@@ -402,8 +402,25 @@ const runPythonProcessor = (command, args) => {
     });
 };
 
+/**
+ * Feature F16: Multer UUID Filenames with Extension
+ * Generates filenames like upload_<uuid>.<ext> deriving the extension from originalname.
+ */
+const uploadStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const parsed = path.parse(file.originalname || '');
+        const ext = parsed.ext ? parsed.ext.toLowerCase() : '.jpg';
+        const safeExt = /^\.[a-z0-9]+$/i.test(ext) ? ext : '.jpg';
+        const uniqueName = `upload_${uuidv4().substring(0, 12)}${safeExt}`;
+        cb(null, uniqueName);
+    }
+});
+
 const photoUpload = multer({
-    dest: uploadsDir,
+    storage: uploadStorage,
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
@@ -921,5 +938,7 @@ export {
     resetRateLimiters,
     resetGenerationLimiter,
     validateEnvironment,
-    safeJsonParse
+    safeJsonParse,
+    photoUpload,
+    uploadStorage
 };
