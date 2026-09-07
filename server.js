@@ -744,10 +744,59 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
     }
 });
 
+/**
+ * Feature F14: Environment Validation at Startup
+ * Validates critical environment variables and external dependencies before server binds port.
+ */
+function validateEnvironment(env = process.env, options = {}) {
+    const errors = [];
+    const warnings = [];
+    const exitOnError = options.exitOnError !== undefined ? options.exitOnError : true;
+    const logger = options.logger || console;
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || !apiKey.trim()) {
+        errors.push(
+            "GEMINI_API_KEY is missing or empty. Please set GEMINI_API_KEY in your .env file or environment variables. Get an API key at https://aistudio.google.com/."
+        );
+    }
+
+    const pythonCheck = options.isPythonAvailable ? options.isPythonAvailable() : isPythonAvailable();
+    if (!pythonCheck) {
+        warnings.push(
+            "Python 3 executable or processor.py not found. Post-processing features (smoothing, background removal, 16-bit displacement mesh) will run in degraded/bypass mode. Ensure Python 3.10+ and OpenCV are installed."
+        );
+    }
+
+    if (errors.length > 0) {
+        logger.error("\n========================================================");
+        logger.error("❌ STARTUP ERROR: Environment validation failed!");
+        errors.forEach(err => logger.error(` - ${err}`));
+        logger.error("========================================================\n");
+        if (exitOnError) {
+            process.exit(1);
+        }
+    }
+
+    if (warnings.length > 0) {
+        logger.warn("\n--------------------------------------------------------");
+        logger.warn("⚠️  STARTUP WARNING:");
+        warnings.forEach(warn => logger.warn(` - ${warn}`));
+        logger.warn("--------------------------------------------------------\n");
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors,
+        warnings
+    };
+}
+
 let server;
 let cleanupScheduler = null;
 const isDirectRun = isMainModule(import.meta.url);
 if (process.env.NODE_ENV !== 'test' && isDirectRun) {
+    validateEnvironment(process.env, { exitOnError: true });
     server = app.listen(port, '0.0.0.0', () => console.log(`DepthForge running on http://0.0.0.0:${port}`));
     cleanupScheduler = startCleanupScheduler({
         dir: generatedDir,
@@ -813,5 +862,6 @@ export {
     photoToDepthLimiter,
     generationLimiter,
     resetRateLimiters,
-    resetGenerationLimiter
+    resetGenerationLimiter,
+    validateEnvironment
 };
