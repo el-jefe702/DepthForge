@@ -15,7 +15,10 @@
             <img src="/static/logo.png" alt="Logo">
             <span class="vintage-font">DepthForge</span>
         </h1>
-        <span style="color: var(--text-muted); font-size: 14px;">v2.0</span>
+        <div class="header-meta">
+            <div class="status-badge"><span class="pulse-dot"></span> 16-Bit CNC Precision</div>
+            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">v2.0</span>
+        </div>
     </header>
 
     <main class="main-grid">
@@ -125,8 +128,16 @@
         <div>
             <div class="preview-area fade-in">
                 <div class="preview-placeholder" id="placeholder">
-                    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19,3H5C3.895,3,3,3.895,3,5v14c0,1.105,0.895,2,2,2h14c1.105,0,2-0.895,2-2V5C21,3.895,20.105,3,19,3z M19,19H5V5h14V19z"/><path d="M13.5,13.5l-3-4l-4,5h11L13.5,13.5z"/></svg>
-                    <span>Your depth map will appear here</span>
+                    <div class="preview-placeholder-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>
+                            <path d="M12 12l8-4.5"/>
+                            <path d="M12 12v9"/>
+                            <path d="M12 12L4 7.5"/>
+                        </svg>
+                    </div>
+                    <span class="preview-placeholder-title">Interactive Relief Canvas</span>
+                    <span class="preview-placeholder-subtitle">Enter a prompt or upload an image to generate ultra high-resolution 16-bit displacement maps.</span>
                 </div>
                 
                 <img id="outputImage" class="output-image" alt="Depth Map" style="display: none;">

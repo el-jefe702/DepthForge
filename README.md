@@ -39,11 +39,12 @@ DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC 
 - **Comprehensive README Documentation Update (F20)**: Comprehensive, synchronized project documentation across Web, Node.js Express server, Python OpenCV pipeline, and native Jetpack Compose Android app. Fully documents all features (F1 through F20), REST and SSE API endpoints, prerequisites, installation workflows, environment variables, dependencies, and project directory structure with automated test suite verification (`tests/readme_verification.test.js`).
 - **Background Removal**: Isolate subjects onto pure black backgrounds with `rembg`
 - **Lossless Export**: Export production-ready 16-bit PNG depth maps
+- **Modern Luxury Forge Aesthetic**: Custom 3D volcanic obsidian & molten laser gold branding, frosted glassmorphism interface (`backdrop-filter: blur(16px)`), specular border highlights, responsive blueprint grid preview canvas, glowing range sliders, animated status badges, and enhanced interactive states across Web and Android WebView mirroring.
 
 ### Platforms
 
-- **Web**: Single-page static frontend served from Express (`static/index.html`, `static/style.css`) with built-in aspect ratio selector, depth intensity slider, prompt history, session gallery, side-by-side comparison view, 3D live preview displacement mesh, real-time SSE progress, and action controls
-- **Android**: Native Jetpack Compose app (`android_app/`) (single-screen forge with native chips, depth intensity slider, prompt history dropdown, session gallery LazyRow, before/after comparison split view with draggable divider, 3D preview dialog, real-time SSE animation, Android Share Sheet integration, and action controls)
+- **Web**: Single-page static frontend served from Express (`static/index.html`, `static/style.css`) with built-in aspect ratio selector, depth intensity slider, prompt history, session gallery, side-by-side comparison view, 3D live preview displacement mesh, real-time SSE progress, luxury glassmorphic design system, and action controls
+- **Android**: Native Jetpack Compose app (`android_app/`) (single-screen forge with native chips, depth intensity slider, prompt history dropdown, session gallery LazyRow, before/after comparison split view with draggable divider, 3D preview dialog, real-time SSE animation, Android Share Sheet integration, mirrored high-tech WebView assets, and action controls)
 
 ---
 
