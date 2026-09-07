@@ -258,6 +258,36 @@ const buildFinalPrompt = (improvedPrompt, depthIntensity = 70) => {
         "OUTPUT: A perfectly smooth, seamless 16-bit depth map optimized for 3D CNC laser engraving.";
 };
 
+/**
+ * Feature F15: Gemini Prompt Response Robustness
+ * Safely parses JSON strings returned by Gemini models, stripping markdown code blocks
+ * if present. Falls back cleanly without crashing if malformed JSON or plain text is received.
+ */
+function safeJsonParse(rawText, fallback = {}, logger = console) {
+    if (typeof rawText !== 'string' || !rawText.trim()) {
+        return fallback;
+    }
+
+    let cleaned = rawText.trim();
+    // Strip markdown code fences if wrapped in ```json ... ``` or ``` ... ```
+    if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    }
+
+    try {
+        const parsed = JSON.parse(cleaned);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
+        }
+        return fallback;
+    } catch (err) {
+        if (logger?.error) {
+            logger.error(`[Gemini Response Robustness] Failed to parse JSON response: ${err.message}. Raw response: ${rawText}`);
+        }
+        return fallback;
+    }
+}
+
 // --- DYNAMIC PACKAGE METADATA ---
 const getPackageVersion = (customPkgPath = path.join(__dirname, 'package.json')) => {
     try {
@@ -445,8 +475,17 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             contents: buildImprovePrompt(studentPrompt, stylePreset),
             config: { responseMimeType: "application/json" }
         });
-        const responseJson = JSON.parse(improveResponse.text);
-        const finalPrompt = buildFinalPrompt(responseJson.improved_prompt || studentPrompt, depthIntensity);
+        const rawImproveText = improveResponse?.text || "";
+        const responseJson = safeJsonParse(rawImproveText, {});
+        const effectivePrompt = (typeof responseJson?.improved_prompt === 'string' && responseJson.improved_prompt.trim())
+            ? responseJson.improved_prompt.trim()
+            : (studentPrompt || "3D relief sculpture");
+
+        if (!responseJson?.improved_prompt) {
+            console.warn(`[Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: ${rawImproveText}`);
+        }
+
+        const finalPrompt = buildFinalPrompt(effectivePrompt, depthIntensity);
         
         const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const numImages = isBatch ? 4 : 1;
@@ -695,11 +734,29 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
             config: { responseMimeType: 'application/json' }
         });
 
-        const analysisJson = JSON.parse(analysisResponse.text);
-        const depthPrompt = analysisJson.depth_prompt;
-        const subjectDescription = analysisJson.subject_description || 'photo subject';
+        const rawAnalysisText = analysisResponse?.text || "";
+        const analysisJson = safeJsonParse(rawAnalysisText, {});
+        
+        let depthPrompt = (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim())
+            ? analysisJson.depth_prompt.trim()
+            : null;
+        let subjectDescription = (typeof analysisJson?.subject_description === 'string' && analysisJson.subject_description.trim())
+            ? analysisJson.subject_description.trim()
+            : 'photo subject';
 
-        if (!depthPrompt) throw new Error('Gemini could not analyze depth structure.');
+        // Robust fallback if Gemini returns plain text, markdown, or non-JSON output
+        if (!depthPrompt) {
+            console.warn(`[Gemini Photo-to-Depth Warning] Non-JSON or missing depth_prompt from Gemini Vision. Using fallback from raw response: ${rawAnalysisText}`);
+            // If raw text is non-empty, use a sanitized excerpt of the raw text or default subject
+            const sanitizedRaw = rawAnalysisText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            if (sanitizedRaw) {
+                depthPrompt = `depth map of ${sanitizedRaw.slice(0, 300)}`;
+                subjectDescription = sanitizedRaw.slice(0, 80);
+            } else {
+                depthPrompt = 'depth map of the uploaded photo subject with organic depth and smooth relief';
+                subjectDescription = 'uploaded photo';
+            }
+        }
 
         const finalDepthPrompt = buildFinalPrompt(depthPrompt, depthIntensity);
 
@@ -863,5 +920,6 @@ export {
     generationLimiter,
     resetRateLimiters,
     resetGenerationLimiter,
-    validateEnvironment
+    validateEnvironment,
+    safeJsonParse
 };
