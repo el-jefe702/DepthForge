@@ -271,6 +271,52 @@ fun AspectRatioSelector(
             }
         }
     }
+@Composable
+fun StylePresetSelector(
+    selectedPreset: String?,
+    onPresetSelected: (String?) -> Unit,
+    enabled: Boolean = true
+) {
+    val presets = listOf(
+        "portrait" to "👤 Portrait",
+        "wildlife" to "🦁 Wildlife",
+        "ornamental" to "⚜️ Ornamental",
+        "floral" to "🌸 Floral",
+        "architecture" to "🏛️ Architecture",
+        "abstract" to "🌀 Abstract"
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text("Style Preset (Optional)", color = TextSecondary, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(presets) { (id, label) ->
+                val isSelected = id == selectedPreset
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (isSelected) GoldAccent else CardBackground)
+                        .border(1.dp, if (isSelected) GoldAccent else GrayBorder, RoundedCornerShape(20.dp))
+                        .clickable(enabled = enabled) {
+                            if (isSelected) onPresetSelected(null)
+                            else onPresetSelected(id)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) DarkBackground else TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -326,6 +372,7 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
     var isRemovingBg by remember { mutableStateOf(false) }
     var bgRemoved by remember { mutableStateOf(false) }
     var isInverting by remember { mutableStateOf(false) }
+    var selectedStylePreset by remember { mutableStateOf<String?>(null) }
     var show3DWebView by remember { mutableStateOf(false) }
     var lastError by remember { mutableStateOf<String?>(null) }
     var activePolishStep by remember { mutableStateOf(-1) }
@@ -488,6 +535,12 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
+                        StylePresetSelector(
+                            selectedPreset = selectedStylePreset,
+                            onPresetSelected = { selectedStylePreset = it },
+                            enabled = !isBusy
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         AspectRatioSelector(
                             selectedRatio = selectedAspectRatio,
                             onRatioSelected = { selectedAspectRatio = it }
@@ -515,7 +568,12 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                                     
                                     coroutineScope.launch {
                                         try {
-                                            val res = ApiClient.generate(promptInput, selectedAspectRatio, depthIntensity.toInt()) // ApiClient.generate(promptInput, selectedAspectRatio)
+                                            val res = ApiClient.generate(
+                                                prompt = promptInput,
+                                                aspectRatio = selectedAspectRatio,
+                                                depthIntensity = depthIntensity.toInt(),
+                                                stylePreset = selectedStylePreset
+                                            ) // ApiClient.generate(promptInput, selectedAspectRatio, depthIntensity.toInt()) ApiClient.generate(promptInput, selectedAspectRatio)
                                             if (res.optString("status") == "success") {
                                                 currentImageUrl = res.getString("image_url")
                                                 currentBitmap = ApiClient.downloadImage(currentImageUrl)
@@ -577,6 +635,12 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                             Text("Photo Selected ✓", color = EmeraldAccent, fontSize = 14.sp)
                         }
                         Spacer(modifier = Modifier.height(16.dp))
+                        StylePresetSelector(
+                            selectedPreset = selectedStylePreset,
+                            onPresetSelected = { selectedStylePreset = it },
+                            enabled = !isBusy
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         AspectRatioSelector(
                             selectedRatio = selectedAspectRatio,
                             onRatioSelected = { selectedAspectRatio = it }
@@ -611,7 +675,12 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                                                         input.copyTo(output)
                                                     }
                                                 }
-                                                val res = ApiClient.photoToDepth(tempFile, selectedAspectRatio, depthIntensity.toInt()) // ApiClient.photoToDepth(tempFile, selectedAspectRatio)
+                                                val res = ApiClient.photoToDepth(
+                                                    file = tempFile,
+                                                    aspectRatio = selectedAspectRatio,
+                                                    depthIntensity = depthIntensity.toInt(),
+                                                    stylePreset = selectedStylePreset
+                                                ) // ApiClient.photoToDepth(tempFile, selectedAspectRatio, depthIntensity.toInt()) ApiClient.photoToDepth(tempFile, selectedAspectRatio)
                                                 if (res.optString("status") == "success") {
                                                     currentImageUrl = res.getString("image_url")
                                                     currentBitmap = ApiClient.downloadImage(currentImageUrl)

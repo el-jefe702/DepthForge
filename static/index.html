@@ -29,6 +29,19 @@
 
             <!-- Text Panel -->
             <div id="textPanel">
+                <!-- Style Presets (F12) -->
+                <div class="style-presets-container" id="textStylePresets">
+                    <span class="style-presets-label">Style Preset (Optional)</span>
+                    <div class="style-presets-row">
+                        <button type="button" class="preset-chip" data-preset="portrait" onclick="selectStylePreset('portrait')">👤 Portrait</button>
+                        <button type="button" class="preset-chip" data-preset="wildlife" onclick="selectStylePreset('wildlife')">🦁 Wildlife</button>
+                        <button type="button" class="preset-chip" data-preset="ornamental" onclick="selectStylePreset('ornamental')">⚜️ Ornamental</button>
+                        <button type="button" class="preset-chip" data-preset="floral" onclick="selectStylePreset('floral')">🌸 Floral</button>
+                        <button type="button" class="preset-chip" data-preset="architecture" onclick="selectStylePreset('architecture')">🏛️ Architecture</button>
+                        <button type="button" class="preset-chip" data-preset="abstract" onclick="selectStylePreset('abstract')">🌀 Abstract</button>
+                    </div>
+                </div>
+
                 <textarea id="promptInput" placeholder="Describe the intricate 3D relief carving you want to generate..."></textarea>
                 
                 <div id="promptHistoryContainer" class="prompt-history-container" style="display: none;">
@@ -64,6 +77,19 @@
 
             <!-- Photo Panel -->
             <div id="photoPanel" style="display: none;">
+                <!-- Style Presets (F12) -->
+                <div class="style-presets-container" id="photoStylePresets">
+                    <span class="style-presets-label">Style Preset (Optional)</span>
+                    <div class="style-presets-row">
+                        <button type="button" class="preset-chip" data-preset="portrait" onclick="selectStylePreset('portrait')">👤 Portrait</button>
+                        <button type="button" class="preset-chip" data-preset="wildlife" onclick="selectStylePreset('wildlife')">🦁 Wildlife</button>
+                        <button type="button" class="preset-chip" data-preset="ornamental" onclick="selectStylePreset('ornamental')">⚜️ Ornamental</button>
+                        <button type="button" class="preset-chip" data-preset="floral" onclick="selectStylePreset('floral')">🌸 Floral</button>
+                        <button type="button" class="preset-chip" data-preset="architecture" onclick="selectStylePreset('architecture')">🏛️ Architecture</button>
+                        <button type="button" class="preset-chip" data-preset="abstract" onclick="selectStylePreset('abstract')">🌀 Abstract</button>
+                    </div>
+                </div>
+
                 <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                     <div id="dropText">Drag & drop photo here or click to browse</div>
                     <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp" style="display:none" onchange="handleFileSelect(event)">
@@ -184,12 +210,34 @@
         let currentImageUrl = '';
         let currentMode = 'text';
         let selectedPhotoFile = null;
+        let activeStylePreset = null; // Style Presets (F12)
         let comparisonBeforeUrl = '';
         let comparisonAfterUrl = '';
         let isComparisonActive = false;
         let comparisonSplit = 50;
         let isDraggingComparison = false;
         let stopComparisonDrag = function() {};
+
+        // Style Presets (F12) Logic
+        function selectStylePreset(presetName) {
+            if (isProcessing()) return;
+            if (activeStylePreset === presetName) {
+                activeStylePreset = null;
+            } else {
+                activeStylePreset = presetName;
+            }
+            updateStylePresetUI();
+        }
+
+        function updateStylePresetUI() {
+            const chips = document.querySelectorAll('.preset-chip');
+            chips.forEach(chip => {
+                const preset = chip.getAttribute('data-preset');
+                const isActive = activeStylePreset === preset;
+                chip.classList.toggle('active', isActive);
+                chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
 
         // Drop zone logic
         const dropZone = document.getElementById('dropZone');
@@ -503,7 +551,14 @@
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, aspectRatio, depth_intensity: depthIntensity, depthIntensity }) /* body: JSON.stringify({ prompt, aspectRatio }) */
+                    body: JSON.stringify({ 
+                        prompt, 
+                        aspectRatio, 
+                        depth_intensity: depthIntensity, 
+                        depthIntensity,
+                        style_preset: activeStylePreset,
+                        stylePreset: activeStylePreset
+                    }) /* body: JSON.stringify({ prompt, aspectRatio }) */
                 });
                 let data = null;
                 try {
@@ -563,6 +618,10 @@
                 formData.append('aspectRatio', aspectRatio);
                 formData.append('depth_intensity', depthIntensity);
                 formData.append('depthIntensity', depthIntensity);
+                if (activeStylePreset) {
+                    formData.append('style_preset', activeStylePreset);
+                    formData.append('stylePreset', activeStylePreset);
+                }
 
                 const res = await fetch('/api/photo-to-depth', {
                     method: 'POST',

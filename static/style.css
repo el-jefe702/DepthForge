@@ -1083,3 +1083,62 @@ textarea:focus, input[type=text]:focus {
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
 }
 
+/* ==========================================
+   Style Presets (F12)
+   ========================================== */
+.style-presets-container {
+  margin-bottom: 12px;
+}
+
+.style-presets-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.style-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+}
+
+.preset-chip:hover:not(:disabled) {
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.preset-chip.active {
+  border-color: var(--accent-gold);
+  background: var(--accent-gold);
+  color: var(--bg-dark);
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+}
+
+.preset-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+

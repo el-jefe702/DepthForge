@@ -116,18 +116,32 @@ object ApiClient {
         } catch (e: Exception) { null }
     }
 
-    // Generate depth map from text prompt with aspect ratio
+    // Generate depth map from text prompt with aspect ratio (F1 legacy overload)
     suspend fun generate(prompt: String, aspectRatio: String = "1:1"): JSONObject {
-        return generate(prompt, aspectRatio, 70)
+        return generate(prompt, aspectRatio, 70, null)
     }
 
-    // Generate depth map from text prompt with aspect ratio and depth intensity
+    // Generate depth map from text prompt with aspect ratio and depth intensity (F6 overload)
     suspend fun generate(prompt: String, aspectRatio: String, depthIntensity: Int = 70): JSONObject {
+        return generate(prompt, aspectRatio, depthIntensity, null)
+    }
+
+    // Generate depth map from text prompt with aspect ratio, depth intensity, and optional style preset (F12)
+    suspend fun generate(
+        prompt: String,
+        aspectRatio: String = "1:1",
+        depthIntensity: Int = 70,
+        stylePreset: String? = null
+    ): JSONObject {
         val body = JSONObject().apply {
             put("prompt", prompt)
             put("aspectRatio", aspectRatio)
             put("depth_intensity", depthIntensity)
             put("depthIntensity", depthIntensity)
+            if (!stylePreset.isNullOrBlank()) {
+                put("style_preset", stylePreset)
+                put("stylePreset", stylePreset)
+            }
         }
         return postJson("/api/generate", body)
     }
@@ -204,23 +218,33 @@ object ApiClient {
         return postJson("/api/invert", JSONObject().put("image_url", imageUrl))
     }
 
-    // Convert photo to depth map with aspect ratio
+    // Convert photo to depth map with aspect ratio (F1 legacy overload)
     suspend fun photoToDepth(file: File, aspectRatio: String = "1:1"): JSONObject {
         return photoToDepth(file, aspectRatio, 70) // mapOf("aspectRatio" to aspectRatio)
     }
 
-    // Convert photo to depth map with aspect ratio and depth intensity
+    // Convert photo to depth map with aspect ratio and depth intensity (F6 overload)
     suspend fun photoToDepth(file: File, aspectRatio: String, depthIntensity: Int = 70): JSONObject {
-        return postMultipart(
-            "/api/photo-to-depth",
-            file,
-            "photo",
-            mapOf(
-                "aspectRatio" to aspectRatio,
-                "depth_intensity" to depthIntensity.toString(),
-                "depthIntensity" to depthIntensity.toString()
-            )
+        return photoToDepth(file, aspectRatio, depthIntensity, null)
+    }
+
+    // Convert photo to depth map with aspect ratio, depth intensity, and optional style preset (F12)
+    suspend fun photoToDepth(
+        file: File,
+        aspectRatio: String = "1:1",
+        depthIntensity: Int = 70,
+        stylePreset: String? = null
+    ): JSONObject {
+        val params = mutableMapOf(
+            "aspectRatio" to aspectRatio,
+            "depth_intensity" to depthIntensity.toString(),
+            "depthIntensity" to depthIntensity.toString()
         )
+        if (!stylePreset.isNullOrBlank()) {
+            params["style_preset"] = stylePreset
+            params["stylePreset"] = stylePreset
+        }
+        return postMultipart("/api/photo-to-depth", file, "photo", params)
     }
 
     // Check server health via GET /api/health

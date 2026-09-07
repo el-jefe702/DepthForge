@@ -158,13 +158,68 @@ function resetGenerationLimiter(options = {}) {
     return resetRateLimiters(options);
 }
 
+// --- STYLE PRESETS ARCHITECTURE (F12) ---
+const STYLE_PRESETS = {
+    portrait: {
+        id: 'portrait',
+        label: 'Portrait',
+        icon: '👤',
+        guidance: 'STYLE: Portraiture relief carving. Emphasize continuous anatomic facial planes, smooth cheekbone undulations, sculpted nose and jawline depth contours, and subtle lip volume. Avoid noisy skin texture and prevent harsh stepping on facial gradients.'
+    },
+    wildlife: {
+        id: 'wildlife',
+        label: 'Wildlife',
+        icon: '🦁',
+        guidance: 'STYLE: Wildlife and animal relief carving. Emphasize anatomical muscle groups, defined silhouette boundaries, sculpted fur volume and feather layering as broad smooth masses rather than noisy individual strands.'
+    },
+    ornamental: {
+        id: 'ornamental',
+        label: 'Ornamental',
+        icon: '⚜️',
+        guidance: 'STYLE: Classical architectural ornamental relief and baroque scrollwork. Emphasize crisp filigree ridges, elegant acanthus leaf curls, symmetric florets, steep chamfered bevels, and clean flat background clearance.'
+    },
+    floral: {
+        id: 'floral',
+        label: 'Floral',
+        icon: '🌸',
+        guidance: 'STYLE: Botanical floral relief carving. Emphasize graceful overlapping petals, smooth concave cup shapes, natural organic curling edges, radiating leaf veining, and delicate blossom center elevation.'
+    },
+    architecture: {
+        id: 'architecture',
+        label: 'Architecture',
+        icon: '🏛️',
+        guidance: 'STYLE: Architectural monument relief. Emphasize distinct geometric planar facades, clean perspective depth recession, crisp column fluting, delineated masonry blocks, and sharp receding spatial planes.'
+    },
+    abstract: {
+        id: 'abstract',
+        label: 'Abstract',
+        icon: '🌀',
+        guidance: 'STYLE: Dynamic modern abstract relief sculpture. Emphasize flowing topographic waves, ribbon curves, mathematical surface transitions, dramatic geometric intersections, and clean curvilinear elevation variations.'
+    }
+};
+
+const sanitizeStylePreset = (preset) => {
+    if (typeof preset !== 'string') return null;
+    const clean = preset.trim().toLowerCase();
+    return STYLE_PRESETS[clean] ? clean : null;
+};
+
+const getStyleGuidance = (preset) => {
+    const validKey = sanitizeStylePreset(preset);
+    return validKey ? STYLE_PRESETS[validKey].guidance : '';
+};
+
 // --- PROMPT ARCHITECTURE ---
-const buildImprovePrompt = (userIdea) => 
-    `Act as a master CNC relief artist. User Idea: ${userIdea} ` +
-    "TASK: Rewrite this into a highly detailed prompt for a 3D grayscale height map. " +
-    "REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. " +
-    "Do NOT include any mention of contours, layers, or topography. " +
-    "Output in JSON format with key 'improved_prompt'.";
+const buildImprovePrompt = (userIdea, stylePreset = null) => {
+    const styleGuidance = getStyleGuidance(stylePreset);
+    const styleBlock = styleGuidance ? ` ${styleGuidance}` : '';
+    return `Act as a master CNC relief artist. User Idea: ${userIdea} ` +
+        "TASK: Rewrite this into a highly detailed prompt for a 3D grayscale height map. " +
+        "REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. " +
+        "Do NOT include any mention of contours, layers, or topography." +
+        styleBlock +
+        " Output in JSON format with key 'improved_prompt'.";
+};
 
 const sanitizeDepthIntensity = (intensity) => {
     if (typeof intensity !== 'number' && typeof intensity !== 'string') {
@@ -383,10 +438,11 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         const studentPrompt = req.body.prompt || "";
         const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
         const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
+        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
         
         const improveResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: buildImprovePrompt(studentPrompt),
+            contents: buildImprovePrompt(studentPrompt, stylePreset),
             config: { responseMimeType: "application/json" }
         });
         const responseJson = JSON.parse(improveResponse.text);
@@ -609,6 +665,9 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
 
         const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
         const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
+        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
+        const styleGuidance = getStyleGuidance(stylePreset);
+        const styleClause = styleGuidance ? ` ${styleGuidance}` : '';
 
         const photoBytes = await fs.promises.readFile(uploadedPath);
         const photoBase64 = photoBytes.toString('base64');
@@ -619,7 +678,7 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
             contents: [{
                 parts: [
                     { inlineData: { mimeType: mimeType, data: photoBase64 } },
-                    { text: 'Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography. Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.' }
+                    { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
                 ]
             }],
             config: { responseMimeType: 'application/json' }
@@ -703,6 +762,9 @@ export {
     handlePostprocessStream,
     buildFinalPrompt,
     buildImprovePrompt,
+    STYLE_PRESETS,
+    sanitizeStylePreset,
+    getStyleGuidance,
     sanitizeDepthIntensity,
     getDepthModifier,
     cleanupGeneratedFiles,
