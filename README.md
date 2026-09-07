@@ -33,6 +33,7 @@ DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC 
 - **Environment Validation at Startup (F14)**: Fails fast on server startup if `GEMINI_API_KEY` is missing or empty, outputting clear troubleshooting guidance and exiting with code 1 before binding ports. Non-critically validates Python 3 and `processor.py` availability, printing formatted warnings if post-processing runs in bypass mode. Exposes a standalone, unit-tested `validateEnvironment` helper.
 - **Gemini Prompt Response Robustness (F15)**: Robust JSON parsing and fallback handling for Gemini prompt enhancement and Vision analysis. Strips markdown fences (```` ```json ````), logs raw parse errors, and falls back gracefully to the original user prompt or sanitized model output rather than crashing with HTTP 500.
 - **Multer UUID Filenames with Extension (F16)**: Configures `multer.diskStorage` for photo uploads to generate collision-free UUID filenames that safely preserve original extensions (e.g. `upload_<uuid>.jpg`, `.png`, `.webp`) rather than extensionless defaults. Ensures automated unlinking/cleanup after processing.
+- **`processor.py` Step Order & Structure (F17)**: Fully aligned, sequential step comments (STEP 1 through STEP 5) matching actual execution and SSE streaming stages: Load/16-bit conversion → Inpainting missing data → Bilateral spatial filtering → Depth normalization → Lossless 16-bit export.
 - **Background Removal**: Isolate subjects onto pure black backgrounds with `rembg`
 - **Lossless Export**: Export production-ready 16-bit PNG depth maps
 
