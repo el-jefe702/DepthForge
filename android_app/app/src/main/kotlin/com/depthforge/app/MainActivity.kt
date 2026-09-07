@@ -3,6 +3,7 @@ package com.depthforge.app
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -1359,26 +1361,52 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Button(
-                        onClick = {
-                            currentBitmap?.let { bitmap ->
-                                coroutineScope.launch {
-                                    try {
-                                        withContext(Dispatchers.IO) {
-                                            saveImageToGallery(context, bitmap, "DepthForge_${System.currentTimeMillis()}")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                currentBitmap?.let { bitmap ->
+                                    coroutineScope.launch {
+                                        try {
+                                            withContext(Dispatchers.IO) {
+                                                saveImageToGallery(context, bitmap, "DepthForge_${System.currentTimeMillis()}")
+                                            }
+                                            scaffoldState.snackbarHostState.showSnackbar("Saved!")
+                                        } catch (e: Exception) {
+                                            scaffoldState.snackbarHostState.showSnackbar("Failed to save")
                                         }
-                                        scaffoldState.snackbarHostState.showSnackbar("Saved!")
-                                    } catch (e: Exception) {
-                                        scaffoldState.snackbarHostState.showSnackbar("Failed to save")
                                     }
                                 }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = EmeraldAccent),
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy && currentBitmap != null
-                    ) {
-                        Text("Download")
+                            },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = EmeraldAccent),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isBusy && currentBitmap != null
+                        ) {
+                            Text("Download")
+                        }
+
+                        Button(
+                            onClick = {
+                                currentBitmap?.let { bitmap ->
+                                    coroutineScope.launch {
+                                        try {
+                                            withContext(Dispatchers.IO) {
+                                                shareDepthMap(context, bitmap)
+                                            }
+                                        } catch (e: Exception) {
+                                            scaffoldState.snackbarHostState.showSnackbar("Failed to share")
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = CyanAccent),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isBusy && currentBitmap != null
+                        ) {
+                            Text("Share")
+                        }
                     }
                 }
             }
@@ -1512,6 +1540,33 @@ private fun saveImageToGallery(context: Context, bitmap: Bitmap, title: String) 
             }
         }
     }
+}
+
+fun shareDepthMap(context: Context, bitmap: Bitmap) {
+    val shareDir = File(context.cacheDir, "share").apply {
+        if (!exists()) mkdirs()
+    }
+    val shareFile = File(shareDir, "depth_share_${System.currentTimeMillis()}.png")
+    FileOutputStream(shareFile).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+
+    val contentUri: Uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        shareFile
+    )
+
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/png"
+        putExtra(Intent.EXTRA_STREAM, contentUri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    val chooser = Intent.createChooser(shareIntent, "Share Depth Map").apply {
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(chooser)
 }
 
 @Composable
