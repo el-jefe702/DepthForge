@@ -71,8 +71,10 @@
                         <label for="depthIntensity" class="form-label" id="depthIntensityLabel" style="margin-bottom: 0;">Depth Intensity: <span id="depthIntensityVal">70%</span></label>
                     </div>
                     <input type="range" id="depthIntensity" name="depth_intensity" class="form-range" min="0" max="100" value="70" aria-label="Depth Intensity" aria-labelledby="depthIntensityLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" aria-valuetext="70%" title="Depth Intensity: 70%" oninput="updateDepthIntensity(this.value)" onchange="updateDepthIntensity(this.value)">
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" id="generateBtn" onclick="generateMap(false)" style="flex: 1;">Ignite Forge</button>
+                    <button class="btn btn-secondary btn-batch" id="generateBatchBtn" onclick="generateMap(true)" style="flex: 1;" title="Generate 4 variations concurrently">⚡ Generate ×4</button>
                 </div>
-                <button class="btn btn-primary" id="generateBtn" onclick="generateMap()">Ignite Forge</button>
             </div>
 
             <!-- Photo Panel -->
@@ -113,7 +115,8 @@
                     <input type="range" id="photoDepthIntensity" name="depth_intensity" class="form-range" min="0" max="100" value="70" aria-label="Depth Intensity" aria-labelledby="photoDepthIntensityLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" aria-valuetext="70%" title="Depth Intensity: 70%" oninput="updateDepthIntensity(this.value)" onchange="updateDepthIntensity(this.value)">
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: 16px;">
-                    <button class="btn btn-secondary" id="convertBtn" onclick="convertPhoto()" disabled>🔬 Convert to Depth Map</button>
+                    <button class="btn btn-secondary" id="convertBtn" onclick="convertPhoto(false)" disabled style="flex: 1;">🔬 Convert to Depth Map</button>
+                    <button class="btn btn-secondary btn-batch" id="convertBatchBtn" onclick="convertPhoto(true)" disabled style="flex: 1;" title="Convert with 4 variations">⚡ Convert ×4</button>
                     <button class="btn btn-outline" id="clearPhotoBtn" onclick="clearPhoto()" style="display: none;">Clear</button>
                 </div>
             </div>
@@ -175,6 +178,18 @@
                 </div>
             </div>
 
+            <!-- Batch Candidate Grid — Pick the Best (F13) -->
+            <div class="batch-grid-container fade-in" id="batchGridContainer" style="display: none;">
+                <div class="batch-grid-header">
+                    <div class="batch-grid-title-row">
+                        <span class="batch-grid-title">⚡ Batch Candidates (Pick the Best)</span>
+                        <span class="batch-grid-count" id="batchGridCount">(4)</span>
+                    </div>
+                    <span class="batch-grid-subtitle">Click a thumbnail to set as active depth map</span>
+                </div>
+                <div class="batch-grid" id="batchGrid"></div>
+            </div>
+
             <!-- Session Gallery / History Strip (F5) -->
             <div class="session-gallery-container fade-in" id="sessionGalleryContainer" style="display: none;">
                 <div class="session-gallery-header">
@@ -211,12 +226,62 @@
         let currentMode = 'text';
         let selectedPhotoFile = null;
         let activeStylePreset = null; // Style Presets (F12)
+        let batchCandidates = []; // Batch Generation (F13)
         let comparisonBeforeUrl = '';
         let comparisonAfterUrl = '';
         let isComparisonActive = false;
         let comparisonSplit = 50;
         let isDraggingComparison = false;
         let stopComparisonDrag = function() {};
+
+        // Batch Generation (F13) Logic
+        function renderBatchCandidates(candidates = batchCandidates) {
+            batchCandidates = Array.isArray(candidates) ? candidates : [];
+            const container = document.getElementById('batchGridContainer');
+            const grid = document.getElementById('batchGrid');
+            const countEl = document.getElementById('batchGridCount');
+            if (!container || !grid) return;
+
+            if (batchCandidates.length <= 1) {
+                container.style.display = 'none';
+                grid.innerHTML = '';
+                if (countEl) countEl.innerText = '(0)';
+                return;
+            }
+
+            container.style.display = 'block';
+            if (countEl) countEl.innerText = `(${batchCandidates.length})`;
+            let html = '';
+            batchCandidates.forEach((url, idx) => {
+                const isSelected = url === currentImageUrl;
+                html += `
+                    <div class="batch-tile ${isSelected ? 'selected' : ''}" 
+                         role="button" 
+                         tabindex="0"
+                         aria-label="Candidate variation ${idx + 1}"
+                         onclick="selectBatchCandidate('${escapeHtml(url)}')"
+                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectBatchCandidate('${escapeHtml(url)}');}">
+                        <img src="${escapeHtml(url)}" alt="Candidate ${idx + 1}" loading="lazy">
+                        <span class="batch-badge">#${idx + 1}</span>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        function selectBatchCandidate(url) {
+            if (isProcessing() || !url) return;
+            displayImageSuccess(url);
+            renderBatchCandidates(batchCandidates);
+        }
+
+        function clearBatchCandidates() {
+            batchCandidates = [];
+            const container = document.getElementById('batchGridContainer');
+            const grid = document.getElementById('batchGrid');
+            if (container) container.style.display = 'none';
+            if (grid) grid.innerHTML = '';
+        }
 
         // Style Presets (F12) Logic
         function selectStylePreset(presetName) {
@@ -292,6 +357,8 @@
                 document.getElementById('photoPreviewImg').style.display = 'block';
                 document.getElementById('dropText').style.display = 'none';
                 document.getElementById('convertBtn').disabled = false;
+                const cbb = document.getElementById('convertBatchBtn');
+                if (cbb) cbb.disabled = false;
                 document.getElementById('clearPhotoBtn').style.display = 'inline-flex';
             };
             reader.readAsDataURL(file);
@@ -303,6 +370,8 @@
             document.getElementById('photoPreviewImg').style.display = 'none';
             document.getElementById('dropText').style.display = 'block';
             document.getElementById('convertBtn').disabled = true;
+            const cbb = document.getElementById('convertBatchBtn');
+            if (cbb) cbb.disabled = true;
             document.getElementById('clearPhotoBtn').style.display = 'none';
         }
 
@@ -516,8 +585,8 @@
             if (id === 'photoDepthIntensitySlider') return _origGetElementById('photoDepthIntensity');
             return _origGetElementById(id);
         };
-
-        async function generateMap() {
+        /* async function generateMap() */
+        async function generateMap(isBatch = false) {
             if (isProcessing()) return;
             const prompt = document.getElementById('promptInput').value.trim();
             if (!prompt) {
@@ -533,6 +602,7 @@
             }
             comparisonBeforeUrl = '';
             comparisonAfterUrl = '';
+            clearBatchCandidates();
             const initialCompareBtn = document.getElementById('compareBtn');
             if (initialCompareBtn) initialCompareBtn.style.display = 'none';
 
@@ -541,8 +611,10 @@
             const depthIntensity = Number.isNaN(parsedDepth) ? 70 : Math.max(0, Math.min(100, parsedDepth));
 
             const btn = document.getElementById('generateBtn');
-            btn.disabled = true;
-            document.getElementById('loadingText').innerText = 'Forging Map in the Cloud...';
+            const batchBtn = document.getElementById('generateBatchBtn');
+            if (btn) btn.disabled = true;
+            if (batchBtn) batchBtn.disabled = true;
+            document.getElementById('loadingText').innerText = isBatch ? '⚡ Forging 4 Map Variations...' : 'Forging Map in the Cloud...';
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('outputImage').style.display = 'none';
             document.getElementById('placeholder').style.display = 'none';
@@ -557,7 +629,9 @@
                         depth_intensity: depthIntensity, 
                         depthIntensity,
                         style_preset: activeStylePreset,
-                        stylePreset: activeStylePreset
+                        stylePreset: activeStylePreset,
+                        batch: isBatch,
+                        numberOfImages: isBatch ? 4 : 1
                     }) /* body: JSON.stringify({ prompt, aspectRatio }) */
                 });
                 let data = null;
@@ -573,17 +647,26 @@
                 
                 displayImageSuccess(data.image_url);
                 savePromptToHistory(prompt);
-                addToGallery(data.image_url, 'Generated');
+                
+                if (data.images && data.images.length > 1) {
+                    renderBatchCandidates(data.images);
+                    data.images.forEach((imgUrl, idx) => {
+                        addToGallery(imgUrl, `Batch #${idx + 1}`);
+                    });
+                } else {
+                    addToGallery(data.image_url, 'Generated');
+                }
             } catch (err) {
                 alert(err.message);
                 document.getElementById('placeholder').style.display = 'flex';
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                btn.disabled = false;
+                if (btn) btn.disabled = false;
+                if (batchBtn) batchBtn.disabled = false;
             }
         }
-
-        async function convertPhoto() {
+        /* async function convertPhoto() */
+        async function convertPhoto(isBatch = false) {
             if (isProcessing() || !selectedPhotoFile) return;
 
             if (isComparisonActive) {
@@ -594,6 +677,7 @@
             }
             comparisonBeforeUrl = '';
             comparisonAfterUrl = '';
+            clearBatchCandidates();
             const initialCompareBtn = document.getElementById('compareBtn');
             if (initialCompareBtn) initialCompareBtn.style.display = 'none';
 
@@ -602,14 +686,16 @@
             const depthIntensity = Number.isNaN(parsedPhotoDepth) ? 70 : Math.max(0, Math.min(100, parsedPhotoDepth));
 
             const btn = document.getElementById('convertBtn');
-            btn.disabled = true;
-            document.getElementById('loadingText').innerText = '🔬 Analyzing depth structure...';
+            const batchBtn = document.getElementById('convertBatchBtn');
+            if (btn) btn.disabled = true;
+            if (batchBtn) batchBtn.disabled = true;
+            document.getElementById('loadingText').innerText = isBatch ? '⚡ Analyzing & Forging 4 Variations...' : '🔬 Analyzing depth structure...';
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('outputImage').style.display = 'none';
             document.getElementById('placeholder').style.display = 'none';
 
             const timeoutId = setTimeout(() => {
-                document.getElementById('loadingText').innerText = '🎨 Generating depth map...';
+                document.getElementById('loadingText').innerText = isBatch ? '⚡ Forging 4 Depth Variations...' : '🎨 Generating depth map...';
             }, 4000);
 
             try {
@@ -618,6 +704,10 @@
                 formData.append('aspectRatio', aspectRatio);
                 formData.append('depth_intensity', depthIntensity);
                 formData.append('depthIntensity', depthIntensity);
+                if (isBatch) {
+                    formData.append('batch', 'true');
+                    formData.append('numberOfImages', '4');
+                }
                 if (activeStylePreset) {
                     formData.append('style_preset', activeStylePreset);
                     formData.append('stylePreset', activeStylePreset);
@@ -639,14 +729,22 @@
                 if (!res.ok) throw new Error(data?.error || 'Conversion failed');
                 
                 displayImageSuccess(data.image_url);
-                addToGallery(data.image_url, 'Photo to Depth');
+                if (data.images && data.images.length > 1) {
+                    renderBatchCandidates(data.images);
+                    data.images.forEach((imgUrl, idx) => {
+                        addToGallery(imgUrl, `Photo Batch #${idx + 1}`);
+                    });
+                } else {
+                    addToGallery(data.image_url, 'Photo to Depth');
+                }
             } catch (err) {
                 alert(err.message);
                 document.getElementById('placeholder').style.display = 'flex';
             } finally {
                 clearTimeout(timeoutId);
                 document.getElementById('loadingOverlay').style.display = 'none';
-                btn.disabled = false;
+                if (btn) btn.disabled = false;
+                if (batchBtn) batchBtn.disabled = false;
             }
         }
 

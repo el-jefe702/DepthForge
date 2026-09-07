@@ -126,12 +126,13 @@ object ApiClient {
         return generate(prompt, aspectRatio, depthIntensity, null)
     }
 
-    // Generate depth map from text prompt with aspect ratio, depth intensity, and optional style preset (F12)
+    // Generate depth map from text prompt with aspect ratio, depth intensity, optional style preset, and optional batch (F13)
     suspend fun generate(
         prompt: String,
         aspectRatio: String = "1:1",
         depthIntensity: Int = 70,
-        stylePreset: String? = null
+        stylePreset: String? = null,
+        batch: Boolean = false
     ): JSONObject {
         val body = JSONObject().apply {
             put("prompt", prompt)
@@ -141,6 +142,10 @@ object ApiClient {
             if (!stylePreset.isNullOrBlank()) {
                 put("style_preset", stylePreset)
                 put("stylePreset", stylePreset)
+            }
+            if (batch) {
+                put("batch", true)
+                put("numberOfImages", 4)
             }
         }
         return postJson("/api/generate", body)
@@ -228,12 +233,13 @@ object ApiClient {
         return photoToDepth(file, aspectRatio, depthIntensity, null)
     }
 
-    // Convert photo to depth map with aspect ratio, depth intensity, and optional style preset (F12)
+    // Convert photo to depth map with aspect ratio, depth intensity, optional style preset, and optional batch (F13)
     suspend fun photoToDepth(
         file: File,
         aspectRatio: String = "1:1",
         depthIntensity: Int = 70,
-        stylePreset: String? = null
+        stylePreset: String? = null,
+        batch: Boolean = false
     ): JSONObject {
         val params = mutableMapOf(
             "aspectRatio" to aspectRatio,
@@ -243,6 +249,10 @@ object ApiClient {
         if (!stylePreset.isNullOrBlank()) {
             params["style_preset"] = stylePreset
             params["stylePreset"] = stylePreset
+        }
+        if (batch) {
+            params["batch"] = "true"
+            params["numberOfImages"] = "4"
         }
         return postMultipart("/api/photo-to-depth", file, "photo", params)
     }

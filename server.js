@@ -448,11 +448,14 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         const responseJson = JSON.parse(improveResponse.text);
         const finalPrompt = buildFinalPrompt(responseJson.improved_prompt || studentPrompt, depthIntensity);
         
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
+        const numImages = isBatch ? 4 : 1;
+
         const imageResult = await ai.models.generateImages({
             model: 'imagen-4.0-fast-generate-001',
             prompt: finalPrompt,
             config: {
-                numberOfImages: 1,
+                numberOfImages: numImages,
                 outputMimeType: "image/png",
                 aspectRatio: aspectRatio
             }
@@ -462,13 +465,21 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             throw new Error("No image returned from the API.");
         }
 
-        const filename = `${uuidv4().substring(0, 10)}.png`;
-        const filepath = path.join(generatedDir, filename);
-        
-        const base64Data = imageResult.generatedImages[0].image.imageBytes;
-        await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+        const imageUrls = [];
+        for (const img of imageResult.generatedImages) {
+            const filename = `${uuidv4().substring(0, 10)}.png`;
+            const filepath = path.join(generatedDir, filename);
+            const base64Data = img.image.imageBytes;
+            await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+            imageUrls.push(`/static/generated/${filename}`);
+        }
 
-        res.json({ status: "success", image_url: `/static/generated/${filename}` });
+        res.json({ 
+            status: "success", 
+            image_url: imageUrls[0],
+            images: imageUrls,
+            batch: isBatch
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
@@ -692,11 +703,14 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
 
         const finalDepthPrompt = buildFinalPrompt(depthPrompt, depthIntensity);
 
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
+        const numImages = isBatch ? 4 : 1;
+
         const imageResult = await ai.models.generateImages({
             model: 'imagen-4.0-fast-generate-001',
             prompt: finalDepthPrompt,
             config: {
-                numberOfImages: 1,
+                numberOfImages: numImages,
                 outputMimeType: 'image/png',
                 aspectRatio: aspectRatio
             }
@@ -706,16 +720,22 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
             throw new Error('No depth map returned from Imagen.');
         }
 
-        const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
-        const filepath = path.join(generatedDir, filename);
-        const base64Data = imageResult.generatedImages[0].image.imageBytes;
-        await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+        const imageUrls = [];
+        for (const img of imageResult.generatedImages) {
+            const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
+            const filepath = path.join(generatedDir, filename);
+            const base64Data = img.image.imageBytes;
+            await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+            imageUrls.push(`/static/generated/${filename}`);
+        }
 
         await fs.promises.unlink(uploadedPath).catch(() => {});
 
         res.json({
             status: 'success',
-            image_url: `/static/generated/${filename}`,
+            image_url: imageUrls[0],
+            images: imageUrls,
+            batch: isBatch,
             subject: subjectDescription
         });
     } catch (error) {

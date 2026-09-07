@@ -374,6 +374,7 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
     var isInverting by remember { mutableStateOf(false) }
     var selectedStylePreset by remember { mutableStateOf<String?>(null) }
     var show3DWebView by remember { mutableStateOf(false) }
+    var batchCandidateUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var lastError by remember { mutableStateOf<String?>(null) }
     var activePolishStep by remember { mutableStateOf(-1) }
     
@@ -552,73 +553,167 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                             enabled = !isBusy
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                if (promptInput.isNotBlank() && !isBusy) {
-                                    isGenerating = true
-                                    lastError = null
-                                    currentImageUrl = ""
-                                    currentBitmap = null
-                                    beforeImageUrl = null
-                                    beforeBitmap = null
-                                    afterImageUrl = null
-                                    isComparing = false
-                                    isPolished = false
-                                    bgRemoved = false
-                                    
-                                    coroutineScope.launch {
-                                        try {
-                                            val res = ApiClient.generate(
-                                                prompt = promptInput,
-                                                aspectRatio = selectedAspectRatio,
-                                                depthIntensity = depthIntensity.toInt(),
-                                                stylePreset = selectedStylePreset
-                                            ) // ApiClient.generate(promptInput, selectedAspectRatio, depthIntensity.toInt()) ApiClient.generate(promptInput, selectedAspectRatio)
-                                            if (res.optString("status") == "success") {
-                                                currentImageUrl = res.getString("image_url")
-                                                currentBitmap = ApiClient.downloadImage(currentImageUrl)
-                                                promptHistory = PromptHistoryManager.savePrompt(actualPrefs, promptInput)
-                                                val (updatedGallery, newItem) = SessionGalleryManager.addItem(
-                                                    sessionGallery,
-                                                    currentImageUrl,
-                                                    currentBitmap,
-                                                    "Generated"
-                                                )
-                                                sessionGallery = updatedGallery
-                                                activeGalleryItemId = newItem.id
-                                            } else {
-                                                val errorMsg = if (ApiClient.isRateLimited(res)) {
-                                                    val serverError = res.optString("error")
-                                                    if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
-                                                        "Too many requests. Please wait before generating again."
-                                                    } else {
-                                                        serverError
-                                                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (promptInput.isNotBlank() && !isBusy) {
+                                        isGenerating = true
+                                        lastError = null
+                                        currentImageUrl = ""
+                                        currentBitmap = null
+                                        beforeImageUrl = null
+                                        beforeBitmap = null
+                                        afterImageUrl = null
+                                        isComparing = false
+                                        isPolished = false
+                                        bgRemoved = false
+                                        batchCandidateUrls = emptyList()
+                                        
+                                        coroutineScope.launch {
+                                            try {
+                                                val res = ApiClient.generate(
+                                                    prompt = promptInput,
+                                                    aspectRatio = selectedAspectRatio,
+                                                    depthIntensity = depthIntensity.toInt(),
+                                                    stylePreset = selectedStylePreset
+                                                ) // ApiClient.generate(promptInput, selectedAspectRatio, depthIntensity.toInt()) ApiClient.generate(promptInput, selectedAspectRatio)
+                                                if (res.optString("status") == "success") {
+                                                    currentImageUrl = res.getString("image_url")
+                                                    currentBitmap = ApiClient.downloadImage(currentImageUrl)
+                                                    promptHistory = PromptHistoryManager.savePrompt(actualPrefs, promptInput)
+                                                    val (updatedGallery, newItem) = SessionGalleryManager.addItem(
+                                                        sessionGallery,
+                                                        currentImageUrl,
+                                                        currentBitmap,
+                                                        "Generated"
+                                                    )
+                                                    sessionGallery = updatedGallery
+                                                    activeGalleryItemId = newItem.id
                                                 } else {
-                                                    res.optString("error").ifEmpty { "Generation failed" }
+                                                    val errorMsg = if (ApiClient.isRateLimited(res)) {
+                                                        val serverError = res.optString("error")
+                                                        if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
+                                                            "Too many requests. Please wait before generating again."
+                                                        } else {
+                                                            serverError
+                                                        }
+                                                    } else {
+                                                        res.optString("error").ifEmpty { "Generation failed" }
+                                                    }
+                                                    lastError = errorMsg
+                                                    coroutineScope.launch {
+                                                        scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                    }
                                                 }
+                                            } catch (e: Exception) {
+                                                val errorMsg = e.message ?: "Unknown error"
                                                 lastError = errorMsg
                                                 coroutineScope.launch {
                                                     scaffoldState.snackbarHostState.showSnackbar(errorMsg)
                                                 }
+                                            } finally {
+                                                isGenerating = false
                                             }
-                                        } catch (e: Exception) {
-                                            val errorMsg = e.message ?: "Unknown error"
-                                            lastError = errorMsg
-                                            coroutineScope.launch {
-                                                scaffoldState.snackbarHostState.showSnackbar(errorMsg)
-                                            }
-                                        } finally {
-                                            isGenerating = false
                                         }
                                     }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = GoldAccent),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isBusy
-                        ) {
-                            Text("Ignite Forge")
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = GoldAccent),
+                                modifier = Modifier.weight(1f),
+                                enabled = !isBusy
+                            ) {
+                                Text("Ignite Forge")
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (promptInput.isNotBlank() && !isBusy) {
+                                        isGenerating = true
+                                        lastError = null
+                                        currentImageUrl = ""
+                                        currentBitmap = null
+                                        beforeImageUrl = null
+                                        beforeBitmap = null
+                                        afterImageUrl = null
+                                        isComparing = false
+                                        isPolished = false
+                                        bgRemoved = false
+                                        batchCandidateUrls = emptyList()
+
+                                        coroutineScope.launch {
+                                            try {
+                                                val res = ApiClient.generate(
+                                                    prompt = promptInput,
+                                                    aspectRatio = selectedAspectRatio,
+                                                    depthIntensity = depthIntensity.toInt(),
+                                                    stylePreset = selectedStylePreset,
+                                                    batch = true
+                                                )
+                                                if (res.optString("status") == "success") {
+                                                    val imagesArray = res.optJSONArray("images")
+                                                    val urls = mutableListOf<String>()
+                                                    if (imagesArray != null) {
+                                                        for (i in 0 until imagesArray.length()) {
+                                                            urls.add(imagesArray.getString(i))
+                                                        }
+                                                    } else if (res.has("image_url")) {
+                                                        urls.add(res.getString("image_url"))
+                                                    }
+                                                    batchCandidateUrls = urls
+                                                    currentImageUrl = urls.firstOrNull() ?: ""
+                                                    currentBitmap = ApiClient.downloadImage(currentImageUrl)
+                                                    promptHistory = PromptHistoryManager.savePrompt(actualPrefs, promptInput)
+
+                                                    var currentG = sessionGallery
+                                                    var lastItemId: String? = null
+                                                    for (u in urls) {
+                                                        val (upd, item) = SessionGalleryManager.addItem(
+                                                            currentG,
+                                                            u,
+                                                            if (u == currentImageUrl) currentBitmap else null,
+                                                            "Batch"
+                                                        )
+                                                        currentG = upd
+                                                        if (lastItemId == null) lastItemId = item.id
+                                                    }
+                                                    sessionGallery = currentG
+                                                    activeGalleryItemId = lastItemId
+                                                } else {
+                                                    val errorMsg = if (ApiClient.isRateLimited(res)) {
+                                                        val serverError = res.optString("error")
+                                                        if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
+                                                            "Too many requests. Please wait before generating again."
+                                                        } else {
+                                                            serverError
+                                                        }
+                                                    } else {
+                                                        res.optString("error").ifEmpty { "Batch generation failed" }
+                                                    }
+                                                    lastError = errorMsg
+                                                    coroutineScope.launch {
+                                                        scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                val errorMsg = e.message ?: "Unknown error"
+                                                lastError = errorMsg
+                                                coroutineScope.launch {
+                                                    scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                }
+                                            } finally {
+                                                isGenerating = false
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = OrangeAccent),
+                                modifier = Modifier.weight(1f),
+                                enabled = !isBusy
+                            ) {
+                                Text("⚡ Generate ×4")
+                            }
                         }
                     } else {
                         Text("Upload a photo to convert to a depth map", color = TextSecondary, fontSize = 14.sp)
@@ -652,80 +747,181 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                             enabled = !isBusy
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                if (!isBusy) {
-                                    selectedPhotoUri?.let { uri ->
-                                        isGenerating = true
-                                        lastError = null
-                                        currentImageUrl = ""
-                                        currentBitmap = null
-                                        beforeImageUrl = null
-                                        beforeBitmap = null
-                                        afterImageUrl = null
-                                        isComparing = false
-                                        isPolished = false
-                                        bgRemoved = false
-                                        
-                                        coroutineScope.launch {
-                                            try {
-                                                val tempFile = File(context.cacheDir, "upload_temp.jpg")
-                                                context.contentResolver.openInputStream(uri)?.use { input ->
-                                                    FileOutputStream(tempFile).use { output ->
-                                                        input.copyTo(output)
-                                                    }
-                                                }
-                                                val res = ApiClient.photoToDepth(
-                                                    file = tempFile,
-                                                    aspectRatio = selectedAspectRatio,
-                                                    depthIntensity = depthIntensity.toInt(),
-                                                    stylePreset = selectedStylePreset
-                                                ) // ApiClient.photoToDepth(tempFile, selectedAspectRatio, depthIntensity.toInt()) ApiClient.photoToDepth(tempFile, selectedAspectRatio)
-                                                if (res.optString("status") == "success") {
-                                                    currentImageUrl = res.getString("image_url")
-                                                    currentBitmap = ApiClient.downloadImage(currentImageUrl)
-                                                    val (updatedGallery, newItem) = SessionGalleryManager.addItem(
-                                                        sessionGallery,
-                                                        currentImageUrl,
-                                                        currentBitmap,
-                                                        "Photo"
-                                                    )
-                                                    sessionGallery = updatedGallery
-                                                    activeGalleryItemId = newItem.id
-                                                } else {
-                                                    val errorMsg = if (ApiClient.isRateLimited(res)) {
-                                                        val serverError = res.optString("error")
-                                                        if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
-                                                            "Too many requests. Please wait before generating again."
-                                                        } else {
-                                                            serverError
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (!isBusy) {
+                                        selectedPhotoUri?.let { uri ->
+                                            isGenerating = true
+                                            lastError = null
+                                            currentImageUrl = ""
+                                            currentBitmap = null
+                                            beforeImageUrl = null
+                                            beforeBitmap = null
+                                            afterImageUrl = null
+                                            isComparing = false
+                                            isPolished = false
+                                            bgRemoved = false
+                                            batchCandidateUrls = emptyList()
+                                            
+                                            coroutineScope.launch {
+                                                try {
+                                                    val tempFile = File(context.cacheDir, "upload_temp.jpg")
+                                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                                        FileOutputStream(tempFile).use { output ->
+                                                            input.copyTo(output)
                                                         }
-                                                    } else {
-                                                        res.optString("error").ifEmpty { "Conversion failed" }
                                                     }
+                                                    val res = ApiClient.photoToDepth(
+                                                        file = tempFile,
+                                                        aspectRatio = selectedAspectRatio,
+                                                        depthIntensity = depthIntensity.toInt(),
+                                                        stylePreset = selectedStylePreset
+                                                    ) // ApiClient.photoToDepth(tempFile, selectedAspectRatio, depthIntensity.toInt()) ApiClient.photoToDepth(tempFile, selectedAspectRatio)
+                                                    if (res.optString("status") == "success") {
+                                                        currentImageUrl = res.getString("image_url")
+                                                        currentBitmap = ApiClient.downloadImage(currentImageUrl)
+                                                        val (updatedGallery, newItem) = SessionGalleryManager.addItem(
+                                                            sessionGallery,
+                                                            currentImageUrl,
+                                                            currentBitmap,
+                                                            "Photo"
+                                                        )
+                                                        sessionGallery = updatedGallery
+                                                        activeGalleryItemId = newItem.id
+                                                    } else {
+                                                        val errorMsg = if (ApiClient.isRateLimited(res)) {
+                                                            val serverError = res.optString("error")
+                                                            if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
+                                                                "Too many requests. Please wait before generating again."
+                                                            } else {
+                                                                serverError
+                                                            }
+                                                        } else {
+                                                            res.optString("error").ifEmpty { "Conversion failed" }
+                                                        }
+                                                        lastError = errorMsg
+                                                        coroutineScope.launch {
+                                                            scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    val errorMsg = e.message ?: "Error reading file"
                                                     lastError = errorMsg
                                                     coroutineScope.launch {
                                                         scaffoldState.snackbarHostState.showSnackbar(errorMsg)
                                                     }
+                                                } finally {
+                                                    isGenerating = false
                                                 }
-                                            } catch (e: Exception) {
-                                                val errorMsg = e.message ?: "Error reading file"
-                                                lastError = errorMsg
-                                                coroutineScope.launch {
-                                                    scaffoldState.snackbarHostState.showSnackbar(errorMsg)
-                                                }
-                                            } finally {
-                                                isGenerating = false
                                             }
                                         }
                                     }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = IndigoAccent),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = selectedPhotoUri != null && !isBusy
-                        ) {
-                            Text("Convert to Depth Map")
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = IndigoAccent),
+                                modifier = Modifier.weight(1f),
+                                enabled = selectedPhotoUri != null && !isBusy
+                            ) {
+                                Text("Convert to Depth Map")
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (!isBusy) {
+                                        selectedPhotoUri?.let { uri ->
+                                            isGenerating = true
+                                            lastError = null
+                                            currentImageUrl = ""
+                                            currentBitmap = null
+                                            beforeImageUrl = null
+                                            beforeBitmap = null
+                                            afterImageUrl = null
+                                            isComparing = false
+                                            isPolished = false
+                                            bgRemoved = false
+                                            batchCandidateUrls = emptyList()
+
+                                            coroutineScope.launch {
+                                                try {
+                                                    val tempFile = File(context.cacheDir, "upload_temp.jpg")
+                                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                                        FileOutputStream(tempFile).use { output ->
+                                                            input.copyTo(output)
+                                                        }
+                                                    }
+                                                    val res = ApiClient.photoToDepth(
+                                                        file = tempFile,
+                                                        aspectRatio = selectedAspectRatio,
+                                                        depthIntensity = depthIntensity.toInt(),
+                                                        stylePreset = selectedStylePreset,
+                                                        batch = true
+                                                    )
+                                                    if (res.optString("status") == "success") {
+                                                        val imagesArray = res.optJSONArray("images")
+                                                        val urls = mutableListOf<String>()
+                                                        if (imagesArray != null) {
+                                                            for (i in 0 until imagesArray.length()) {
+                                                                urls.add(imagesArray.getString(i))
+                                                            }
+                                                        } else if (res.has("image_url")) {
+                                                            urls.add(res.getString("image_url"))
+                                                        }
+                                                        batchCandidateUrls = urls
+                                                        currentImageUrl = urls.firstOrNull() ?: ""
+                                                        currentBitmap = ApiClient.downloadImage(currentImageUrl)
+
+                                                        var currentG = sessionGallery
+                                                        var lastItemId: String? = null
+                                                        for (u in urls) {
+                                                            val (upd, item) = SessionGalleryManager.addItem(
+                                                                currentG,
+                                                                u,
+                                                                if (u == currentImageUrl) currentBitmap else null,
+                                                                "Photo Batch"
+                                                            )
+                                                            currentG = upd
+                                                            if (lastItemId == null) lastItemId = item.id
+                                                        }
+                                                        sessionGallery = currentG
+                                                        activeGalleryItemId = lastItemId
+                                                    } else {
+                                                        val errorMsg = if (ApiClient.isRateLimited(res)) {
+                                                            val serverError = res.optString("error")
+                                                            if (serverError.isBlank() || serverError.startsWith("HTTP 429")) {
+                                                                "Too many requests. Please wait before generating again."
+                                                            } else {
+                                                                serverError
+                                                            }
+                                                        } else {
+                                                            res.optString("error").ifEmpty { "Batch conversion failed" }
+                                                        }
+                                                        lastError = errorMsg
+                                                        coroutineScope.launch {
+                                                            scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    val errorMsg = e.message ?: "Error reading file"
+                                                    lastError = errorMsg
+                                                    coroutineScope.launch {
+                                                        scaffoldState.snackbarHostState.showSnackbar(errorMsg)
+                                                    }
+                                                } finally {
+                                                    isGenerating = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = OrangeAccent),
+                                modifier = Modifier.weight(1f),
+                                enabled = selectedPhotoUri != null && !isBusy
+                            ) {
+                                Text("⚡ Convert ×4")
+                            }
                         }
                     }
 
@@ -830,6 +1026,25 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                         }
                     }
                 }
+            }
+
+            // Batch Candidates Grid (F13)
+            if (batchCandidateUrls.isNotEmpty() && !isGenerating && !isPolishing) {
+                Spacer(modifier = Modifier.height(16.dp))
+                BatchCandidateGrid(
+                    candidateUrls = batchCandidateUrls,
+                    selectedUrl = currentImageUrl,
+                    onSelectCandidate = { selectedUrl ->
+                        currentImageUrl = selectedUrl
+                        isComparing = false
+                        isPolished = false
+                        bgRemoved = false
+                        coroutineScope.launch {
+                            currentBitmap = ApiClient.downloadImage(selectedUrl)
+                        }
+                    },
+                    enabled = !isBusy
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -974,6 +1189,7 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                                 afterImageUrl = null
                                 isComparing = false
                                 activeGalleryItemId = null
+                                batchCandidateUrls = emptyList()
                                 isPolished = false
                                 bgRemoved = false
                                 promptInput = ""
@@ -1466,3 +1682,141 @@ fun BeforeAfterComparisonView(
         }
     }
 }
+
+@Composable
+fun BatchCandidateGrid(
+    candidateUrls: List<String>,
+    selectedUrl: String,
+    onSelectCandidate: (String) -> Unit,
+    enabled: Boolean = true
+) {
+    Card(
+        backgroundColor = CardBackground,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, GrayBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Batch Candidates (${candidateUrls.size})",
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Pick the best map to preview, polish, or export",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 2x2 grid layout
+            val rows = candidateUrls.chunked(2)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rows.forEachIndexed { rowIndex, rowUrls ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowUrls.forEachIndexed { colIndex, url ->
+                            val itemIndex = rowIndex * 2 + colIndex + 1
+                            val isSelected = (url == selectedUrl)
+                            var tileBitmap by remember(url) { mutableStateOf<Bitmap?>(null) }
+
+                            LaunchedEffect(url) {
+                                tileBitmap = ApiClient.downloadImage(url)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(120.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) GoldAccent else GrayBorder,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable(enabled = enabled) {
+                                        onSelectCandidate(url)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (tileBitmap != null) {
+                                    Image(
+                                        bitmap = tileBitmap!!.asImageBitmap(),
+                                        contentDescription = "Candidate #$itemIndex",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    CircularProgressIndicator(
+                                        color = GoldAccent,
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+
+                                // Candidate # badge
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(6.dp)
+                                        .background(
+                                            if (isSelected) GoldAccent else Color.Black.copy(alpha = 0.7f),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "#$itemIndex",
+                                        color = if (isSelected) DarkBackground else TextPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // Selected indicator checkmark
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(6.dp)
+                                            .background(GoldAccent, RoundedCornerShape(12.dp))
+                                            .size(20.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "✓",
+                                            color = DarkBackground,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        // Handle odd number of items if any
+                        if (rowUrls.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
