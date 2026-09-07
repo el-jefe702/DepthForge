@@ -8,6 +8,7 @@ import { spawn, spawnSync } from 'child_process';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
+import PQueue from 'p-queue';
 
 dotenv.config();
 
@@ -386,7 +387,14 @@ const spawnPythonProcessor = (command, args) => {
     return spawn(pythonExec, ['-u', path.join(__dirname, 'processor.py'), command, ...args], { cwd: __dirname });
 };
 
-const runPythonProcessor = (command, args) => {
+/**
+ * Feature F18: Concurrency Queue for Python Processor
+ * Serializes Python subprocess tasks (Polish, Invert, Remove BG) with concurrency: 1
+ * so simultaneous requests do not compete for system resources.
+ */
+const pythonProcessorQueue = new PQueue({ concurrency: 1 });
+
+const runPythonProcessorDirect = (command, args) => {
     return new Promise((resolve, reject) => {
         const pyProg = spawnPythonProcessor(command, args);
         
@@ -400,6 +408,15 @@ const runPythonProcessor = (command, args) => {
         });
         pyProg.on('error', (err) => reject(new Error(`Could not start Python: ${err.message}`)));
     });
+};
+
+const runPythonProcessor = (command, args) => {
+    const queueDepth = pythonProcessorQueue.size;
+    const isBusy = pythonProcessorQueue.pending > 0 || queueDepth > 0;
+    if (isBusy) {
+        console.log(`[Python Queue] Request queued for '${command}' (queue depth: ${queueDepth}, pending: ${pythonProcessorQueue.pending})`);
+    }
+    return pythonProcessorQueue.add(() => runPythonProcessorDirect(command, args));
 };
 
 /**
@@ -940,5 +957,6 @@ export {
     validateEnvironment,
     safeJsonParse,
     photoUpload,
-    uploadStorage
+    uploadStorage,
+    pythonProcessorQueue
 };
