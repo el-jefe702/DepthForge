@@ -158,37 +158,6 @@ function resetGenerationLimiter(options = {}) {
     return resetRateLimiters(options);
 }
 
-// ----------------------------------------------------------------------
-// LumenBurn API Endpoint
-// ----------------------------------------------------------------------
-import { Converter } from './lumenburn/converter.js';
-const upload = multer();
-
-app.post('/api/lumenburn/convert', upload.single('svg'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No SVG file provided.');
-    }
-    
-    try {
-        const svgContent = req.file.buffer.toString('utf-8');
-        const lbrn2Content = Converter.convertSvgToLbrn2(svgContent);
-        
-        res.setHeader('Content-Type', 'application/xml');
-        res.setHeader('Content-Disposition', 'attachment; filename="output.lbrn2"');
-        res.send(lbrn2Content);
-    } catch (err) {
-        console.error('LumenBurn Error:', err);
-        res.status(500).send('Conversion failed: ' + err.message);
-    }
-});
-
-// Serve the lumenburn UI at /lumenburn
-app.get('/lumenburn', (req, res) => {
-    res.sendFile(path.join(__dirname, 'static', 'lumenburn.html'));
-});
-
-// ----------------------------------------------------------------------
-
 // --- PROMPT ARCHITECTURE ---
 const buildImprovePrompt = (userIdea) => 
     `Act as a master CNC relief artist. User Idea: ${userIdea} ` +
