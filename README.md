@@ -153,6 +153,32 @@ node cleanup.js [dir] [ttlHours]
 
 Open **http://localhost:8000** in your browser.
 
+### Deploying to Vercel (Serverless Version)
+
+DepthForge includes native Vercel serverless deployment support configured through `vercel.json` and `api/index.js`.
+
+#### Method 1: Deploy with Vercel CLI
+```bash
+# Install Vercel CLI if not already installed
+npm install -g vercel
+
+# Test locally using Vercel Dev server
+vercel dev
+
+# Deploy to Vercel production
+vercel --prod
+```
+
+#### Method 2: Deploy via Vercel Web Dashboard (Git)
+1. Push your repository to GitHub / GitLab / Bitbucket.
+2. In the [Vercel Dashboard](https://vercel.com/dashboard), click **Add New...** → **Project**.
+3. Import your DepthForge repository.
+4. In **Project Settings** → **Environment Variables**, add:
+   - `GEMINI_API_KEY`: Your Google Gemini API Key.
+5. Click **Deploy**. Vercel will build and serve your static frontend and route API calls to the serverless function handler.
+
+*Note: In the Vercel serverless environment, generated depth maps are created in `/tmp` and served ephemerally. High-resolution Gemini 3.6 & Imagen generation, aspect ratio selection, style presets, batch candidates, and 3D live preview run completely serverless.*
+
 ---
 
 ## API Endpoints
@@ -209,8 +235,9 @@ DepthForge/
 ├── package.json                       # Node.js project manifest & script declarations
 ├── package-lock.json                  # Deterministic Node dependency lockfile
 ├── Dockerfile                         # Container definition with Node, Python, and OpenCV
-├── docker-compose.yml                 # Multi-container orchestration & healthcheck probe
-├── .env.example                       # Template for environment configuration
+├── vercel.json                        # Vercel serverless deployment & route rewrites
+├── api/                               # Vercel serverless functions
+│   └── index.js                       # Serverless entrypoint wrapping Express app
 ├── static/                            # Web frontend assets (served at /static)
 │   ├── index.html                     # Single-page web UI (Three.js, 3D preview, compare slider)
 │   └── style.css                      # Modern dark-theme responsive design system

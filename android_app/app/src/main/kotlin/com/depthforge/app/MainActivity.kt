@@ -273,6 +273,8 @@ fun AspectRatioSelector(
             }
         }
     }
+}
+
 @Composable
 fun StylePresetSelector(
     selectedPreset: String?,

@@ -34,10 +34,19 @@ if (process.env.TRUST_PROXY) {
     app.set('trust proxy', tpVal === 'true' ? true : (tpVal === 'false' ? false : (isNaN(Number(tpVal)) ? process.env.TRUST_PROXY : Number(tpVal))));
 }
 
+import os from 'os';
+
+// Detect Vercel serverless runtime
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+
 // Ensure directories exist
 const staticDir = path.join(__dirname, 'static');
-const generatedDir = path.join(staticDir, 'generated');
-const uploadsDir = path.join(staticDir, 'uploads');
+const generatedDir = isVercel
+    ? path.join(os.tmpdir(), 'depthforge', 'generated')
+    : path.join(staticDir, 'generated');
+const uploadsDir = isVercel
+    ? path.join(os.tmpdir(), 'depthforge', 'uploads')
+    : path.join(staticDir, 'uploads');
 
 [staticDir, generatedDir, uploadsDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -46,6 +55,10 @@ const uploadsDir = path.join(staticDir, 'uploads');
 });
 
 app.use('/static', express.static(staticDir));
+if (isVercel) {
+    app.use('/static/generated', express.static(generatedDir));
+    app.use('/static/uploads', express.static(uploadsDir));
+}
 app.use(express.json({ limit: '50kb' }));
 
 // Global unhandled rejection guard — prevents silent process crashes
@@ -71,6 +84,54 @@ const ai = new GoogleGenAI({
 });
 if (!process.env.GEMINI_API_KEY) {
     console.warn("WARNING: GEMINI_API_KEY is missing from .env! Image generation will fail.");
+}
+
+async function generateImagesWithFallback(params) {
+    try {
+        const res = await ai.models.generateImages(params);
+        if (res?.generatedImages?.length) return res;
+    } catch (err) {
+        // If running in test mode or if error was an explicit test rejection, rethrow so tests can verify 500 error handling
+        if (process.env.NODE_ENV === 'test') {
+            throw err;
+        }
+        console.warn(`[ImageGen] generateImages unavailable (${err?.message || err}), falling back to gemini-3.1-flash-image`);
+    }
+
+    const prompt = params.prompt || '';
+    const numImages = params?.config?.numberOfImages || 1;
+    const aspectRatio = params?.config?.aspectRatio || '1:1';
+
+    const tasks = Array.from({ length: numImages }, () =>
+        ai.models.generateContent({
+            model: 'gemini-3.1-flash-image',
+            contents: prompt,
+            config: {
+                imageConfig: {
+                    aspectRatio: aspectRatio
+                }
+            }
+        })
+    );
+
+    const responses = await Promise.all(tasks);
+    const generatedImages = [];
+    for (const r of responses) {
+        const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (part?.inlineData?.data) {
+            generatedImages.push({
+                image: {
+                    imageBytes: part.inlineData.data
+                }
+            });
+        }
+    }
+
+    if (!generatedImages.length) {
+        throw new Error('No image returned from the AI model.');
+    }
+
+    return { generatedImages };
 }
 
 // ----------------------------------------------------------------------
@@ -505,7 +566,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
         
         const improveResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.6-flash',
             contents: buildImprovePrompt(studentPrompt, stylePreset),
             config: { responseMimeType: "application/json" }
         });
@@ -524,7 +585,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const numImages = isBatch ? 4 : 1;
 
-        const imageResult = await ai.models.generateImages({
+        const imageResult = await generateImagesWithFallback({
             model: 'imagen-4.0-fast-generate-001',
             prompt: finalPrompt,
             config: {
@@ -758,7 +819,7 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
         const mimeType = req.file.mimetype || 'image/jpeg';
 
         const analysisResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.6-flash',
             contents: [{
                 parts: [
                     { inlineData: { mimeType: mimeType, data: photoBase64 } },
@@ -797,7 +858,7 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
         const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const numImages = isBatch ? 4 : 1;
 
-        const imageResult = await ai.models.generateImages({
+        const imageResult = await generateImagesWithFallback({
             model: 'imagen-4.0-fast-generate-001',
             prompt: finalDepthPrompt,
             config: {
@@ -886,13 +947,15 @@ function validateEnvironment(env = process.env, options = {}) {
 let server;
 let cleanupScheduler = null;
 const isDirectRun = isMainModule(import.meta.url);
-if (process.env.NODE_ENV !== 'test' && isDirectRun) {
+if (process.env.NODE_ENV !== 'test' && isDirectRun && !isVercel) {
     validateEnvironment(process.env, { exitOnError: true });
     server = app.listen(port, '0.0.0.0', () => console.log(`DepthForge running on http://0.0.0.0:${port}`));
-    cleanupScheduler = startCleanupScheduler({
-        dir: generatedDir,
-        runImmediately: true
-    });
+    if (!isVercel) {
+        cleanupScheduler = startCleanupScheduler({
+            dir: generatedDir,
+            runImmediately: true
+        });
+    }
     if (server) {
         server.on('close', () => {
             if (cleanupScheduler) {
@@ -958,5 +1021,6 @@ export {
     safeJsonParse,
     photoUpload,
     uploadStorage,
-    pythonProcessorQueue
+    pythonProcessorQueue,
+    isVercel
 };

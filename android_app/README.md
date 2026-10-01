@@ -36,6 +36,14 @@ Open the `android_app/` folder directly in **Android Studio**.
 ### 2. Sync and Build
 Let Gradle sync project dependencies, and build the `app` configuration.
 
+Alternatively, build the APK from the command line using the Gradle wrapper:
+```bash
+cd android_app
+gradlew.bat assembleDebug
+```
+The compiled debug APK will be generated at:
+- `android_app/app/build/outputs/apk/debug/app-debug.apk` (or top-level `depthforge-debug.apk`)
+
 ### 3. Setup Connection Address
 * **Android Emulator:** The emulator automatically routes localhost of your computer to `http://10.0.2.2:8000/`. This is the default.
 * **Physical Device:** Ensure your phone is connected to the same Wi-Fi network as your host machine. Tap the gear icon in the top-right corner of the app's landing screen and enter your computer's LAN IP address (e.g. `http://192.168.1.100:8000/`).
