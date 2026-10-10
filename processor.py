@@ -5,91 +5,110 @@ import numpy as np
 
 def smooth_image(input_path, output_path):
     # ==========================================
-    # STEP 1: LOAD & CONVERT TO 16-BIT GRAYSCALE
+    # STEP 1: LOAD & CONVERT TO FLOAT32 GRAYSCALE
     # ==========================================
-    print("[STEP 1/5] Loading image and converting to 16-bit grayscale...", flush=True)
+    print("[STEP 1/5] Loading image and converting to grayscale...", flush=True)
     raw_img = cv2.imread(input_path, cv2.IMREAD_UNCHANGED)
 
     if raw_img is None:
         print(f"Error: Could not load {input_path}", file=sys.stderr, flush=True)
         sys.exit(1)
 
-    if raw_img.dtype == np.uint16:
-        if len(raw_img.shape) == 3:
-            img_16bit = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY if raw_img.shape[2] == 3 else cv2.COLOR_BGRA2GRAY)
-        else:
-            img_16bit = raw_img
+    # Convert to single-channel grayscale if needed
+    if len(raw_img.shape) == 3:
+        if raw_img.shape[2] == 3:
+            raw_img = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
+        elif raw_img.shape[2] == 4:
+            raw_img = cv2.cvtColor(raw_img, cv2.COLOR_BGRA2GRAY)
+
+    # Record the source bit depth
+    if raw_img.dtype == np.uint8:
+        src_bits = 8
+        max_val = 255.0
+    elif raw_img.dtype == np.uint16:
+        src_bits = 16
+        max_val = 65535.0
     else:
-        if len(raw_img.shape) == 3:
-            img_8bit = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY if raw_img.shape[2] == 3 else cv2.COLOR_BGRA2GRAY)
+        # Handle other dtypes by converting to uint16 or uint8
+        if np.issubdtype(raw_img.dtype, np.integer):
+            info = np.iinfo(raw_img.dtype)
+            max_val = float(info.max)
+            src_bits = 16 if max_val > 255 else 8
         else:
-            img_8bit = raw_img
-        # Upscale from 8-bit (0-255) to 16-bit (0-65535)
-        # Multiplying by 257 correctly maps 255 to 65535
-        img_16bit = (img_8bit.astype(np.uint32) * 257).astype(np.uint16)
+            # Assume float in [0, 1]
+            max_val = 1.0
+            src_bits = 16
+
+    # Convert to float32 in [0, 1]
+    float_depth = raw_img.astype(np.float32) / max_val
 
     # ==========================================
-    # STEP 2: CLEAN UP MISSING DATA (INPAINTING)
+    # STEP 2: FILL HOLES (INPAINTING)
     # ==========================================
     print("[STEP 2/5] Identifying and cleaning up missing data (inpainting)...", flush=True)
+    
     # Build a mask of the foreground region (any non-zero pixel is subject matter).
     # We only want to inpaint holes *within* the subject, not the intentional
     # pure-black background. Dilate the foreground to establish its bounding region,
     # then find pixels that are zero *inside* that region — those are the real holes.
-    fg_mask = (img_16bit > 0).astype(np.uint8)
+    fg_mask = (float_depth > 0).astype(np.uint8)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
     fg_dilated = cv2.dilate(fg_mask, kernel, iterations=3)
     # Holes are pixels that are zero AND inside the dilated foreground region
-    missing_mask = ((img_16bit == 0) & (fg_dilated > 0)).astype(np.uint8)
+    missing_mask = ((float_depth == 0) & (fg_dilated > 0)).astype(np.uint8)
 
-    # Close minor holes using morphological operations
-    struct_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    cleaned_16bit = cv2.morphologyEx(img_16bit, cv2.MORPH_CLOSE, struct_kernel)
-
-    # If large holes exist, downscale mask to 8-bit to use OpenCV's inpaint
     if np.any(missing_mask):
         print("Large missing data holes detected; applying telea inpainting...", flush=True)
-        # Convert temporarily to 8-bit for cv2.inpaint compatibility
-        tmp_8bit = (cleaned_16bit // 257).astype(np.uint8)
+        # Convert float to temporary uint8 for inpainting
+        tmp_8bit = (float_depth * 255.0).astype(np.uint8)
         inpainted_8bit = cv2.inpaint(tmp_8bit, missing_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
-        # Convert back to 16-bit
-        cleaned_16bit = (inpainted_8bit.astype(np.uint32) * 257).astype(np.uint16)
+        # Copy only the filled hole pixels back into the float array
+        filled_mask = missing_mask > 0
+        float_depth[filled_mask] = inpainted_8bit[filled_mask].astype(np.float32) / 255.0
 
     # ==========================================
-    # STEP 3: SPATIAL FILTERING (FIX BANDING)
+    # STEP 3: SPATIAL FILTERING (SMOOTH GRADIENTS)
     # ==========================================
-    print("[STEP 3/5] Applying bilateral spatial filtering to fix banding while preserving edges...", flush=True)
-    # OpenCV bilateralFilter does not support uint16 natively. 
-    # Convert to float32 first to perform precise mathematical smoothing.
-    float_depth = cleaned_16bit.astype(np.float32)
-
-    # Bilateral filter clears banding but keeps sharp edges
-    # d=9 (pixel neighborhood), sigmaColor=5000 (intensity variation), sigmaSpace=5 (coordinate space)
-    filtered_float = cv2.bilateralFilter(float_depth, d=9, sigmaColor=5000.0, sigmaSpace=5.0)
-
-    print("Applying Gaussian blur to smooth micro-textures...", flush=True)
+    print("[STEP 3/5] Applying bilateral spatial filtering to smooth while preserving edges...", flush=True)
+    
+    # Scale float32 [0, 1] to [0, 65535] for bilateral filter
+    # (bilateralFilter works on intensity; scaling makes sigmaColor easier to reason about)
+    scaled_depth = float_depth * 65535.0
+    
+    # Bilateral filter: d=9 (pixel neighborhood), sigmaColor=5000 (intensity variation),
+    # sigmaSpace=5 (coordinate space). This smooths gradients while preserving edges.
+    filtered_scaled = cv2.bilateralFilter(scaled_depth, d=9, sigmaColor=5000.0, sigmaSpace=5.0)
+    
     # Optional minor Gaussian blur to smooth any micro-textures
-    filtered_float = cv2.GaussianBlur(filtered_float, (3, 3), 0)
+    print("Applying Gaussian blur to smooth micro-textures...", flush=True)
+    filtered_scaled = cv2.GaussianBlur(filtered_scaled, (3, 3), 0)
+    
+    # Scale back to [0, 1]
+    filtered_float = filtered_scaled / 65535.0
 
     # ==========================================
     # STEP 4: NORMALIZE THE DEPTH RANGE
     # ==========================================
-    print("[STEP 4/5] Stretching depth values to normalize full 16-bit range...", flush=True)
+    print("[STEP 4/5] Normalizing depth values to full 16-bit range...", flush=True)
+    
     # Find the lowest and highest values in the filtered image
-    min_val, max_val, _, _ = cv2.minMaxLoc(filtered_float)
+    min_val = np.min(filtered_float)
+    max_val = np.max(filtered_float)
 
-    # Stretch the values to fill the exact 16-bit range (0 to 65535)
+    # Stretch the values to fill the full [0, 1] range
     if max_val > min_val:
-        normalized_float = (filtered_float - min_val) * (65535.0 / (max_val - min_val))
+        normalized_float = (filtered_float - min_val) / (max_val - min_val)
     else:
         normalized_float = filtered_float
-
-    final_16bit = normalized_float.astype(np.uint16)
 
     # ==========================================
     # STEP 5: EXPORT AS LOSSLESS 16-BIT PNG
     # ==========================================
     print(f"[STEP 5/5] Exporting processed 16-bit PNG to {output_path}...", flush=True)
+    
+    # Quantize float32 [0, 1] to uint16 [0, 65535]
+    final_16bit = (normalized_float * 65535.0).astype(np.uint16)
+    
     # Explicitly use compression parameters for maximum file safety
     cv2.imwrite(output_path, final_16bit, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
