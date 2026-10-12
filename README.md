@@ -75,10 +75,11 @@ With `PORT=8000`, open `http://localhost:8000`.
 
 ## VPS deployment with Docker Compose
 
-Set the real `.env` on the VPS host before starting the service. This branch's Compose file reads `GEMINI_API_KEY` from the host environment and fails fast if it is missing or empty.
+Before starting Compose, set a nonempty `GEMINI_API_KEY` in the VPS host's `.env` file or export it in the shell. The `.env` created in Local setup contains an empty placeholder: replace it with your real key first. Do not commit the key. Compose requires this variable at configuration time and will reject a missing or empty value. A shell-exported value takes precedence over `.env`, so check that it is the intended key. Docker Compose v2.24+ is required for this branch's optional `env_file` syntax.
 
 ```bash
-export GEMINI_API_KEY="your_key_here"
+# After setting GEMINI_API_KEY in the VPS host's .env (or exporting it):
+docker compose config --quiet
 docker compose up --build -d
 docker compose ps
 docker compose logs --tail=100 depthforge
@@ -87,28 +88,21 @@ curl --fail http://localhost:8000/api/health
 
 Put a TLS reverse proxy in front of the service for public access. Restrict direct access to port 8000 according to your VPS firewall and proxy arrangement. Configure `TRUST_PROXY` to match the actual trusted proxy chain rather than leaving it unset.
 
-### Environment persistence changes in PR #3
+### Environment and persistence on this branch
 
-PR #3 is separate from this branch. Once merged, it adds:
+The current `docker-compose.yaml` uses an optional host `.env` via `env_file`, explicitly requires a nonempty `GEMINI_API_KEY` from Compose interpolation, and sets `SUBSCRIPTIONS_DB_PATH` to `/app/data/subscriptions.db`. It mounts named `generated_data` and `app_data` volumes. An optional `env_file` does not make the API key optional. The repository does not currently include `.env.example`; `.gitignore` ignores `.env` but does not have broader `.env`-variant rules.
 
-- `.env.example` as a secret-free template.
-- Compose `env_file` loading from the host, with optional-file syntax requiring Docker Compose v2.24+.
-- A named `app_data` volume at `/app/data` for the subscription database.
-- Ignore rules for `.env` variants.
-
-Do not assume these changes are present merely because this README was merged. The original Compose file only forwards selected variables; additional host `.env` settings are not automatically passed into the container.
-
-With PR #3 merged, recreate the service after editing `.env`:
+After changing `.env`, recreate the service so the container receives the new values:
 
 ```bash
 docker compose up -d --force-recreate depthforge
 ```
 
-Image rebuilds do not update or delete a host-side `.env`. A new clone does not include secrets: restore the host file from your secure backup. Avoid overwrite commands such as `echo ... > .env` or unconditional copying of the template.
+Image rebuilds do not update or delete a host-side `.env`. A new clone does not include secrets: restore the host file from your secure backup. Avoid overwrite commands such as `echo ... > .env` or unconditional copying of a template.
 
 ### Persistent data and backups
 
-The `generated_data` volume stores `/app/static/generated`. Generated files remain subject to `GENERATED_TTL_HOURS` cleanup: persistence does not disable expiration. PR #3 adds `app_data` for `/app/data`. Uploads are not currently mounted on a persistent volume.
+The `generated_data` volume stores `/app/static/generated`. Generated files remain subject to `GENERATED_TTL_HOURS` cleanup: persistence does not disable expiration. The `app_data` volume stores `/app/data` for the subscription database path configured by Compose; this does not imply that PR #2's subscription module is present or wired into the app. Uploads are not currently mounted on a persistent volume.
 
 Keep secure backups of `.env` and persistent data. Do not run `docker compose down -v` unless you intend to delete named volumes. These changes do not recover secrets or data already lost.
 
@@ -123,7 +117,7 @@ Keep secure backups of `.env` and persistent data. Do not run `docker compose do
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Generation rate-limit window in milliseconds. |
 | `RATE_LIMIT_MAX` | `10` | Requests per IP per window. |
 | `TRUST_PROXY` | Disabled | Trusted proxy configuration for client IP handling. |
-| `SUBSCRIPTIONS_DB_PATH` | `./data/subscriptions.db` in PR #2 | SQLite location; PR #3 sets `/app/data/subscriptions.db` in Compose. |
+| `SUBSCRIPTIONS_DB_PATH` | `/app/data/subscriptions.db` in Compose | SQLite path reserved for the separate PR #2 subscription module, which is not present on this branch. |
 
 ## Dependencies
 
@@ -176,7 +170,7 @@ DepthForge/
   package-lock.json                 Node dependency lockfile
   requirements.txt                  Python dependencies
   Dockerfile                        Container build
-  docker-compose.yaml               VPS service and generated-data volume
+  docker-compose.yaml               VPS service and generated-data/app-data volumes
   static/                           Browser UI assets
   tests/                            Node test suites
     readme_verification.test.js      Documentation checks
@@ -193,4 +187,4 @@ Documentation updates are not proof of a successful build or deployment. The rec
 
 ## License
 
-See `LICENSE`. SLCreations, LLC, 2026.
+Proprietary software. Copyright (c) 2026 SpatialOps, LLC. All rights reserved. See `LICENSE` for terms, including third-party components and previously distributed versions.
