@@ -7,6 +7,7 @@ on:
       - 'db/**'
       - 'tests/migrations.test.js'
       - 'tests/ledger-schema.test.js'
+      - 'tests/credits.test.js'
       - 'package*.json'
       - '.github/workflows/migration-tests.yml'
 permissions:
@@ -22,5 +23,5 @@ jobs:
           node-version: '22'
       - name: Install dependencies (lockfile update still pending)
         run: npm install --no-audit --no-fund
-      - name: Run migration and ledger schema suites
-        run: node --test tests/migrations.test.js tests/ledger-schema.test.js
+      - name: Run database suites
+        run: node --test tests/migrations.test.js tests/ledger-schema.test.js tests/credits.test.js
