@@ -1,5 +1,5 @@
 # Use Node.js 20 on Debian Bullseye Slim as base image
-FROM node:20-bullseye-slim
+FROM node:22-bookworm-slim
 
 # Set working directory
 WORKDIR /app
@@ -27,7 +27,7 @@ RUN npm ci || npm install
 COPY requirements.txt ./
 
 # Install Python modules
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends python3-venv && python3 -m venv /opt/depthforge-venv && /opt/depthforge-venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
@@ -38,3 +38,4 @@ EXPOSE 8080
 
 # Command to run the application
 CMD ["npm", "start"]
+ENV PATH="/opt/depthforge-venv/bin:$PATH"
