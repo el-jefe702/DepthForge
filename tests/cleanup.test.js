@@ -149,7 +149,7 @@ describe('Automatic Generated File Cleanup (F8) - Unit & Integration Tests', () 
 
     describe('3. File Purging and Preservation Mechanics', () => {
         test('purges files older than TTL and preserves files within TTL threshold', async () => {
-            const now = Date.now();
+            const now = Math.floor(Date.now() / 1000) * 1000;
             const hourMs = 60 * 60 * 1000;
 
             const files = [
