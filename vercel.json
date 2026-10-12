@@ -1,0 +1,4 @@
+{
+  "deprecated": true,
+  "message": "DepthForge is deployed on a VPS, not Vercel. This legacy configuration file is intentionally retired."
+}
