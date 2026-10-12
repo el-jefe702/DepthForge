@@ -5,6 +5,7 @@ on:
     paths: ['.github/workflows/refresh-lockfile.yml']
 permissions:
   contents: write
+  workflows: write
 jobs:
   refresh:
     runs-on: ubuntu-latest
