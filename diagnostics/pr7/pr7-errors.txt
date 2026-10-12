@@ -1,0 +1,468 @@
+792-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5802024Z         1..8
+793-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5830838Z     ok 2 - 2. TTL Validation & Fallback Logic (parseTtlHours)
+794-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5861885Z       ---
+795-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5862574Z       duration_ms: 5.796537
+796-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5876352Z       type: 'suite'
+797-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5902537Z       ...
+798-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5932595Z     # Subtest: 3. File Purging and Preservation Mechanics
+799-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5962353Z         # Subtest: purges files older than TTL and preserves files within TTL threshold
+800:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5963743Z         not ok 1 - purges files older than TTL and preserves files within TTL threshold
+801-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.5991875Z           ---
+802-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6022021Z           duration_ms: 63.490537
+803-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6039364Z           location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:151:9'
+804-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6062079Z           failureType: 'testCodeFailure'
+805-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6082106Z           error: |-
+806-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6092015Z             Expected values to be strictly equal:
+807-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6122071Z             
+808-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6151959Z             4 !== 3
+809-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6172019Z             
+810-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6182021Z           code: 'ERR_ASSERTION'
+811:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6183451Z           name: 'AssertionError'
+812-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6211944Z           expected: 3
+813-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6233646Z           actual: 4
+814-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6256839Z           operator: 'strictEqual'
+815-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6257708Z           stack: |-
+816-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6258961Z             TestContext.<anonymous> (file:///home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:181:20)
+817-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6260472Z             async Test.run (node:internal/test_runner/test:797:9)
+818-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6261800Z             async Promise.all (index 0)
+819-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6262673Z             async Suite.run (node:internal/test_runner/test:1135:7)
+820-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6263744Z             async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+821-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6264631Z           ...
+822-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6265455Z         # Subtest: respects custom ttlHours parameter (e.g. 12 hours)
+823-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6266595Z         ok 2 - respects custom ttlHours parameter (e.g. 12 hours)
+824-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6267443Z           ---
+825-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6268119Z           duration_ms: 10.086345
+826-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6268768Z           ...
+827-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6269746Z         # Subtest: synchronous API cleanupGeneratedFilesSync performs identical purging
+828-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6271141Z         ok 3 - synchronous API cleanupGeneratedFilesSync performs identical purging
+829-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6272477Z           ---
+830-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6273125Z           duration_ms: 1.605955
+831-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6273760Z           ...
+832-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6275028Z         # Subtest: strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+833-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6277013Z         ok 4 - strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+834-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6278295Z           ---
+835-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6278913Z           duration_ms: 12.056623
+836-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6279560Z           ...
+837-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6280667Z         1..4
+838:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6281759Z     not ok 3 - 3. File Purging and Preservation Mechanics
+839-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6282568Z       ---
+840-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6283174Z       duration_ms: 90.6643
+841-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6283954Z       type: 'suite'
+842-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6284960Z       location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:150:5'
+843-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6286034Z       failureType: 'subtestsFailed'
+844-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6286832Z       error: '1 subtest failed'
+845-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6287576Z       code: 'ERR_TEST_FAILURE'
+846-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6288216Z       ...
+847-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6288920Z     # Subtest: 4. Directory Edge Cases & Robustness
+848-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6290087Z         # Subtest: handles missing directory gracefully without throwing or crashing
+849-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6291615Z         ok 1 - handles missing directory gracefully without throwing or crashing
+850-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6292546Z           ---
+851-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6293148Z           duration_ms: 10.52177
+852-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6293810Z           ...
+853-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6294607Z         # Subtest: handles empty directory cleanly without errors
+854-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6295638Z         ok 2 - handles empty directory cleanly without errors
+855-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6296359Z           ---
+856-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6296943Z           duration_ms: 5.78189
+857-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6297536Z           ...
+858-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6298568Z         # Subtest: ignores subdirectories and non-file artifacts without descending or deleting them
+859-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6300107Z         ok 3 - ignores subdirectories and non-file artifacts without descending or deleting them
+860-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6301428Z           ---
+861-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6302109Z           duration_ms: 1.796241
+862-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6302769Z           ...
+863-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6303680Z         # Subtest: falls back to defaultGeneratedDir when dir is omitted, null, or empty
+864-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6305078Z         ok 4 - falls back to defaultGeneratedDir when dir is omitted, null, or empty
+865-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6306047Z           ---
+866-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6306718Z           duration_ms: 3.355289
+867-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6307738Z           ...
+868-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6308786Z         # Subtest: handles targetDir pointing to a regular file instead of directory without crashing
+869-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6310320Z         ok 5 - handles targetDir pointing to a regular file instead of directory without crashing
+870-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6311642Z           ---
+871-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6312298Z           duration_ms: 1.790181
+872-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6312970Z           ...
+873-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6313950Z         # Subtest: handles non-finite or invalid now timestamp falling back to Date.now()
+874-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6315336Z         ok 6 - handles non-finite or invalid now timestamp falling back to Date.now()
+875-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6316305Z           ---
+876-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6316954Z           duration_ms: 2.300736
+877-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6317612Z           ...
+878-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6318775Z         # Subtest: explicit ttlHours: null falls back to default 24h even if process.env.GENERATED_TTL_HOURS is set
+879-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6320493Z         ok 7 - explicit ttlHours: null falls back to default 24h even if process.env.GENERATED_TTL_HOURS is set
+880-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6321977Z           ---
+881-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6322633Z           duration_ms: 4.011066
+882-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6323286Z           ...
+883-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:18.6324206Z         # Subtest: supports now passed as a Date object in both async and sync APIs
+--
+1039-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8777833Z           ...
+1040-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8778152Z         1..7
+1041-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8778696Z     ok 10 - 10. Server Startup Integration & CLI Direct Execution
+1042-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8779293Z       ---
+1043-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8779706Z       duration_ms: 1347.384516
+1044-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8780154Z       type: 'suite'
+1045-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8780488Z       ...
+1046-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8780974Z     1..10
+1047:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8781964Z not ok 4 - Automatic Generated File Cleanup (F8) - Unit & Integration Tests
+1048-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8782728Z   ---
+1049-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8783112Z   duration_ms: 1850.515702
+1050-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8783601Z   type: 'suite'
+1051-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8784350Z   location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:32:1'
+1052-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8785227Z   failureType: 'subtestsFailed'
+1053-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8785838Z   error: '1 subtest failed'
+1054-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8786309Z   code: 'ERR_TEST_FAILURE'
+1055-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.8786897Z   ...
+1056-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9030995Z # Subtest: Side-by-Side Comparison View (F7) - Unit & Integration Tests
+1057-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9083108Z     # Subtest: 1. Web UI & Assets Parity
+1058-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9132927Z         # Subtest: index.html is identical byte-for-byte between static/ and android assets
+1059-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9175242Z         ok 1 - index.html is identical byte-for-byte between static/ and android assets
+1060-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9202209Z           ---
+1061-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9226790Z           duration_ms: 1.046969
+1062-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9256759Z           ...
+1063-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9292868Z         # Subtest: style.css is identical byte-for-byte between static/ and android assets
+1064-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9314874Z         ok 2 - style.css is identical byte-for-byte between static/ and android assets
+1065-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9342719Z           ---
+1066-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9343657Z           duration_ms: 0.211255
+1067-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9344418Z           ...
+1068-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9345285Z         # Subtest: HTML contains comparison view container, wrapper, images, labels, and handle
+1069-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9346305Z         ok 3 - HTML contains comparison view container, wrapper, images, labels, and handle
+1070-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9346939Z           ---
+1071-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9347492Z           duration_ms: 0.248365
+1072-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9348009Z           ...
+1073-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9348790Z         # Subtest: HTML clearly labels Before and After with accessible indicators
+1074-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9350108Z         ok 4 - HTML clearly labels Before and After with accessible indicators
+1075-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9351033Z           ---
+1076-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9351933Z           duration_ms: 0.189876
+1077-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9352769Z           ...
+1078-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9353705Z         # Subtest: Comparison slider handle includes slider accessibility attributes
+1079-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9354958Z         ok 5 - Comparison slider handle includes slider accessibility attributes
+1080-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9355864Z           ---
+1081-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9356282Z           duration_ms: 0.171471
+1082-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9356692Z           ...
+1083-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9357618Z         # Subtest: CSS contains all required styling classes for comparison view and controls
+1084-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9358895Z         ok 6 - CSS contains all required styling classes for comparison view and controls
+1085-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9359665Z           ---
+1086-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9359901Z           duration_ms: 0.220673
+1087-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9360135Z           ...
+1088-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9360747Z         # Subtest: CSS includes clip-path and hardware-accelerated positioning for smooth reveal
+1089-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9361765Z         ok 7 - CSS includes clip-path and hardware-accelerated positioning for smooth reveal
+1090-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9363045Z           ---
+1091-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9363614Z           duration_ms: 0.172293
+1092-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:19.9364766Z           ...
+--
+2278-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3408530Z     1..2
+2279-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3409148Z ok 12 - Multer UUID Filenames with Extension (Feature F16) - Tests
+2280-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3409751Z   ---
+2281-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3410100Z   duration_ms: 149.522773
+2282-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3410483Z   type: 'suite'
+2283-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3410802Z   ...
+2284-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3411836Z # Subtest: processor.py Step Comments & Order (Feature F17) - Unit Tests
+2285-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3412740Z     # Subtest: processor.py exists and contains step comment banners
+2286:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3413587Z     not ok 1 - processor.py exists and contains step comment banners
+2287-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3414458Z       ---
+2288-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3414799Z       duration_ms: 13.339653
+2289-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3415616Z       location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:15:5'
+2290-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3416462Z       failureType: 'testCodeFailure'
+2291-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3416916Z       error: |-
+2292-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3417384Z         The expression evaluated to a falsy value:
+2293-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3417880Z         
+2294-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3418513Z           assert.ok(content.includes('STEP 1: LOAD & CONVERT TO 16-BIT GRAYSCALE'))
+2295-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3419197Z         
+2296-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3419549Z       code: 'ERR_ASSERTION'
+2297:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3419983Z       name: 'AssertionError'
+2298-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3420420Z       expected: true
+2299-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3420815Z       actual: false
+2300-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3421451Z       operator: '=='
+2301-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3421861Z       stack: |-
+2302-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3422820Z         TestContext.<anonymous> (file:///home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:17:16)
+2303-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3423889Z         Test.runInAsyncScope (node:async_hooks:206:9)
+2304-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3424577Z         Test.run (node:internal/test_runner/test:796:25)
+2305-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3425262Z         Test.start (node:internal/test_runner/test:702:17)
+2306-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3425900Z         node:internal/test_runner/test:1133:71
+2307-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3426523Z         node:internal/per_context/primordials:482:82
+2308-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3427100Z         new Promise (<anonymous>)
+2309-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3427794Z         new SafePromise (node:internal/per_context/primordials:450:29)
+2310-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3428559Z         node:internal/per_context/primordials:482:9
+2311-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3429138Z         Array.map (<anonymous>)
+2312-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3429551Z       ...
+2313-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3430311Z     # Subtest: step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+2314-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3431958Z     ok 2 - step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+2315-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3432755Z       ---
+2316-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3433106Z       duration_ms: 0.276528
+2317-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3433503Z       ...
+2318-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3434161Z     # Subtest: print statements match step sequence [STEP 1/5] through [STEP 5/5]
+2319-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3435175Z     ok 3 - print statements match step sequence [STEP 1/5] through [STEP 5/5]
+2320-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3435845Z       ---
+2321-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3436180Z       duration_ms: 0.307205
+2322-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3436563Z       ...
+2323-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3436863Z     1..3
+2324:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3437510Z not ok 13 - processor.py Step Comments & Order (Feature F17) - Unit Tests
+2325-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3438140Z   ---
+2326-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3438477Z   duration_ms: 15.901708
+2327-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3438859Z   type: 'suite'
+2328-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3439607Z   location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:11:1'
+2329-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3440449Z   failureType: 'subtestsFailed'
+2330-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3440903Z   error: '1 subtest failed'
+2331-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3441658Z   code: 'ERR_TEST_FAILURE'
+2332-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3442061Z   ...
+2333-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3442677Z # Subtest: Prompt History Feature (F3) - Unit & Integration Tests
+2334-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3443371Z     # Subtest: 1. Web UI & Assets Parity
+2335-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3444111Z         # Subtest: index.html is identical between static/ and android assets
+2336-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3444994Z         ok 1 - index.html is identical between static/ and android assets
+2337-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3445632Z           ---
+2338-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3446026Z           duration_ms: 1.335359
+2339-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3446445Z           ...
+2340-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3447059Z         # Subtest: style.css is identical between static/ and android assets
+2341-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3447963Z         ok 2 - style.css is identical between static/ and android assets
+2342-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3448598Z           ---
+2343-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3449006Z           duration_ms: 0.233988
+2344-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3449427Z           ...
+2345-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3450211Z         # Subtest: HTML contains prompt history container, select dropdown, list, and clear button
+2346-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3451917Z         ok 3 - HTML contains prompt history container, select dropdown, list, and clear button
+2347-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3452750Z           ---
+2348-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3453147Z           duration_ms: 0.325038
+2349-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3453559Z           ...
+2350-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3454060Z         # Subtest: CSS contains classes for prompt history UI
+2351-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3454772Z         ok 4 - CSS contains classes for prompt history UI
+2352-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3455311Z           ---
+2353-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3455699Z           duration_ms: 0.265487
+2354-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3456109Z           ...
+2355-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3456434Z         1..4
+2356-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3456833Z     ok 1 - 1. Web UI & Assets Parity
+2357-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3457278Z       ---
+2358-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3457610Z       duration_ms: 5.918366
+2359-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3458012Z       type: 'suite'
+2360-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3458359Z       ...
+2361-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3459062Z     # Subtest: 2. Client-side Prompt History Logic & Storage Contract
+2362-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3459944Z         # Subtest: uses exact localStorage key "depthforge_prompt_history"
+2363-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3460827Z         ok 1 - uses exact localStorage key "depthforge_prompt_history"
+2364-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3461838Z           ---
+2365-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3462259Z           duration_ms: 0.934989
+2366-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3462658Z           ...
+2367-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3463160Z         # Subtest: returns empty array when history is not set
+2368-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3463888Z         ok 2 - returns empty array when history is not set
+2369-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.3464433Z           ---
+--
+3738-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4079724Z # skipped 0
+3739-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4079808Z # todo 0
+3740-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4079925Z # duration_ms 7818.940673
+3741-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4093082Z ##[error]Process completed with exit code 1.
+3742-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4165181Z ##[group]Run echo '## Test results' >> "$GITHUB_STEP_SUMMARY"
+3743-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4165410Z ^[[36;1mecho '## Test results' >> "$GITHUB_STEP_SUMMARY"^[[0m
+3744-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4165570Z ^[[36;1mcat tested-commit.txt >> "$GITHUB_STEP_SUMMARY"^[[0m
+3745-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4165675Z ^[[36;1mif [ -f node-tests.log ]; then^[[0m
+3746:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166157Z ^[[36;1m  grep -Ein -B 5 -A 30 'not ok|AssertionError|ModuleNotFoundError|TypeError|ReferenceError|SyntaxError' node-tests.log > test-errors.txt || true^[[0m
+3747-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166251Z ^[[36;1m  cat test-errors.txt^[[0m
+3748-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166377Z ^[[36;1m  echo '```text' >> "$GITHUB_STEP_SUMMARY"^[[0m
+3749-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166546Z ^[[36;1m  tail -n 30 node-tests.log >> "$GITHUB_STEP_SUMMARY"^[[0m
+3750-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166673Z ^[[36;1m  cat test-errors.txt >> "$GITHUB_STEP_SUMMARY"^[[0m
+3751-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166785Z ^[[36;1m  echo '```' >> "$GITHUB_STEP_SUMMARY"^[[0m
+3752-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4166859Z ^[[36;1mfi^[[0m
+3753-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4232936Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+3754-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233036Z env:
+3755-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233221Z   GEMINI_API_KEY: ci-placeholder-not-a-real-api-key
+3756-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233391Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.17/x64
+3757-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233612Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib/pkgconfig
+3758-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233781Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3759-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4233945Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3760-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4234108Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3761-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4234287Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib
+3762-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4234484Z   PYTHON_EXEC: /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+3763-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4234584Z ##[endgroup]
+3764-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4376684Z 471-      duration_ms: 5.796537
+3765-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4376967Z 472-      type: 'suite'
+3766-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4377160Z 473-      ...
+3767-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4377746Z 474-    # Subtest: 3. File Purging and Preservation Mechanics
+3768-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4378278Z 475-        # Subtest: purges files older than TTL and preserves files within TTL threshold
+3769:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4378771Z 476:        not ok 1 - purges files older than TTL and preserves files within TTL threshold
+3770-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4378911Z 477-          ---
+3771-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4379117Z 478-          duration_ms: 63.490537
+3772-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4379662Z 479-          location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:151:9'
+3773-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4379905Z 480-          failureType: 'testCodeFailure'
+3774-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380073Z 481-          error: |-
+3775-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380341Z 482-            Expected values to be strictly equal:
+3776-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380463Z 483-            
+3777-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380608Z 484-            4 !== 3
+3778-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380722Z 485-            
+3779-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4380925Z 486-          code: 'ERR_ASSERTION'
+3780:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4381127Z 487:          name: 'AssertionError'
+3781-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4381495Z 488-          expected: 3
+3782-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4381640Z 489-          actual: 4
+3783-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4381850Z 490-          operator: 'strictEqual'
+3784-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4381991Z 491-          stack: |-
+3785-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4382695Z 492-            TestContext.<anonymous> (file:///home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:181:20)
+3786-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4383050Z 493-            async Test.run (node:internal/test_runner/test:797:9)
+3787-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4383284Z 494-            async Promise.all (index 0)
+3788-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4383645Z 495-            async Suite.run (node:internal/test_runner/test:1135:7)
+3789-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4384393Z 496-            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+3790-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4384530Z 497-          ...
+3791-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4384918Z 498-        # Subtest: respects custom ttlHours parameter (e.g. 12 hours)
+3792-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4385265Z 499-        ok 2 - respects custom ttlHours parameter (e.g. 12 hours)
+3793-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4385585Z 500-          ---
+3794-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4385791Z 501-          duration_ms: 10.086345
+3795-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4385920Z 502-          ...
+3796-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4386449Z 503-        # Subtest: synchronous API cleanupGeneratedFilesSync performs identical purging
+3797-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4386905Z 504-        ok 3 - synchronous API cleanupGeneratedFilesSync performs identical purging
+3798-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4387026Z 505-          ---
+3799-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4387207Z 506-          duration_ms: 1.605955
+3800-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4387370Z 507-          ...
+3801-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4388134Z 508-        # Subtest: strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+3802-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4388859Z 509-        ok 4 - strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+3803-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4388982Z 510-          ---
+3804-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389163Z 511-          duration_ms: 12.056623
+3805-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389282Z 512-          ...
+3806-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389391Z 513-        1..4
+3807:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389682Z 514:    not ok 3 - 3. File Purging and Preservation Mechanics
+3808-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389796Z 515-      ---
+3809-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4389971Z 516-      duration_ms: 90.6643
+3810-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4390102Z 517-      type: 'suite'
+3811-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4390570Z 518-      location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:150:5'
+3812-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4390772Z 519-      failureType: 'subtestsFailed'
+3813-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4390950Z 520-      error: '1 subtest failed'
+3814-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4391270Z 521-      code: 'ERR_TEST_FAILURE'
+3815-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4391393Z 522-      ...
+3816-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4391650Z 523-    # Subtest: 4. Directory Edge Cases & Robustness
+3817-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4392084Z 524-        # Subtest: handles missing directory gracefully without throwing or crashing
+3818-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4392485Z 525-        ok 1 - handles missing directory gracefully without throwing or crashing
+3819-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4392610Z 526-          ---
+3820-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4392790Z 527-          duration_ms: 10.52177
+3821-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4392906Z 528-          ...
+3822-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4393232Z 529-        # Subtest: handles empty directory cleanly without errors
+3823-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4393531Z 530-        ok 2 - handles empty directory cleanly without errors
+3824-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4393653Z 531-          ---
+3825-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4393836Z 532-          duration_ms: 5.78189
+3826-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4393962Z 533-          ...
+3827-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4394497Z 534-        # Subtest: ignores subdirectories and non-file artifacts without descending or deleting them
+3828-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4395003Z 535-        ok 3 - ignores subdirectories and non-file artifacts without descending or deleting them
+3829-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4395129Z 536-          ---
+3830-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4395303Z 537-          duration_ms: 1.796241
+3831-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4395427Z 538-          ...
+3832-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4395876Z 539-        # Subtest: falls back to defaultGeneratedDir when dir is omitted, null, or empty
+3833-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4396293Z 540-        ok 4 - falls back to defaultGeneratedDir when dir is omitted, null, or empty
+3834-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4396414Z 541-          ---
+3835-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4396585Z 542-          duration_ms: 3.355289
+3836-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4396708Z 543-          ...
+3837-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397122Z 544-        # Subtest: handles targetDir pointing to a regular file instead of directory without crashing
+3838-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397208Z --
+3839-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397298Z 718-      ---
+3840-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397441Z 719-      duration_ms: 1347.384516
+3841-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397544Z 720-      type: 'suite'
+3842-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397630Z 721-      ...
+3843-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4397860Z 722-    1..10
+3844:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4398190Z 723:not ok 4 - Automatic Generated File Cleanup (F8) - Unit & Integration Tests
+3845-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4398276Z 724-  ---
+3846-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4398413Z 725-  duration_ms: 1850.515702
+3847-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4398517Z 726-  type: 'suite'
+3848-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399004Z 727-  location: '/home/runner/work/DepthForge/DepthForge/tests/cleanup.test.js:32:1'
+3849-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399153Z 728-  failureType: 'subtestsFailed'
+3850-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399289Z 729-  error: '1 subtest failed'
+3851-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399420Z 730-  code: 'ERR_TEST_FAILURE'
+3852-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399496Z 731-  ...
+3853-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399795Z 732-# Subtest: Side-by-Side Comparison View (F7) - Unit & Integration Tests
+3854-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4399959Z 733-    # Subtest: 1. Web UI & Assets Parity
+3855-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4400320Z 734-        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+3856-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4400658Z 735-        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+3857-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4400756Z 736-          ---
+3858-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4400901Z 737-          duration_ms: 1.046969
+3859-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4400993Z 738-          ...
+3860-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4401827Z 739-        # Subtest: style.css is identical byte-for-byte between static/ and android assets
+3861-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4402424Z 740-        ok 2 - style.css is identical byte-for-byte between static/ and android assets
+3862-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4402604Z 741-          ---
+3863-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4402837Z 742-          duration_ms: 0.211255
+3864-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4402992Z 743-          ...
+3865-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4403622Z 744-        # Subtest: HTML contains comparison view container, wrapper, images, labels, and handle
+3866-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4404224Z 745-        ok 3 - HTML contains comparison view container, wrapper, images, labels, and handle
+3867-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4404404Z 746-          ---
+3868-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4404631Z 747-          duration_ms: 0.248365
+3869-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4404787Z 748-          ...
+3870-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4405554Z 749-        # Subtest: HTML clearly labels Before and After with accessible indicators
+3871-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406318Z 750-        ok 4 - HTML clearly labels Before and After with accessible indicators
+3872-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406499Z 751-          ---
+3873-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406642Z 752-          duration_ms: 0.189876
+3874-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406744Z 753-          ...
+3875-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406836Z --
+3876-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4406974Z 1957-  duration_ms: 149.522773
+3877-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4407074Z 1958-  type: 'suite'
+3878-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4407159Z 1959-  ...
+3879-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4407459Z 1960-# Subtest: processor.py Step Comments & Order (Feature F17) - Unit Tests
+3880-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4407734Z 1961-    # Subtest: processor.py exists and contains step comment banners
+3881:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4407992Z 1962:    not ok 1 - processor.py exists and contains step comment banners
+3882-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4408073Z 1963-      ---
+3883-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4408213Z 1964-      duration_ms: 13.339653
+3884-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4408601Z 1965-      location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:15:5'
+3885-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4408795Z 1966-      failureType: 'testCodeFailure'
+3886-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4408894Z 1967-      error: |-
+3887-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409093Z 1968-        The expression evaluated to a falsy value:
+3888-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409177Z 1969-        
+3889-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409504Z 1970-          assert.ok(content.includes('STEP 1: LOAD & CONVERT TO 16-BIT GRAYSCALE'))
+3890-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409593Z 1971-        
+3891-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409738Z 1972-      code: 'ERR_ASSERTION'
+3892:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409872Z 1973:      name: 'AssertionError'
+3893-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4409983Z 1974-      expected: true
+3894-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4410084Z 1975-      actual: false
+3895-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4410193Z 1976-      operator: '=='
+3896-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4410293Z 1977-      stack: |-
+3897-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4410800Z 1978-        TestContext.<anonymous> (file:///home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:17:16)
+3898-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4411029Z 1979-        Test.runInAsyncScope (node:async_hooks:206:9)
+3899-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4412342Z 1980-        Test.run (node:internal/test_runner/test:796:25)
+3900-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4412580Z 1981-        Test.start (node:internal/test_runner/test:702:17)
+3901-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4412767Z 1982-        node:internal/test_runner/test:1133:71
+3902-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413113Z 1983-        node:internal/per_context/primordials:482:82
+3903-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413265Z 1984-        new Promise (<anonymous>)
+3904-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413550Z 1985-        new SafePromise (node:internal/per_context/primordials:450:29)
+3905-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413757Z 1986-        node:internal/per_context/primordials:482:9
+3906-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413901Z 1987-        Array.map (<anonymous>)
+3907-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4413984Z 1988-      ...
+3908-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4414374Z 1989-    # Subtest: step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+3909-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4414737Z 1990-    ok 2 - step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+3910-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4414828Z 1991-      ---
+3911-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4414959Z 1992-      duration_ms: 0.276528
+3912-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415039Z 1993-      ...
+3913-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415377Z 1994-    # Subtest: print statements match step sequence [STEP 1/5] through [STEP 5/5]
+3914-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415694Z 1995-    ok 3 - print statements match step sequence [STEP 1/5] through [STEP 5/5]
+3915-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415781Z 1996-      ---
+3916-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415915Z 1997-      duration_ms: 0.307205
+3917-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4415992Z 1998-      ...
+3918-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4416074Z 1999-    1..3
+3919:tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4416377Z 2000:not ok 13 - processor.py Step Comments & Order (Feature F17) - Unit Tests
+3920-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4416462Z 2001-  ---
+3921-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4416579Z 2002-  duration_ms: 15.901708
+3922-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4416675Z 2003-  type: 'suite'
+3923-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417061Z 2004-  location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:11:1'
+3924-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417216Z 2005-  failureType: 'subtestsFailed'
+3925-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417347Z 2006-  error: '1 subtest failed'
+3926-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417481Z 2007-  code: 'ERR_TEST_FAILURE'
+3927-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417563Z 2008-  ...
+3928-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417826Z 2009-# Subtest: Prompt History Feature (F3) - Unit & Integration Tests
+3929-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4417997Z 2010-    # Subtest: 1. Web UI & Assets Parity
+3930-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4418293Z 2011-        # Subtest: index.html is identical between static/ and android assets
+3931-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4418565Z 2012-        ok 1 - index.html is identical between static/ and android assets
+3932-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4418669Z 2013-          ---
+3933-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4418806Z 2014-          duration_ms: 1.335359
+3934-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4418902Z 2015-          ...
+3935-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4419195Z 2016-        # Subtest: style.css is identical between static/ and android assets
+3936-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4419456Z 2017-        ok 2 - style.css is identical between static/ and android assets
+3937-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4419553Z 2018-          ---
+3938-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4419690Z 2019-          duration_ms: 0.233988
+3939-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4419781Z 2020-          ...
+3940-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4420182Z 2021-        # Subtest: HTML contains prompt history container, select dropdown, list, and clear button
+3941-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4420552Z 2022-        ok 3 - HTML contains prompt history container, select dropdown, list, and clear button
+3942-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4420646Z 2023-          ---
+3943-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4420785Z 2024-          duration_ms: 0.325038
+3944-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4420875Z 2025-          ...
+3945-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4421111Z 2026-        # Subtest: CSS contains classes for prompt history UI
+3946-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4421621Z 2027-        ok 4 - CSS contains classes for prompt history UI
+3947-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4421720Z 2028-          ---
+3948-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4421902Z 2029-          duration_ms: 0.265487
+3949-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4422079Z 2030-          ...
+3950-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4550203Z ##[group]Run actions/upload-artifact@v4
+3951-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4550326Z with:
+3952-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4550443Z   name: pr7-test-logs-pr7-38306543321
+3953-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4550863Z   path: node-tests.log
+3954-tests (pr7)	UNKNOWN STEP	test-errors.txt
+3955-tests (pr7)	UNKNOWN STEP	tested-commit.txt
+3956-tests (pr7)	UNKNOWN STEP	python-packages.txt
+3957-tests (pr7)	UNKNOWN STEP	
+3958-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4550958Z   if-no-files-found: warn
+3959-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551046Z   retention-days: 7
+3960-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551437Z   compression-level: 6
+3961-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551571Z   overwrite: false
+3962-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551674Z   include-hidden-files: false
+3963-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551749Z env:
+3964-tests (pr7)	UNKNOWN STEP	2026-10-12T20:49:25.4551900Z   GEMINI_API_KEY: ci-placeholder-not-a-real-api-key

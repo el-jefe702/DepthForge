@@ -1,0 +1,591 @@
+2270-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1324201Z ok 12 - Multer UUID Filenames with Extension (Feature F16) - Tests
+2271-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1324471Z   ---
+2272-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1324659Z   duration_ms: 86.703966
+2273-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1324857Z   type: 'suite'
+2274-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1325020Z   ...
+2275-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1325529Z # node:internal/modules/package_json_reader:93
+2276-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1325954Z #         throw error;
+2277-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1326223Z #         ^
+2278:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1326933Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2279-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1327574Z #     at parse (<anonymous>)
+2280-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1327891Z #     at read (node:internal/modules/package_json_reader:80:16)
+2281-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1328295Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2282-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1328900Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2283-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1329551Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2284-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1330318Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2285-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1331131Z #     at node:internal/main/run_main_module:28:49 {
+2286-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1331693Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2287-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1332118Z # }
+2288-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1332374Z # Node.js v20.20.2
+2289-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1333163Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js
+2290:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1334001Z not ok 12 - /home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js
+2291-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1334508Z   ---
+2292-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1334758Z   duration_ms: 64.399736
+2293-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1335336Z   location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:1:1'
+2294-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1335939Z   failureType: 'testCodeFailure'
+2295-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1336265Z   exitCode: 1
+2296-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1336512Z   signal: ~
+2297-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1336767Z   error: 'test failed'
+2298-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1337058Z   code: 'ERR_TEST_FAILURE'
+2299-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1337342Z   ...
+2300-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1337691Z # node:internal/modules/package_json_reader:93
+2301-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1338095Z #         throw error;
+2302-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1338366Z #         ^
+2303:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1339115Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2304-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1339826Z #     at parse (<anonymous>)
+2305-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1340315Z #     at read (node:internal/modules/package_json_reader:80:16)
+2306-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1341237Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2307-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1341948Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2308-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1342634Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2309-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1343432Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2310-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1344132Z #     at node:internal/main/run_main_module:28:49 {
+2311-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1344713Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2312-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1345151Z # }
+2313-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1345409Z # Node.js v20.20.2
+2314-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1345961Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js
+2315:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1346776Z not ok 13 - /home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js
+2316-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1347277Z   ---
+2317-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1347531Z   duration_ms: 31.549252
+2318-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1348115Z   location: '/home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js:1:1'
+2319-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1348705Z   failureType: 'testCodeFailure'
+2320-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1349007Z   exitCode: 1
+2321-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1349253Z   signal: ~
+2322-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1349512Z   error: 'test failed'
+2323-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1349769Z   code: 'ERR_TEST_FAILURE'
+2324-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1350056Z   ...
+2325-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1350403Z # node:internal/modules/package_json_reader:93
+2326-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1350762Z #         throw error;
+2327-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1351193Z #         ^
+2328:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1351905Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2329-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1352567Z #     at parse (<anonymous>)
+2330-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1353270Z #     at read (node:internal/modules/package_json_reader:80:16)
+2331-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1353901Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2332-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1354553Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2333-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1355126Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2334-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1355604Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2335-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1356022Z #     at node:internal/main/run_main_module:28:49 {
+2336-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1356368Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2337-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1356628Z # }
+2338-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1356789Z # Node.js v20.20.2
+2339-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1357120Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js
+2340:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1357585Z not ok 14 - /home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js
+2341-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1357882Z   ---
+2342-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1358047Z   duration_ms: 26.242168
+2343-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1358380Z   location: '/home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js:1:1'
+2344-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1358853Z   failureType: 'testCodeFailure'
+2345-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1359052Z   exitCode: 1
+2346-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1359219Z   signal: ~
+2347-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1359381Z   error: 'test failed'
+2348-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1359570Z   code: 'ERR_TEST_FAILURE'
+2349-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1359758Z   ...
+2350-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1360093Z # node:internal/modules/package_json_reader:93
+2351-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1360339Z #         throw error;
+2352-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1360518Z #         ^
+2353:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1361148Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2354-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1361832Z #     at parse (<anonymous>)
+2355-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1362201Z #     at read (node:internal/modules/package_json_reader:80:16)
+2356-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1362596Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2357-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1363030Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2358-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1363453Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2359-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1363926Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2360-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1364337Z #     at node:internal/main/run_main_module:28:49 {
+2361-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1364687Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2362-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1364950Z # }
+2363-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1365120Z # Node.js v20.20.2
+2364-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1365446Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js
+2365:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1365883Z not ok 15 - /home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js
+2366-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1366176Z   ---
+2367-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1366341Z   duration_ms: 29.520663
+2368-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1366705Z   location: '/home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js:1:1'
+2369-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1367069Z   failureType: 'testCodeFailure'
+2370-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1367272Z   exitCode: 1
+2371-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1367457Z   signal: ~
+2372-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1367636Z   error: 'test failed'
+2373-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1367829Z   code: 'ERR_TEST_FAILURE'
+2374-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1368030Z   ...
+2375-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1368366Z # Subtest: Feature F20 (Comprehensive README Documentation Update) - Tests
+2376-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1368821Z     # Subtest: 1. Core Features Documentation (F1 through F20)
+2377-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1369219Z         # Subtest: README documents Feature F1 (Aspect Ratio Selector)
+2378-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1369606Z         ok 1 - README documents Feature F1 (Aspect Ratio Selector)
+2379-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1369878Z           ---
+2380-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1370080Z           duration_ms: 1.190696
+2381-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1370294Z           ...
+2382-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1370548Z         # Subtest: README documents Feature F2 (Invert Depth Map)
+2383-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1371049Z         ok 2 - README documents Feature F2 (Invert Depth Map)
+2384-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1371318Z           ---
+2385-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1371500Z           duration_ms: 2.946632
+2386-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1371846Z           ...
+2387-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1372097Z         # Subtest: README documents Feature F3 (Prompt History)
+2388-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1372468Z         ok 3 - README documents Feature F3 (Prompt History)
+2389-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1372733Z           ---
+2390-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1372931Z           duration_ms: 0.172956
+2391-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1373119Z           ...
+2392-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1373434Z         # Subtest: README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+2393-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1373912Z         ok 4 - README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+2394-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1374240Z           ---
+2395-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1374415Z           duration_ms: 0.135531
+2396-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1374631Z           ...
+2397-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1374959Z         # Subtest: README documents Feature F5 (Session Gallery / History Panel)
+2398-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1375379Z         ok 5 - README documents Feature F5 (Session Gallery / History Panel)
+2399-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1375681Z           ---
+2400-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1375861Z           duration_ms: 0.186106
+2401-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1376061Z           ...
+2402-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1376426Z         # Subtest: README documents Feature F6 (Depth Intensity Slider)
+2403-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1376831Z         ok 6 - README documents Feature F6 (Depth Intensity Slider)
+2404-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1377128Z           ---
+2405-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1377345Z           duration_ms: 0.116674
+2406-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1377543Z           ...
+2407-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1377849Z         # Subtest: README documents Feature F7 (Side-by-Side Comparison View)
+2408-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1378299Z         ok 7 - README documents Feature F7 (Side-by-Side Comparison View)
+2409-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1378602Z           ---
+2410-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1378780Z           duration_ms: 0.115962
+--
+2607-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1443124Z ok 17 - Feature F20 (Comprehensive README Documentation Update) - Tests
+2608-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1443462Z   ---
+2609-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1443641Z   duration_ms: 16.379985
+2610-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1443830Z   type: 'suite'
+2611-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1443995Z   ...
+2612-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1444224Z # node:internal/modules/package_json_reader:93
+2613-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1444472Z #         throw error;
+2614-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1444647Z #         ^
+2615:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1445085Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2616-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1445514Z #     at parse (<anonymous>)
+2617-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1445815Z #     at read (node:internal/modules/package_json_reader:80:16)
+2618-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1446210Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2619-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1446641Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2620-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1447050Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2621-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1447513Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2622-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1447924Z #     at node:internal/main/run_main_module:28:49 {
+2623-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1448265Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2624-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1448532Z # }
+2625-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1448696Z # Node.js v20.20.2
+2626-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1449035Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js
+2627:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1449508Z not ok 17 - /home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js
+2628-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1449805Z   ---
+2629-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1449969Z   duration_ms: 29.335432
+2630-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1450446Z   location: '/home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js:1:1'
+2631-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1450821Z   failureType: 'testCodeFailure'
+2632-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1451221Z   exitCode: 1
+2633-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1451382Z   signal: ~
+2634-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1451543Z   error: 'test failed'
+2635-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1451728Z   code: 'ERR_TEST_FAILURE'
+2636-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1451913Z   ...
+2637-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1452131Z # node:internal/modules/package_json_reader:93
+2638-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1452369Z #         throw error;
+2639-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1452535Z #         ^
+2640:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1452962Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2641-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1453385Z #     at parse (<anonymous>)
+2642-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1453686Z #     at read (node:internal/modules/package_json_reader:80:16)
+2643-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1454074Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2644-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1454492Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2645-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1454902Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2646-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1455484Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2647-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1455898Z #     at node:internal/main/run_main_module:28:49 {
+2648-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1456235Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2649-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1456494Z # }
+2650-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1456666Z # Node.js v20.20.2
+2651-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1456994Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js
+2652:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1457441Z not ok 18 - /home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js
+2653-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1457737Z   ---
+2654-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1457909Z   duration_ms: 30.079331
+2655-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1458241Z   location: '/home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js:1:1'
+2656-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1458587Z   failureType: 'testCodeFailure'
+2657-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1458815Z   exitCode: 1
+2658-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1458974Z   signal: ~
+2659-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1459142Z   error: 'test failed'
+2660-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1459329Z   code: 'ERR_TEST_FAILURE'
+2661-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1459514Z   ...
+2662-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1459731Z # node:internal/modules/package_json_reader:93
+2663-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1459964Z #         throw error;
+2664-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1460131Z #         ^
+2665:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1460557Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2666-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1461258Z #     at parse (<anonymous>)
+2667-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1461559Z #     at read (node:internal/modules/package_json_reader:80:16)
+2668-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1461939Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2669-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1462353Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2670-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1462757Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2671-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1463221Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2672-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1463627Z #     at node:internal/main/run_main_module:28:49 {
+2673-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1463963Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2674-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1464222Z # }
+2675-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1464384Z # Node.js v20.20.2
+2676-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1464705Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js
+2677:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1465164Z not ok 19 - /home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js
+2678-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1465454Z   ---
+2679-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1465616Z   duration_ms: 60.126145
+2680-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1465939Z   location: '/home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js:1:1'
+2681-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1466283Z   failureType: 'testCodeFailure'
+2682-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1466485Z   exitCode: 1
+2683-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1466644Z   signal: ~
+2684-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1466800Z   error: 'test failed'
+2685-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1466980Z   code: 'ERR_TEST_FAILURE'
+2686-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1467164Z   ...
+2687-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1467375Z # node:internal/modules/package_json_reader:93
+2688-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1467866Z #         throw error;
+2689-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1468114Z #         ^
+2690:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1468846Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2691-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1469482Z #     at parse (<anonymous>)
+2692-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1469787Z #     at read (node:internal/modules/package_json_reader:80:16)
+2693-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1470188Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2694-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1470626Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2695-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1471261Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2696-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1472071Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2697-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1472735Z #     at node:internal/main/run_main_module:28:49 {
+2698-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1473270Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2699-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1473683Z # }
+2700-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1473909Z # Node.js v20.20.2
+2701-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1474265Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js
+2702:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1474877Z not ok 20 - /home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js
+2703-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1475191Z   ---
+2704-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1475367Z   duration_ms: 26.603144
+2705-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1475717Z   location: '/home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js:1:1'
+2706-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1476089Z   failureType: 'testCodeFailure'
+2707-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1476293Z   exitCode: 1
+2708-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1476460Z   signal: ~
+2709-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1476627Z   error: 'test failed'
+2710-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1476822Z   code: 'ERR_TEST_FAILURE'
+2711-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1477006Z   ...
+2712-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1477226Z # node:internal/modules/package_json_reader:93
+2713-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1477497Z #         throw error;
+2714-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1477668Z #         ^
+2715:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1478116Z # SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2716-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1478551Z #     at parse (<anonymous>)
+2717-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1478855Z #     at read (node:internal/modules/package_json_reader:80:16)
+2718-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1479252Z #     at readPackage (node:internal/modules/package_json_reader:141:10)
+2719-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1479679Z #     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2720-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1480087Z #     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2721-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1480562Z #     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2722-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1481207Z #     at node:internal/main/run_main_module:28:49 {
+2723-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1481567Z #   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2724-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1481832Z # }
+2725-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1482000Z # Node.js v20.20.2
+2726-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1482310Z # Subtest: /home/runner/work/DepthForge/DepthForge/tests/vercel.test.js
+2727:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1482744Z not ok 21 - /home/runner/work/DepthForge/DepthForge/tests/vercel.test.js
+2728-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1483039Z   ---
+2729-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1483213Z   duration_ms: 59.979818
+2730-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1483533Z   location: '/home/runner/work/DepthForge/DepthForge/tests/vercel.test.js:1:1'
+2731-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1483876Z   failureType: 'testCodeFailure'
+2732-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484083Z   exitCode: 1
+2733-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484247Z   signal: ~
+2734-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484413Z   error: 'test failed'
+2735-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484601Z   code: 'ERR_TEST_FAILURE'
+2736-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484783Z   ...
+2737-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1484929Z 1..22
+2738-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485085Z # tests 322
+2739-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485236Z # suites 70
+2740-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485402Z # pass 313
+2741-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485567Z # fail 9
+2742-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485723Z # cancelled 0
+2743-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1485889Z # skipped 0
+2744-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1486045Z # todo 0
+2745-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1486227Z # duration_ms 5161.395907
+2746-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1496088Z ##[error]Process completed with exit code 1.
+2747-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1539407Z ##[group]Run echo '## Test results' >> "$GITHUB_STEP_SUMMARY"
+2748-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1539776Z ^[[36;1mecho '## Test results' >> "$GITHUB_STEP_SUMMARY"^[[0m
+2749-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1540071Z ^[[36;1mcat tested-commit.txt >> "$GITHUB_STEP_SUMMARY"^[[0m
+2750-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1540338Z ^[[36;1mif [ -f node-tests.log ]; then^[[0m
+2751:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1541009Z ^[[36;1m  grep -Ein -B 5 -A 30 'not ok|AssertionError|ModuleNotFoundError|TypeError|ReferenceError|SyntaxError' node-tests.log > test-errors.txt || true^[[0m
+2752-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1541611Z ^[[36;1m  cat test-errors.txt^[[0m
+2753-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1541839Z ^[[36;1m  echo '```text' >> "$GITHUB_STEP_SUMMARY"^[[0m
+2754-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1542125Z ^[[36;1m  tail -n 30 node-tests.log >> "$GITHUB_STEP_SUMMARY"^[[0m
+2755-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1542418Z ^[[36;1m  cat test-errors.txt >> "$GITHUB_STEP_SUMMARY"^[[0m
+2756-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1542689Z ^[[36;1m  echo '```' >> "$GITHUB_STEP_SUMMARY"^[[0m
+2757-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1542909Z ^[[36;1mfi^[[0m
+2758-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1599307Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2759-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1599587Z env:
+2760-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1599795Z   GEMINI_API_KEY: ci-placeholder-not-a-real-api-key
+2761-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1600229Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.17/x64
+2762-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1600556Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib/pkgconfig
+2763-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1600973Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+2764-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1601272Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+2765-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1601571Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+2766-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1601868Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib
+2767-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1602180Z   PYTHON_EXEC: /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+2768-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1602444Z ##[endgroup]
+2769-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1709512Z 1933-  type: 'suite'
+2770-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1709808Z 1934-  ...
+2771-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1710095Z 1935-# node:internal/modules/package_json_reader:93
+2772-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1710399Z 1936-#         throw error;
+2773-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1710605Z 1937-#         ^
+2774:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1711317Z 1938:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2775-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1711819Z 1939-#     at parse (<anonymous>)
+2776-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1712215Z 1940-#     at read (node:internal/modules/package_json_reader:80:16)
+2777-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1712899Z 1941-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2778-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1713644Z 1942-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2779-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1714325Z 1943-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2780-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1714843Z 1944-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2781-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1715292Z 1945-#     at node:internal/main/run_main_module:28:49 {
+2782-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1715674Z 1946-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2783-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1715961Z 1947-# }
+2784-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1716135Z 1948-# Node.js v20.20.2
+2785-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1716514Z 1949-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js
+2786:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1717011Z 1950:not ok 12 - /home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js
+2787-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1717327Z 1951-  ---
+2788-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1717510Z 1952-  duration_ms: 64.399736
+2789-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1717914Z 1953-  location: '/home/runner/work/DepthForge/DepthForge/tests/processor_steps.test.js:1:1'
+2790-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1718305Z 1954-  failureType: 'testCodeFailure'
+2791-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1718533Z 1955-  exitCode: 1
+2792-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1718705Z 1956-  signal: ~
+2793-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1718890Z 1957-  error: 'test failed'
+2794-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1719120Z 1958-  code: 'ERR_TEST_FAILURE'
+2795-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1719312Z 1959-  ...
+2796-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1719545Z 1960-# node:internal/modules/package_json_reader:93
+2797-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1719811Z 1961-#         throw error;
+2798-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1720189Z 1962-#         ^
+2799:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1720655Z 1963:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2800-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1721342Z 1964-#     at parse (<anonymous>)
+2801-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1721664Z 1965-#     at read (node:internal/modules/package_json_reader:80:16)
+2802-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1722082Z 1966-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2803-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1722539Z 1967-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2804-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1722968Z 1968-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2805-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1723464Z 1969-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2806-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1723901Z 1970-#     at node:internal/main/run_main_module:28:49 {
+2807-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1724266Z 1971-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2808-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1724543Z 1972-# }
+2809-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1724721Z 1973-# Node.js v20.20.2
+2810-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1725077Z 1974-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js
+2811:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1725707Z 1975:not ok 13 - /home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js
+2812-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1726020Z 1976-  ---
+2813-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1726208Z 1977-  duration_ms: 31.549252
+2814-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1726615Z 1978-  location: '/home/runner/work/DepthForge/DepthForge/tests/prompt_history.test.js:1:1'
+2815-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1727002Z 1979-  failureType: 'testCodeFailure'
+2816-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1727226Z 1980-  exitCode: 1
+2817-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1727399Z 1981-  signal: ~
+2818-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1727584Z 1982-  error: 'test failed'
+2819-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1727806Z 1983-  code: 'ERR_TEST_FAILURE'
+2820-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1728003Z 1984-  ...
+2821-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1728237Z 1985-# node:internal/modules/package_json_reader:93
+2822-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1728487Z 1986-#         throw error;
+2823-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1728662Z 1987-#         ^
+2824:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1729112Z 1988:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2825-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1729567Z 1989-#     at parse (<anonymous>)
+2826-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1729883Z 1990-#     at read (node:internal/modules/package_json_reader:80:16)
+2827-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1730290Z 1991-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2828-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1730736Z 1992-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2829-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1731309Z 1993-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2830-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1731802Z 1994-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2831-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1732237Z 1995-#     at node:internal/main/run_main_module:28:49 {
+2832-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1732596Z 1996-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2833-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1732865Z 1997-# }
+2834-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1733030Z 1998-# Node.js v20.20.2
+2835-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1733384Z 1999-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js
+2836:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1733870Z 2000:not ok 14 - /home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js
+2837-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1734174Z 2001-  ---
+2838-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1734350Z 2002-  duration_ms: 26.242168
+2839-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1734736Z 2003-  location: '/home/runner/work/DepthForge/DepthForge/tests/python_queue.test.js:1:1'
+2840-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1735112Z 2004-  failureType: 'testCodeFailure'
+2841-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1735326Z 2005-  exitCode: 1
+2842-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1735502Z 2006-  signal: ~
+2843-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1735682Z 2007-  error: 'test failed'
+2844-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1735898Z 2008-  code: 'ERR_TEST_FAILURE'
+2845-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1736094Z 2009-  ...
+2846-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1736322Z 2010-# node:internal/modules/package_json_reader:93
+2847-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1736576Z 2011-#         throw error;
+2848-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1736761Z 2012-#         ^
+2849:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1737326Z 2013:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2850-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1737857Z 2014-#     at parse (<anonymous>)
+2851-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1738493Z 2015-#     at read (node:internal/modules/package_json_reader:80:16)
+2852-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1739153Z 2016-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2853-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1739774Z 2017-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2854-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1740217Z 2018-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2855-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1740717Z 2019-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2856-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1741302Z 2020-#     at node:internal/main/run_main_module:28:49 {
+2857-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1741675Z 2021-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2858-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1741958Z 2022-# }
+2859-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1742138Z 2023-# Node.js v20.20.2
+2860-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1742488Z 2024-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js
+2861:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1742951Z 2025:not ok 15 - /home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js
+2862-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1743372Z 2026-  ---
+2863-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1743564Z 2027-  duration_ms: 29.520663
+2864-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1743942Z 2028-  location: '/home/runner/work/DepthForge/DepthForge/tests/rate_limit.test.js:1:1'
+2865-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1744313Z 2029-  failureType: 'testCodeFailure'
+2866-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1744538Z 2030-  exitCode: 1
+2867-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1744710Z 2031-  signal: ~
+2868-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1744895Z 2032-  error: 'test failed'
+2869-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1745120Z 2033-  code: 'ERR_TEST_FAILURE'
+2870-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1745318Z 2034-  ...
+2871-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1745641Z 2035-# Subtest: Feature F20 (Comprehensive README Documentation Update) - Tests
+2872-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1746058Z 2036-    # Subtest: 1. Core Features Documentation (F1 through F20)
+2873-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1746458Z 2037-        # Subtest: README documents Feature F1 (Aspect Ratio Selector)
+2874-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1746858Z 2038-        ok 1 - README documents Feature F1 (Aspect Ratio Selector)
+2875-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1747140Z 2039-          ---
+2876-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1747346Z 2040-          duration_ms: 1.190696
+2877-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1747557Z 2041-          ...
+2878-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1747836Z 2042-        # Subtest: README documents Feature F2 (Invert Depth Map)
+2879-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1748204Z 2043-        ok 2 - README documents Feature F2 (Invert Depth Map)
+2880-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1748467Z 2044-          ---
+2881-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1748677Z 2045-          duration_ms: 2.946632
+2882-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1748874Z 2046-          ...
+2883-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1749137Z 2047-        # Subtest: README documents Feature F3 (Prompt History)
+2884-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1749494Z 2048-        ok 3 - README documents Feature F3 (Prompt History)
+2885-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1749762Z 2049-          ---
+2886-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1749961Z 2050-          duration_ms: 0.172956
+2887-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1750171Z 2051-          ...
+2888-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1750511Z 2052-        # Subtest: README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+2889-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1751201Z 2053-        ok 4 - README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+2890-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1751521Z 2054-          ---
+2891-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1751719Z 2055-          duration_ms: 0.135531
+2892-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1751925Z --
+2893-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1752100Z 2270-  type: 'suite'
+2894-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1752273Z 2271-  ...
+2895-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1752507Z 2272-# node:internal/modules/package_json_reader:93
+2896-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1752760Z 2273-#         throw error;
+2897-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1752941Z 2274-#         ^
+2898:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1753398Z 2275:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2899-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1753848Z 2276-#     at parse (<anonymous>)
+2900-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1754161Z 2277-#     at read (node:internal/modules/package_json_reader:80:16)
+2901-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1754571Z 2278-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2902-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1755134Z 2279-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2903-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1755579Z 2280-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2904-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1756087Z 2281-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2905-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1756521Z 2282-#     at node:internal/main/run_main_module:28:49 {
+2906-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1756885Z 2283-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2907-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1757151Z 2284-# }
+2908-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1757324Z 2285-# Node.js v20.20.2
+2909-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1757684Z 2286-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js
+2910:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1758180Z 2287:not ok 17 - /home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js
+2911-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1758494Z 2288-  ---
+2912-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1758674Z 2289-  duration_ms: 29.335432
+2913-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1759070Z 2290-  location: '/home/runner/work/DepthForge/DepthForge/tests/session_gallery.test.js:1:1'
+2914-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1759461Z 2291-  failureType: 'testCodeFailure'
+2915-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1759684Z 2292-  exitCode: 1
+2916-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1759850Z 2293-  signal: ~
+2917-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1760153Z 2294-  error: 'test failed'
+2918-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1760378Z 2295-  code: 'ERR_TEST_FAILURE'
+2919-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1760567Z 2296-  ...
+2920-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1760797Z 2297-# node:internal/modules/package_json_reader:93
+2921-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1761743Z 2298-#         throw error;
+2922-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1761928Z 2299-#         ^
+2923:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1762376Z 2300:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2924-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1762818Z 2301-#     at parse (<anonymous>)
+2925-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1763141Z 2302-#     at read (node:internal/modules/package_json_reader:80:16)
+2926-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1763557Z 2303-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2927-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1764011Z 2304-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2928-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1764442Z 2305-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2929-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1764936Z 2306-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2930-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1765368Z 2307-#     at node:internal/main/run_main_module:28:49 {
+2931-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1765725Z 2308-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2932-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1766000Z 2309-# }
+2933-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1766169Z 2310-# Node.js v20.20.2
+2934-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1766527Z 2311-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js
+2935:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1767028Z 2312:not ok 18 - /home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js
+2936-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1767341Z 2313-  ---
+2937-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1767515Z 2314-  duration_ms: 30.079331
+2938-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1767902Z 2315-  location: '/home/runner/work/DepthForge/DepthForge/tests/sse_pipeline.test.js:1:1'
+2939-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1768276Z 2316-  failureType: 'testCodeFailure'
+2940-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1768494Z 2317-  exitCode: 1
+2941-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1768663Z 2318-  signal: ~
+2942-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1768849Z 2319-  error: 'test failed'
+2943-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1769072Z 2320-  code: 'ERR_TEST_FAILURE'
+2944-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1769258Z 2321-  ...
+2945-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1769489Z 2322-# node:internal/modules/package_json_reader:93
+2946-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1769737Z 2323-#         throw error;
+2947-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1769911Z 2324-#         ^
+2948:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1770364Z 2325:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2949-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1770798Z 2326-#     at parse (<anonymous>)
+2950-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1771309Z 2327-#     at read (node:internal/modules/package_json_reader:80:16)
+2951-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1771722Z 2328-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2952-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1772167Z 2329-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2953-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1772592Z 2330-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2954-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1773195Z 2331-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2955-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1773639Z 2332-#     at node:internal/main/run_main_module:28:49 {
+2956-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1774003Z 2333-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2957-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1774270Z 2334-# }
+2958-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1774439Z 2335-# Node.js v20.20.2
+2959-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1774795Z 2336-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js
+2960:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1775269Z 2337:not ok 19 - /home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js
+2961-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1775575Z 2338-  ---
+2962-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1775755Z 2339-  duration_ms: 60.126145
+2963-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1776143Z 2340-  location: '/home/runner/work/DepthForge/DepthForge/tests/style_presets.test.js:1:1'
+2964-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1776525Z 2341-  failureType: 'testCodeFailure'
+2965-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1776738Z 2342-  exitCode: 1
+2966-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1776906Z 2343-  signal: ~
+2967-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1777093Z 2344-  error: 'test failed'
+2968-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1777310Z 2345-  code: 'ERR_TEST_FAILURE'
+2969-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1777601Z 2346-  ...
+2970-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1777830Z 2347-# node:internal/modules/package_json_reader:93
+2971-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1778082Z 2348-#         throw error;
+2972-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1778260Z 2349-#         ^
+2973:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1778704Z 2350:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2974-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1779132Z 2351-#     at parse (<anonymous>)
+2975-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1779446Z 2352-#     at read (node:internal/modules/package_json_reader:80:16)
+2976-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1779857Z 2353-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+2977-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1780297Z 2354-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+2978-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1780717Z 2355-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+2979-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1781380Z 2356-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+2980-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1781814Z 2357-#     at node:internal/main/run_main_module:28:49 {
+2981-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1782183Z 2358-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+2982-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1782450Z 2359-# }
+2983-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1782620Z 2360-# Node.js v20.20.2
+2984-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1782971Z 2361-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js
+2985:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1783454Z 2362:not ok 20 - /home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js
+2986-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1783759Z 2363-  ---
+2987-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1783940Z 2364-  duration_ms: 26.603144
+2988-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1784330Z 2365-  location: '/home/runner/work/DepthForge/DepthForge/tests/three_d_preview.test.js:1:1'
+2989-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1784712Z 2366-  failureType: 'testCodeFailure'
+2990-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1784924Z 2367-  exitCode: 1
+2991-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1785092Z 2368-  signal: ~
+2992-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1785274Z 2369-  error: 'test failed'
+2993-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1785500Z 2370-  code: 'ERR_TEST_FAILURE'
+2994-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1785688Z 2371-  ...
+2995-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1785920Z 2372-# node:internal/modules/package_json_reader:93
+2996-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1786166Z 2373-#         throw error;
+2997-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1786343Z 2374-#         ^
+2998:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1786780Z 2375:# SyntaxError: Error parsing /home/runner/work/DepthForge/DepthForge/package.json: Unexpected end of JSON input
+2999-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1787220Z 2376-#     at parse (<anonymous>)
+3000-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1787534Z 2377-#     at read (node:internal/modules/package_json_reader:80:16)
+3001-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1787941Z 2378-#     at readPackage (node:internal/modules/package_json_reader:141:10)
+3002-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1788383Z 2379-#     at readPackageScope (node:internal/modules/package_json_reader:164:19)
+3003-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1788810Z 2380-#     at shouldUseESMLoader (node:internal/modules/run_main:79:15)
+3004-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1789309Z 2381-#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:157:24)
+3005-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1789857Z 2382-#     at node:internal/main/run_main_module:28:49 {
+3006-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1790223Z 2383-#   path: '/home/runner/work/DepthForge/DepthForge/package.json'
+3007-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1790497Z 2384-# }
+3008-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1790663Z 2385-# Node.js v20.20.2
+3009-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1791130Z 2386-# Subtest: /home/runner/work/DepthForge/DepthForge/tests/vercel.test.js
+3010:tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1791579Z 2387:not ok 21 - /home/runner/work/DepthForge/DepthForge/tests/vercel.test.js
+3011-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1791869Z 2388-  ---
+3012-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1792060Z 2389-  duration_ms: 59.979818
+3013-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1792430Z 2390-  location: '/home/runner/work/DepthForge/DepthForge/tests/vercel.test.js:1:1'
+3014-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1792787Z 2391-  failureType: 'testCodeFailure'
+3015-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793011Z 2392-  exitCode: 1
+3016-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793185Z 2393-  signal: ~
+3017-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793367Z 2394-  error: 'test failed'
+3018-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793588Z 2395-  code: 'ERR_TEST_FAILURE'
+3019-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793783Z 2396-  ...
+3020-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1793940Z 2397-1..22
+3021-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1794095Z 2398-# tests 322
+3022-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1794265Z 2399-# suites 70
+3023-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1794559Z 2400-# pass 313
+3024-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1794730Z 2401-# fail 9
+3025-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1794905Z 2402-# cancelled 0
+3026-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1795075Z 2403-# skipped 0
+3027-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1795238Z 2404-# todo 0
+3028-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1795428Z 2405-# duration_ms 5161.395907
+3029-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1902445Z ##[group]Run actions/upload-artifact@v4
+3030-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1902677Z with:
+3031-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1902877Z   name: pr7-test-logs-main-baseline-38306543321
+3032-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1903226Z   path: node-tests.log
+3033-tests (main-baseline)	UNKNOWN STEP	test-errors.txt
+3034-tests (main-baseline)	UNKNOWN STEP	tested-commit.txt
+3035-tests (main-baseline)	UNKNOWN STEP	python-packages.txt
+3036-tests (main-baseline)	UNKNOWN STEP	
+3037-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1903549Z   if-no-files-found: warn
+3038-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1903739Z   retention-days: 7
+3039-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1903914Z   compression-level: 6
+3040-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1904092Z   overwrite: false
+3041-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1904266Z   include-hidden-files: false
+3042-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1904458Z env:
+3043-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1904655Z   GEMINI_API_KEY: ci-placeholder-not-a-real-api-key
+3044-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1904952Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.17/x64
+3045-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1905301Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib/pkgconfig
+3046-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1905629Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3047-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1905952Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3048-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1906247Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+3049-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1906555Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib
+3050-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1906874Z   PYTHON_EXEC: /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+3051-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.1907141Z ##[endgroup]
+3052-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.3260215Z (node:2760) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+3053-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.3261482Z (Use `node --trace-deprecation ...` to show where the warning was created)
+3054-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.3316759Z Multiple search paths detected. Calculating the least common ancestor of all paths
+3055-tests (main-baseline)	UNKNOWN STEP	2026-10-12T20:49:13.3319313Z The least common ancestor is /home/runner/work/DepthForge/DepthForge. This will be the root directory of the artifact
