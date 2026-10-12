@@ -2,7 +2,9 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
+import { initLedgerSchema } from './ledger-schema.js';
 
+// Legacy draft quotas; not the approved credit policy. Do not use for billing.
 export const PLANS = {
   free: { monthlyQuota: 10 },
   pro: { monthlyQuota: 200 },
@@ -48,12 +50,24 @@ export function currentPeriod(date = new Date()) {
 }
 
 export function initDb(dbPath = process.env.SUBSCRIPTIONS_DB_PATH || './data/subscriptions.db') {
-  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  db.exec(SCHEMA_SQL);
-  return db;
+  if (typeof dbPath !== 'string' || !dbPath.trim() || dbPath.includes('\0')) {
+    throw new TypeError('Database path must be a nonblank string without null bytes');
+  }
+  let db;
+  try {
+    if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    db.transaction(() => {
+      db.exec(SCHEMA_SQL);
+      initLedgerSchema(db);
+    }).immediate();
+    return db;
+  } catch (cause) {
+    if (db?.open) db.close();
+    throw new Error('Database initialization failed; check path permissions and schema compatibility', { cause });
+  }
 }
 
 export function getOrCreateUser(db, email, externalId = null) {

@@ -10,6 +10,7 @@ on:
       - 'tests/credits.test.js'
       - 'tests/reservations.test.js'
       - 'tests/settlement.test.js'
+      - 'tests/db-integration.test.js'
       - 'package*.json'
       - '.github/workflows/migration-tests.yml'
 permissions:
@@ -26,4 +27,4 @@ jobs:
       - name: Install dependencies (lockfile update still pending)
         run: npm install --no-audit --no-fund
       - name: Run database suites
-        run: node --test tests/migrations.test.js tests/ledger-schema.test.js tests/credits.test.js tests/reservations.test.js tests/settlement.test.js
+        run: node --test tests/migrations.test.js tests/ledger-schema.test.js tests/credits.test.js tests/reservations.test.js tests/settlement.test.js tests/db-integration.test.js
