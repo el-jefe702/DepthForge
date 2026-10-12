@@ -1,0 +1,30 @@
+name: Sync Android web assets
+on:
+  push:
+    branches: [chore/remove-vercel]
+    paths: [.github/workflows/sync-android-assets.yml]
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/remove-vercel
+      - name: Copy web assets and commit
+        run: |
+          mkdir -p android_app/app/src/main/assets/static
+          cp static/index.html android_app/app/src/main/assets/index.html
+          cp static/style.css android_app/app/src/main/assets/style.css
+          cp static/style.css android_app/app/src/main/assets/static/style.css
+          git add android_app/app/src/main/assets/index.html android_app/app/src/main/assets/style.css android_app/app/src/main/assets/static/style.css
+          if git diff --cached --quiet; then
+            echo 'Assets already synchronized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "chore: sync web assets with android app"
+          git push origin HEAD:chore/remove-vercel
