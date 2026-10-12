@@ -90,7 +90,7 @@ Put a TLS reverse proxy in front of the service for public access. Restrict dire
 
 ### Environment and persistence on this branch
 
-The current `docker-compose.yaml` uses an optional host `.env` via `env_file`, explicitly requires a nonempty `GEMINI_API_KEY` from Compose interpolation, and sets `SUBSCRIPTIONS_DB_PATH` to `/app/data/subscriptions.db`. It mounts named `generated_data` and `app_data` volumes. An optional `env_file` does not make the API key optional. The repository does not currently include `.env.example`; `.gitignore` ignores `.env` but does not have broader `.env`-variant rules.
+The current `docker-compose.yaml` uses an optional host `.env` via `env_file`, explicitly requires a nonempty `GEMINI_API_KEY` from Compose interpolation, and sets `SUBSCRIPTIONS_DB_PATH` to `/app/data/subscriptions.db`. It mounts named `generated_data` and `app_data` volumes. An optional `env_file` does not make the API key optional. The repository includes `.env.example` as a secret-free template. `.gitignore` ignores `.env` and `.env.*`, while allowing `.env.example`. Create `.env` from the template only if it does not already exist, then set a real, nonempty `GEMINI_API_KEY`. Never overwrite an existing host `.env` or commit real credentials.
 
 After changing `.env`, recreate the service so the container receives the new values:
 
