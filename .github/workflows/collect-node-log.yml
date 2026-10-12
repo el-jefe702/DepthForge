@@ -1,48 +1,91 @@
 name: Collect PR 4 Node test log
+
 on:
   push:
     branches: [chore/remove-vercel]
     paths: [.github/workflows/collect-node-log.yml]
+  workflow_dispatch:
+
 permissions:
   contents: read
   actions: read
+
 jobs:
   collect-node-log:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
     steps:
-      - name: Retrieve existing Node job log
+      - name: Fetch Node test log (auto-resolve job ID)
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_RUN_ID: "38236444711"
         run: |
           set -euo pipefail
-          gh api repos/el-jefe702/DepthForge/actions/jobs/114768184133 > job.json
-          python3 -c 'import json; j=json.load(open("job.json")); print("Node job:", j["status"], j.get("conclusion")); assert j["status"] == "completed", "Job must finish before its log can be downloaded"'
-          gh api repos/el-jefe702/DepthForge/actions/jobs/114768184133/logs > node-tests.log
+
+          gh api \
+            "repos/${TARGET_REPO}/actions/runs/${TARGET_RUN_ID}/jobs?filter=latest&per_page=100" \
+            > jobs.json
+
+          job_id=$(jq -r \
+            '[.jobs[] | select(.name == "node-tests")][0].id // empty' \
+            jobs.json)
+
+          if [ -z "$job_id" ]; then
+            echo "No node-tests job found in run ${TARGET_RUN_ID}"
+            exit 1
+          fi
+
+          job_status=$(jq -r --argjson id "$job_id" \
+            '.jobs[] | select(.id == $id) | .status' \
+            jobs.json)
+
+          if [ "$job_status" != "completed" ]; then
+            echo "Node job ${job_id} is ${job_status}; logs are not ready."
+            exit 1
+          fi
+
+          echo "Fetching node-tests job ${job_id} from run ${TARGET_RUN_ID}"
+
+          gh run view \
+            --repo "$TARGET_REPO" \
+            --job "$job_id" \
+            --log > node-tests.log
+
           test -s node-tests.log
-      - name: Extract Invert test section
+
+      - name: Extract failing diagnostics
+        if: always()
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('node-tests.log').read_text(errors='replace')
-          lines = text.splitlines()
-          start = next((i for i, line in enumerate(lines) if '# Subtest: Invert Depth Map Feature (F2)' in line), None)
-          if start is None:
-              section = 'Invert suite header not found. Inspect the full node-tests.log artifact.'
-          else:
-              end = next((i for i in range(start + 1, len(lines)) if ('not ok ' in lines[i] or 'ok ' in lines[i]) and '- Invert Depth Map Feature (F2)' in lines[i]), len(lines) - 1)
-              section = '\n'.join(lines[start:min(end + 12, len(lines))])
-          Path('invert-tests.log').write_text(section + '\n')
-          print(section)
-          PY
-      - name: Upload diagnostic logs
+          set -euo pipefail
+          mkdir -p diagnostics
+
+          if [ ! -s node-tests.log ]; then
+            echo "Node test log was not retrieved. Inspect the fetch step." \
+              | tee diagnostics/node-test-errors.txt
+            exit 1
+          fi
+
+          grep -Ein -B 8 -A 30 \
+            'AssertionError|not ok|TypeError|ReferenceError|SyntaxError|Traceback|ModuleNotFoundError' \
+            node-tests.log > diagnostics/node-test-errors.txt || true
+
+          if [ -s diagnostics/node-test-errors.txt ]; then
+            cat diagnostics/node-test-errors.txt
+          else
+            echo "No selected failure markers found; inspect the full log." \
+              | tee diagnostics/node-test-errors.txt
+          fi
+
+      - name: Upload Node test diagnostics artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pr4-node-test-diagnostics
           path: |
-            job.json
+            jobs.json
             node-tests.log
-            invert-tests.log
+            diagnostics/node-test-errors.txt
           retention-days: 7
           if-no-files-found: warn
