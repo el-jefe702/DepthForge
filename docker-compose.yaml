@@ -9,6 +9,7 @@ services:
       - path: .env
         required: false
     environment:
+      GEMINI_API_KEY: "${GEMINI_API_KEY:?Set GEMINI_API_KEY in the host environment or .env before starting Compose}"
       PORT: "8080"
       SUBSCRIPTIONS_DB_PATH: "/app/data/subscriptions.db"
     volumes:
