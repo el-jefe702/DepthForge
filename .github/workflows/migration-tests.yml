@@ -1,0 +1,30 @@
+name: Migration tests
+on:
+  push:
+    branches: [feature/subscriptions-db]
+  pull_request:
+    paths:
+      - 'db/**'
+      - 'tests/migrations.test.js'
+      - 'tests/ledger-schema.test.js'
+      - 'tests/credits.test.js'
+      - 'tests/reservations.test.js'
+      - 'tests/settlement.test.js'
+      - 'tests/db-integration.test.js'
+      - 'package*.json'
+      - '.github/workflows/migration-tests.yml'
+permissions:
+  contents: read
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run database suites
+        run: node --test tests/migrations.test.js tests/ledger-schema.test.js tests/credits.test.js tests/reservations.test.js tests/settlement.test.js tests/db-integration.test.js
