@@ -20,7 +20,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
-          TARGET_RUN_ID: "38236444711"
+          TARGET_RUN_ID: "38297312351"
         run: |
           set -euo pipefail
 
