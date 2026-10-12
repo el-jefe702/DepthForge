@@ -1,0 +1,35 @@
+        ok 6 - MainActivity.kt injects JavaScript to enter 3D preview with current image
+          ---
+          duration_ms: 0.217896
+          ...
+        # Subtest: MainActivity.kt provides BackHandler and close button for 3D WebView dialog
+        ok 7 - MainActivity.kt provides BackHandler and close button for 3D WebView dialog
+          ---
+          duration_ms: 0.333933
+          ...
+        # Subtest: MainActivity.kt uses fullscreen DialogProperties for immersive 3D experience
+        ok 8 - MainActivity.kt uses fullscreen DialogProperties for immersive 3D experience
+          ---
+          duration_ms: 0.242483
+          ...
+        1..8
+    ok 4 - 4. Android Native UI Integration
+      ---
+      duration_ms: 2.258444
+      type: 'suite'
+      ...
+    1..4
+ok 21 - 3D Live Preview (Three.js Displacement) (F11) - Unit & Integration Tests
+  ---
+  duration_ms: 9.716291
+  type: 'suite'
+  ...
+1..21
+# tests 475
+# suites 112
+# pass 475
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11567.732187

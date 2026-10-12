@@ -1,0 +1,3365 @@
+
+> depthforge@2.0.0 test
+> node --test --test-concurrency=1 tests/*.test.js
+
+TAP version 13
+# Subtest: Feature F19 (Android Share Intent) - Unit & Integration Tests
+    # Subtest: 1. FileProvider & Manifest Configuration
+        # Subtest: AndroidManifest.xml registers androidx.core.content.FileProvider
+        ok 1 - AndroidManifest.xml registers androidx.core.content.FileProvider
+          ---
+          duration_ms: 1.043998
+          ...
+        # Subtest: FileProvider defines authorities with applicationId and exported=false
+        ok 2 - FileProvider defines authorities with applicationId and exported=false
+          ---
+          duration_ms: 0.158345
+          ...
+        # Subtest: FileProvider links to @xml/file_paths meta-data
+        ok 3 - FileProvider links to @xml/file_paths meta-data
+          ---
+          duration_ms: 0.145482
+          ...
+        # Subtest: res/xml/file_paths.xml exists and defines cache-path for sharing
+        ok 4 - res/xml/file_paths.xml exists and defines cache-path for sharing
+          ---
+          duration_ms: 0.218007
+          ...
+        1..4
+    ok 1 - 1. FileProvider & Manifest Configuration
+      ---
+      duration_ms: 2.408454
+      type: 'suite'
+      ...
+    # Subtest: 2. MainActivity.kt Imports and shareDepthMap Implementation
+        # Subtest: MainActivity.kt imports Intent and FileProvider
+        ok 1 - MainActivity.kt imports Intent and FileProvider
+          ---
+          duration_ms: 0.269754
+          ...
+        # Subtest: MainActivity.kt declares shareDepthMap(context: Context, bitmap: Bitmap)
+        ok 2 - MainActivity.kt declares shareDepthMap(context: Context, bitmap: Bitmap)
+          ---
+          duration_ms: 0.170378
+          ...
+        # Subtest: shareDepthMap saves bitmap to cacheDir/share with timestamped PNG filename
+        ok 3 - shareDepthMap saves bitmap to cacheDir/share with timestamped PNG filename
+          ---
+          duration_ms: 0.283128
+          ...
+        # Subtest: shareDepthMap generates FileProvider content URI
+        ok 4 - shareDepthMap generates FileProvider content URI
+          ---
+          duration_ms: 0.204662
+          ...
+        # Subtest: shareDepthMap configures Intent.ACTION_SEND, MIME type, and read permissions
+        ok 5 - shareDepthMap configures Intent.ACTION_SEND, MIME type, and read permissions
+          ---
+          duration_ms: 0.324435
+          ...
+        # Subtest: shareDepthMap creates chooser with "Share Depth Map" and launches activity
+        ok 6 - shareDepthMap creates chooser with "Share Depth Map" and launches activity
+          ---
+          duration_ms: 0.327972
+          ...
+        1..6
+    ok 2 - 2. MainActivity.kt Imports and shareDepthMap Implementation
+      ---
+      duration_ms: 2.10615
+      type: 'suite'
+      ...
+    # Subtest: 3. Action Button Row UI & State Management
+        # Subtest: Action buttons include Share button with Text("Share")
+        ok 1 - Action buttons include Share button with Text("Share")
+          ---
+          duration_ms: 0.248534
+          ...
+        # Subtest: Share button is placed next to Download button in action buttons row
+        ok 2 - Share button is placed next to Download button in action buttons row
+          ---
+          duration_ms: 0.319967
+          ...
+        # Subtest: Share button is enabled only when !isBusy && currentBitmap != null
+        ok 3 - Share button is enabled only when !isBusy && currentBitmap != null
+          ---
+          duration_ms: 0.989336
+          ...
+        # Subtest: Share button invokes shareDepthMap within coroutine with error handling
+        ok 4 - Share button invokes shareDepthMap within coroutine with error handling
+          ---
+          duration_ms: 0.237884
+          ...
+        1..4
+    ok 3 - 3. Action Button Row UI & State Management
+      ---
+      duration_ms: 2.075452
+      type: 'suite'
+      ...
+    # Subtest: 4. State Transition and Multi-Feature Compatibility Simulation
+        # Subtest: Share button is hidden and disabled initially before any image is generated
+        ok 1 - Share button is hidden and disabled initially before any image is generated
+          ---
+          duration_ms: 0.365191
+          ...
+        # Subtest: Share button is enabled and visible after initial map generation
+        ok 2 - Share button is enabled and visible after initial map generation
+          ---
+          duration_ms: 0.191377
+          ...
+        # Subtest: Share button is disabled while busy (e.g. inverting or removing bg)
+        ok 3 - Share button is disabled while busy (e.g. inverting or removing bg)
+          ---
+          duration_ms: 0.138769
+          ...
+        # Subtest: Share button works seamlessly across Polish, Invert, and Remove BG workflows
+        ok 4 - Share button works seamlessly across Polish, Invert, and Remove BG workflows
+          ---
+          duration_ms: 0.316741
+          ...
+        1..4
+    ok 4 - 4. State Transition and Multi-Feature Compatibility Simulation
+      ---
+      duration_ms: 1.235334
+      type: 'suite'
+      ...
+    1..4
+ok 1 - Feature F19 (Android Share Intent) - Unit & Integration Tests
+  ---
+  duration_ms: 8.759686
+  type: 'suite'
+  ...
+# Subtest: Aspect Ratio Feature - Unit & Integration Tests
+    # Subtest: 1. Sanitize Aspect Ratio Logic
+        # Subtest: ALLOWED_ASPECT_RATIOS has exact 5 supported ratios in required order
+        ok 1 - ALLOWED_ASPECT_RATIOS has exact 5 supported ratios in required order
+          ---
+          duration_ms: 1.316587
+          ...
+        # Subtest: returns valid ratios unchanged for all 5 allowed values
+        ok 2 - returns valid ratios unchanged for all 5 allowed values
+          ---
+          duration_ms: 0.210102
+          ...
+        # Subtest: falls back to 1:1 for invalid, empty, or non-matching string values
+        ok 3 - falls back to 1:1 for invalid, empty, or non-matching string values
+          ---
+          duration_ms: 0.155179
+          ...
+        1..3
+    ok 1 - 1. Sanitize Aspect Ratio Logic
+      ---
+      duration_ms: 2.401912
+      type: 'suite'
+      ...
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (26ms)
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (2ms)
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (2ms)
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (1ms)
+    # Subtest: 2. Express Server Endpoint /api/generate
+        # Subtest: passes each of the 5 allowed aspect ratios to generateImages config
+        ok 1 - passes each of the 5 allowed aspect ratios to generateImages config
+          ---
+          duration_ms: 107.590919
+          ...
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (3ms)
+        # Subtest: defaults aspect ratio to 1:1 when omitted in request body
+        ok 2 - defaults aspect ratio to 1:1 when omitted in request body
+          ---
+          duration_ms: 13.661051
+          ...
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 200 (3ms)
+        # Subtest: falls back to 1:1 when an unsupported ratio is passed
+        ok 3 - falls back to 1:1 when an unsupported ratio is passed
+          ---
+          duration_ms: 9.255132
+          ...
+# Error: Imagen API rate limit exceeded
+#     at ai.models.generateImages (file:///home/runner/work/DepthForge/DepthForge/tests/aspect_ratio.test.js:141:23)
+#     at generateImagesWithFallback (file:///home/runner/work/DepthForge/DepthForge/server.js:91:37)
+#     at file:///home/runner/work/DepthForge/DepthForge/server.js:588:35
+#     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+# [10:52:28 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:28 PM] 🌍 POST /api/generate - 500 (4ms)
+        # Subtest: handles API generation failure gracefully with 500 status
+        ok 4 - handles API generation failure gracefully with 500 status
+          ---
+          duration_ms: 9.401153
+          ...
+        1..4
+    ok 2 - 2. Express Server Endpoint /api/generate
+      ---
+      duration_ms: 140.609003
+      type: 'suite'
+      ...
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (11ms)
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (5ms)
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (5ms)
+    # Subtest: 3. Express Server Endpoint /api/photo-to-depth
+        # Subtest: passes each of the 5 allowed aspect ratios in multipart request to generateImages
+        ok 1 - passes each of the 5 allowed aspect ratios in multipart request to generateImages
+          ---
+          duration_ms: 55.928531
+          ...
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+        # Subtest: defaults aspect ratio to 1:1 when omitted in multipart request
+        ok 2 - defaults aspect ratio to 1:1 when omitted in multipart request
+          ---
+          duration_ms: 11.165976
+          ...
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+        # Subtest: falls back to 1:1 when invalid aspect ratio is sent in multipart request
+        ok 3 - falls back to 1:1 when invalid aspect ratio is sent in multipart request
+          ---
+          duration_ms: 9.101533
+          ...
+# [10:52:28 PM] 🌍 POST /api/photo-to-depth - 400 (0ms)
+        # Subtest: returns 400 when no photo is uploaded
+        ok 4 - returns 400 when no photo is uploaded
+          ---
+          duration_ms: 5.444469
+          ...
+        1..4
+    ok 3 - 3. Express Server Endpoint /api/photo-to-depth
+      ---
+      duration_ms: 82.468904
+      type: 'suite'
+      ...
+    # Subtest: 4. Web UI & Android Assets Parity
+        # Subtest: index.html is identical between static/ and android assets
+        ok 1 - index.html is identical between static/ and android assets
+          ---
+          duration_ms: 0.188071
+          ...
+        # Subtest: style.css is identical between static/ and android assets
+        ok 2 - style.css is identical between static/ and android assets
+          ---
+          duration_ms: 0.131735
+          ...
+        # Subtest: HTML contains aspect ratio dropdowns for both text and photo modes
+        ok 3 - HTML contains aspect ratio dropdowns for both text and photo modes
+          ---
+          duration_ms: 0.15571
+          ...
+        # Subtest: HTML JS sends aspectRatio in generateMap and convertPhoto
+        ok 4 - HTML JS sends aspectRatio in generateMap and convertPhoto
+          ---
+          duration_ms: 0.164818
+          ...
+        1..4
+    ok 4 - 4. Web UI & Android Assets Parity
+      ---
+      duration_ms: 0.918624
+      type: 'suite'
+      ...
+    # Subtest: 5. Android Native UI & Client Integration
+        # Subtest: ApiClient.kt has aspectRatio parameter defaulting to "1:1"
+        ok 1 - ApiClient.kt has aspectRatio parameter defaulting to "1:1"
+          ---
+          duration_ms: 0.16069
+          ...
+        # Subtest: MainActivity.kt exposes AspectRatioSelector and connects it to ApiClient
+        ok 2 - MainActivity.kt exposes AspectRatioSelector and connects it to ApiClient
+          ---
+          duration_ms: 0.163304
+          ...
+        1..2
+    ok 5 - 5. Android Native UI & Client Integration
+      ---
+      duration_ms: 0.446102
+      type: 'suite'
+      ...
+    1..5
+ok 2 - Aspect Ratio Feature - Unit & Integration Tests
+  ---
+  duration_ms: 227.907589
+  type: 'suite'
+  ...
+# Subtest: Batch Generation (F13) - Unit & Integration Tests
+    # Subtest: 1. Server Batch Implementation in server.js
+        # Subtest: POST /api/generate checks req.body.batch flag and passes numberOfImages
+        ok 1 - POST /api/generate checks req.body.batch flag and passes numberOfImages
+          ---
+          duration_ms: 1.569649
+          ...
+        # Subtest: POST /api/photo-to-depth checks req.body.batch flag and passes numberOfImages
+        ok 2 - POST /api/photo-to-depth checks req.body.batch flag and passes numberOfImages
+          ---
+          duration_ms: 0.161031
+          ...
+        1..2
+    ok 1 - 1. Server Batch Implementation in server.js
+      ---
+      duration_ms: 2.424624
+      type: 'suite'
+      ...
+    # Subtest: 2. Web UI Elements & Batch Controls in static/index.html
+        # Subtest: Generate ×4 button exists in text generation panel
+        ok 1 - Generate ×4 button exists in text generation panel
+          ---
+          duration_ms: 0.244847
+          ...
+        # Subtest: Convert ×4 button exists in photo upload panel
+        ok 2 - Convert ×4 button exists in photo upload panel
+          ---
+          duration_ms: 0.141564
+          ...
+        # Subtest: Batch candidates container and grid elements exist in DOM
+        ok 3 - Batch candidates container and grid elements exist in DOM
+          ---
+          duration_ms: 0.143237
+          ...
+        # Subtest: JavaScript manages batch candidates state and candidate selection
+        ok 4 - JavaScript manages batch candidates state and candidate selection
+          ---
+          duration_ms: 0.157194
+          ...
+        # Subtest: Photo selection enables and disables convertBatchBtn properly
+        ok 5 - Photo selection enables and disables convertBatchBtn properly
+          ---
+          duration_ms: 0.177231
+          ...
+        1..5
+    ok 2 - 2. Web UI Elements & Batch Controls in static/index.html
+      ---
+      duration_ms: 1.271572
+      type: 'suite'
+      ...
+    # Subtest: 3. CSS Styles in static/style.css
+        # Subtest: Defines batch grid layout with 2 columns
+        ok 1 - Defines batch grid layout with 2 columns
+          ---
+          duration_ms: 0.173033
+          ...
+        # Subtest: Defines batch tile, selected state, badge, and button styles
+        ok 2 - Defines batch tile, selected state, badge, and button styles
+          ---
+          duration_ms: 0.241741
+          ...
+        1..2
+    ok 3 - 3. CSS Styles in static/style.css
+      ---
+      duration_ms: 0.580183
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native Jetpack Compose App Parity
+        # Subtest: ApiClient.kt supports batch parameter in generate and photoToDepth
+        ok 1 - ApiClient.kt supports batch parameter in generate and photoToDepth
+          ---
+          duration_ms: 0.218247
+          ...
+        # Subtest: MainActivity.kt contains batchCandidateUrls state and buttons
+        ok 2 - MainActivity.kt contains batchCandidateUrls state and buttons
+          ---
+          duration_ms: 0.23598
+          ...
+        # Subtest: BatchCandidateGrid composable defines candidate selection and \#N badges
+        ok 3 - BatchCandidateGrid composable defines candidate selection and \#N badges
+          ---
+          duration_ms: 0.218267
+          ...
+        1..3
+    ok 4 - 4. Android Native Jetpack Compose App Parity
+      ---
+      duration_ms: 0.911121
+      type: 'suite'
+      ...
+    # Subtest: 5. Web Asset Parity between static/ and Android assets/
+        # Subtest: index.html is identical in static/ and android_app assets
+        ok 1 - index.html is identical in static/ and android_app assets
+          ---
+          duration_ms: 0.21437
+          ...
+        # Subtest: style.css is identical in static/ and android_app assets
+        ok 2 - style.css is identical in static/ and android_app assets
+          ---
+          duration_ms: 0.191017
+          ...
+        1..2
+    ok 5 - 5. Web Asset Parity between static/ and Android assets/
+      ---
+      duration_ms: 0.537764
+      type: 'suite'
+      ...
+    1..5
+ok 3 - Batch Generation (F13) - Unit & Integration Tests
+  ---
+  duration_ms: 6.806972
+  type: 'suite'
+  ...
+# Subtest: Automatic Generated File Cleanup (F8) - Unit & Integration Tests
+    # Subtest: 1. Module & Server Exports Contract
+        # Subtest: cleanup.js exports required functions and constants
+        ok 1 - cleanup.js exports required functions and constants
+          ---
+          duration_ms: 1.996826
+          ...
+        # Subtest: server.js re-exports cleanup functions and constants
+        ok 2 - server.js re-exports cleanup functions and constants
+          ---
+          duration_ms: 0.480847
+          ...
+        # Subtest: isMainModule returns false for server.js and cleanup.js when imported in test runner
+        ok 3 - isMainModule returns false for server.js and cleanup.js when imported in test runner
+          ---
+          duration_ms: 0.649722
+          ...
+        # Subtest: isMainModule accurately matches argv[1] path even across NTFS junctions and symlinks
+        ok 4 - isMainModule accurately matches argv[1] path even across NTFS junctions and symlinks
+          ---
+          duration_ms: 0.566106
+          ...
+        1..4
+    ok 1 - 1. Module & Server Exports Contract
+      ---
+      duration_ms: 4.355988
+      type: 'suite'
+      ...
+    # Subtest: 2. TTL Validation & Fallback Logic (parseTtlHours)
+        # Subtest: falls back to 24 when value is undefined, null, empty or whitespace
+        ok 1 - falls back to 24 when value is undefined, null, empty or whitespace
+          ---
+          duration_ms: 0.628433
+          ...
+        # Subtest: falls back to 24 for invalid, non-numeric strings or NaN
+        ok 2 - falls back to 24 for invalid, non-numeric strings or NaN
+          ---
+          duration_ms: 0.457073
+          ...
+        # Subtest: falls back to 24 for negative numbers or negative numeric strings
+        ok 3 - falls back to 24 for negative numbers or negative numeric strings
+          ---
+          duration_ms: 0.568731
+          ...
+        # Subtest: falls back to 24 for zero and zero string
+        ok 4 - falls back to 24 for zero and zero string
+          ---
+          duration_ms: 0.353079
+          ...
+        # Subtest: falls back to 24 for non-finite numbers (Infinity, -Infinity)
+        ok 5 - falls back to 24 for non-finite numbers (Infinity, -Infinity)
+          ---
+          duration_ms: 0.427839
+          ...
+        # Subtest: falls back to 24 for booleans, objects, arrays, and symbols
+        ok 6 - falls back to 24 for booleans, objects, arrays, and symbols
+          ---
+          duration_ms: 0.481178
+          ...
+        # Subtest: parses and returns valid positive numbers and numeric strings
+        ok 7 - parses and returns valid positive numbers and numeric strings
+          ---
+          duration_ms: 0.355013
+          ...
+        # Subtest: supports valid fractional positive numbers (e.g. 0.5 hours = 30 minutes)
+        ok 8 - supports valid fractional positive numbers (e.g. 0.5 hours = 30 minutes)
+          ---
+          duration_ms: 0.543304
+          ...
+        1..8
+    ok 2 - 2. TTL Validation & Fallback Logic (parseTtlHours)
+      ---
+      duration_ms: 4.395001
+      type: 'suite'
+      ...
+    # Subtest: 3. File Purging and Preservation Mechanics
+        # Subtest: purges files older than TTL and preserves files within TTL threshold
+        ok 1 - purges files older than TTL and preserves files within TTL threshold
+          ---
+          duration_ms: 27.128752
+          ...
+        # Subtest: respects custom ttlHours parameter (e.g. 12 hours)
+        ok 2 - respects custom ttlHours parameter (e.g. 12 hours)
+          ---
+          duration_ms: 2.425889
+          ...
+        # Subtest: synchronous API cleanupGeneratedFilesSync performs identical purging
+        ok 3 - synchronous API cleanupGeneratedFilesSync performs identical purging
+          ---
+          duration_ms: 1.069826
+          ...
+        # Subtest: strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+        ok 4 - strictly tests cutoff boundary precision: cutoffMs - 1ms (purged) vs cutoffMs (preserved) vs cutoffMs + 1ms (preserved)
+          ---
+          duration_ms: 4.265639
+          ...
+        1..4
+    ok 3 - 3. File Purging and Preservation Mechanics
+      ---
+      duration_ms: 35.289902
+      type: 'suite'
+      ...
+    # Subtest: 4. Directory Edge Cases & Robustness
+        # Subtest: handles missing directory gracefully without throwing or crashing
+        ok 1 - handles missing directory gracefully without throwing or crashing
+          ---
+          duration_ms: 4.75898
+          ...
+        # Subtest: handles empty directory cleanly without errors
+        ok 2 - handles empty directory cleanly without errors
+          ---
+          duration_ms: 1.422074
+          ...
+        # Subtest: ignores subdirectories and non-file artifacts without descending or deleting them
+        ok 3 - ignores subdirectories and non-file artifacts without descending or deleting them
+          ---
+          duration_ms: 2.67461
+          ...
+        # Subtest: falls back to defaultGeneratedDir when dir is omitted, null, or empty
+        ok 4 - falls back to defaultGeneratedDir when dir is omitted, null, or empty
+          ---
+          duration_ms: 3.536706
+          ...
+        # Subtest: handles targetDir pointing to a regular file instead of directory without crashing
+        ok 5 - handles targetDir pointing to a regular file instead of directory without crashing
+          ---
+          duration_ms: 1.199989
+          ...
+        # Subtest: handles non-finite or invalid now timestamp falling back to Date.now()
+        ok 6 - handles non-finite or invalid now timestamp falling back to Date.now()
+          ---
+          duration_ms: 1.335004
+          ...
+        # Subtest: explicit ttlHours: null falls back to default 24h even if process.env.GENERATED_TTL_HOURS is set
+        ok 7 - explicit ttlHours: null falls back to default 24h even if process.env.GENERATED_TTL_HOURS is set
+          ---
+          duration_ms: 0.982183
+          ...
+        # Subtest: supports now passed as a Date object in both async and sync APIs
+        ok 8 - supports now passed as a Date object in both async and sync APIs
+          ---
+          duration_ms: 2.48124
+          ...
+        # Subtest: guarantees accounting soundness: scanned === removed + preserved + errors.length
+        ok 9 - guarantees accounting soundness: scanned === removed + preserved + errors.length
+          ---
+          duration_ms: 2.100399
+          ...
+        # Subtest: guarantees accounting soundness when stat throws error: scanned === removed + preserved + errors.length
+        ok 10 - guarantees accounting soundness when stat throws error: scanned === removed + preserved + errors.length
+          ---
+          duration_ms: 1.218424
+          ...
+        # Subtest: supports dir passed as file URL object
+        ok 11 - supports dir passed as file URL object
+          ---
+          duration_ms: 1.340221
+          ...
+        1..11
+    ok 4 - 4. Directory Edge Cases & Robustness
+      ---
+      duration_ms: 23.744587
+      type: 'suite'
+      ...
+    # Subtest: 5. Error Handling & Locked Files
+        # Subtest: handles locked file deletion error gracefully without crashing
+        ok 1 - handles locked file deletion error gracefully without crashing
+          ---
+          duration_ms: 2.15442
+          ...
+        # Subtest: sync version handles locked file deletion error gracefully
+        ok 2 - sync version handles locked file deletion error gracefully
+          ---
+          duration_ms: 0.688254
+          ...
+        # Subtest: handles real OS-level process locked file without crashing
+        ok 3 - handles real OS-level process locked file without crashing
+          ---
+          duration_ms: 0.378386
+          ...
+        1..3
+    ok 5 - 5. Error Handling & Locked Files
+      ---
+      duration_ms: 3.377092
+      type: 'suite'
+      ...
+    # Subtest: 6. Stdout Logging Contract
+        # Subtest: logs scan execution and count matching required format
+        ok 1 - logs scan execution and count matching required format
+          ---
+          duration_ms: 2.916703
+          ...
+        # Subtest: logs 0 removed files when directory is empty or all files are fresh
+        ok 2 - logs 0 removed files when directory is empty or all files are fresh
+          ---
+          duration_ms: 1.162819
+          ...
+        # Subtest: formatDirForLog normalizes paths cleanly
+        ok 3 - formatDirForLog normalizes paths cleanly
+          ---
+          duration_ms: 0.457714
+          ...
+        1..3
+    ok 6 - 6. Stdout Logging Contract
+      ---
+      duration_ms: 4.742439
+      type: 'suite'
+      ...
+    # Subtest: 7. Periodic Cleanup Scheduler (startCleanupScheduler & stopCleanupScheduler)
+        # Subtest: runs cleanup immediately upon startup when runImmediately is true
+        ok 1 - runs cleanup immediately upon startup when runImmediately is true
+          ---
+          duration_ms: 51.584708
+          ...
+        # Subtest: runs periodically at specified interval and stops cleanly
+        ok 2 - runs periodically at specified interval and stops cleanly
+          ---
+          duration_ms: 219.975387
+          ...
+        # Subtest: stopCleanupScheduler accepts raw timer or scheduler object
+        ok 3 - stopCleanupScheduler accepts raw timer or scheduler object
+          ---
+          duration_ms: 0.757704
+          ...
+        1..3
+    ok 7 - 7. Periodic Cleanup Scheduler (startCleanupScheduler & stopCleanupScheduler)
+      ---
+      duration_ms: 272.53296
+      type: 'suite'
+      ...
+    # Subtest: 8. Environment Variable Configuration (GENERATED_TTL_HOURS)
+        # Subtest: uses GENERATED_TTL_HOURS environment variable when ttlHours argument is omitted
+        ok 1 - uses GENERATED_TTL_HOURS environment variable when ttlHours argument is omitted
+          ---
+          duration_ms: 2.208291
+          ...
+        # Subtest: falls back to 24 when GENERATED_TTL_HOURS env var is invalid or negative
+        ok 2 - falls back to 24 when GENERATED_TTL_HOURS env var is invalid or negative
+          ---
+          duration_ms: 1.496542
+          ...
+        1..2
+    ok 8 - 8. Environment Variable Configuration (GENERATED_TTL_HOURS)
+      ---
+      duration_ms: 3.938369
+      type: 'suite'
+      ...
+    # Subtest: 9. Comprehensive End-to-End Generated Directory Verification
+        # Subtest: can safely scan default static/generated directory without altering fresh files
+        ok 1 - can safely scan default static/generated directory without altering fresh files
+          ---
+          duration_ms: 2.811446
+          ...
+        1..1
+    ok 9 - 9. Comprehensive End-to-End Generated Directory Verification
+      ---
+      duration_ms: 2.959983
+      type: 'suite'
+      ...
+    # Subtest: 10. Server Startup Integration & CLI Direct Execution
+        # Subtest: spawns server.js directly and confirms startup banner and immediate cleanup scan log
+        ok 1 - spawns server.js directly and confirms startup banner and immediate cleanup scan log
+          ---
+          duration_ms: 310.443659
+          ...
+        # Subtest: runs node cleanup.js directly and verifies clean execution with exit code 0
+        ok 2 - runs node cleanup.js directly and verifies clean execution with exit code 0
+          ---
+          duration_ms: 44.642993
+          ...
+        # Subtest: startCleanupScheduler falls back to CLEANUP_INTERVAL_MS when intervalMs is invalid or negative
+        ok 3 - startCleanupScheduler falls back to CLEANUP_INTERVAL_MS when intervalMs is invalid or negative
+          ---
+          duration_ms: 0.46096
+          ...
+        # Subtest: node cleanup.js --help prints usage instructions with exit code 0
+        ok 4 - node cleanup.js --help prints usage instructions with exit code 0
+          ---
+          duration_ms: 43.74678
+          ...
+        # Subtest: node cleanup.js --dir and --ttl flags are supported with exit code 0
+        ok 5 - node cleanup.js --dir and --ttl flags are supported with exit code 0
+          ---
+          duration_ms: 45.705625
+          ...
+        # Subtest: server.on("close") invokes stopCleanupScheduler when server shuts down
+        ok 6 - server.on("close") invokes stopCleanupScheduler when server shuts down
+          ---
+          duration_ms: 2.850428
+          ...
+        # Subtest: server process handles SIGINT gracefully, closing server and tearing down cleanup scheduler
+        ok 7 - server process handles SIGINT gracefully, closing server and tearing down cleanup scheduler
+          ---
+          duration_ms: 307.03946
+          ...
+        1..7
+    ok 10 - 10. Server Startup Integration & CLI Direct Execution
+      ---
+      duration_ms: 755.337612
+      type: 'suite'
+      ...
+    1..10
+ok 4 - Automatic Generated File Cleanup (F8) - Unit & Integration Tests
+  ---
+  duration_ms: 1112.181184
+  type: 'suite'
+  ...
+# Subtest: Side-by-Side Comparison View (F7) - Unit & Integration Tests
+    # Subtest: 1. Web UI & Assets Parity
+        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 1.009684
+          ...
+        # Subtest: style.css is identical byte-for-byte between static/ and android assets
+        ok 2 - style.css is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.236922
+          ...
+        # Subtest: HTML contains comparison view container, wrapper, images, labels, and handle
+        ok 3 - HTML contains comparison view container, wrapper, images, labels, and handle
+          ---
+          duration_ms: 0.240529
+          ...
+        # Subtest: HTML clearly labels Before and After with accessible indicators
+        ok 4 - HTML clearly labels Before and After with accessible indicators
+          ---
+          duration_ms: 0.143798
+          ...
+        # Subtest: Comparison slider handle includes slider accessibility attributes
+        ok 5 - Comparison slider handle includes slider accessibility attributes
+          ---
+          duration_ms: 0.173794
+          ...
+        # Subtest: CSS contains all required styling classes for comparison view and controls
+        ok 6 - CSS contains all required styling classes for comparison view and controls
+          ---
+          duration_ms: 0.259936
+          ...
+        # Subtest: CSS includes clip-path and hardware-accelerated positioning for smooth reveal
+        ok 7 - CSS includes clip-path and hardware-accelerated positioning for smooth reveal
+          ---
+          duration_ms: 0.172732
+          ...
+        1..7
+    ok 1 - 1. Web UI & Assets Parity
+      ---
+      duration_ms: 3.073194
+      type: 'suite'
+      ...
+    # Subtest: 2. Client-side Comparison State Logic Contract
+        # Subtest: comparison view starts inactive with empty before/after URLs and default 50% split
+        ok 1 - comparison view starts inactive with empty before/after URLs and default 50% split
+          ---
+          duration_ms: 0.334364
+          ...
+        # Subtest: enterComparisonView fails gracefully when before/after URLs are missing
+        ok 2 - enterComparisonView fails gracefully when before/after URLs are missing
+          ---
+          duration_ms: 0.261307
+          ...
+        # Subtest: showComparisonOption configures before and after image URLs
+        ok 3 - showComparisonOption configures before and after image URLs
+          ---
+          duration_ms: 0.19287
+          ...
+        # Subtest: enterComparisonView activates comparison mode when URLs are valid
+        ok 4 - enterComparisonView activates comparison mode when URLs are valid
+          ---
+          duration_ms: 0.195996
+          ...
+        # Subtest: exitComparisonView deactivates comparison mode
+        ok 5 - exitComparisonView deactivates comparison mode
+          ---
+          duration_ms: 0.179355
+          ...
+        # Subtest: toggleComparisonView flips between active and inactive cleanly
+        ok 6 - toggleComparisonView flips between active and inactive cleanly
+          ---
+          duration_ms: 0.250688
+          ...
+        # Subtest: setComparisonSplit clamps values strictly between 0 and 100
+        ok 7 - setComparisonSplit clamps values strictly between 0 and 100
+          ---
+          duration_ms: 0.178303
+          ...
+        # Subtest: comparison transitions are blocked when isProcessing is active
+        ok 8 - comparison transitions are blocked when isProcessing is active
+          ---
+          duration_ms: 0.154919
+          ...
+        1..8
+    ok 2 - 2. Client-side Comparison State Logic Contract
+      ---
+      duration_ms: 2.170951
+      type: 'suite'
+      ...
+    # Subtest: 3. Web Application Wiring & Action Integration
+        # Subtest: invertDepthMap captures preUrl, updates comparisonBeforeUrl, and calls showComparisonOption
+        ok 1 - invertDepthMap captures preUrl, updates comparisonBeforeUrl, and calls showComparisonOption
+          ---
+          duration_ms: 0.913896
+          ...
+        # Subtest: removeBg captures preUrl, updates comparisonBeforeUrl, and calls showComparisonOption
+        ok 2 - removeBg captures preUrl, updates comparisonBeforeUrl, and calls showComparisonOption
+          ---
+          duration_ms: 0.171941
+          ...
+        # Subtest: polishRelief captures preUrl, updates comparisonBeforeUrl on complete, and calls showComparisonOption
+        ok 3 - polishRelief captures preUrl, updates comparisonBeforeUrl on complete, and calls showComparisonOption
+          ---
+          duration_ms: 0.253203
+          ...
+        # Subtest: generateMap resets comparison state and exits comparison view
+        ok 4 - generateMap resets comparison state and exits comparison view
+          ---
+          duration_ms: 0.158646
+          ...
+        # Subtest: convertPhoto resets comparison state and exits comparison view
+        ok 5 - convertPhoto resets comparison state and exits comparison view
+          ---
+          duration_ms: 0.14482
+          ...
+        # Subtest: selectGalleryItem exits comparison view and shows compareBtn only if matching comparisonAfterUrl
+        ok 6 - selectGalleryItem exits comparison view and shows compareBtn only if matching comparisonAfterUrl
+          ---
+          duration_ms: 0.130192
+          ...
+        # Subtest: clearGallery resets comparison state and hides compareBtn
+        ok 7 - clearGallery resets comparison state and hides compareBtn
+          ---
+          duration_ms: 0.151873
+          ...
+        1..7
+    ok 3 - 3. Web Application Wiring & Action Integration
+      ---
+      duration_ms: 2.257352
+      type: 'suite'
+      ...
+    # Subtest: 4. Mouse & Touch Drag Interaction Contract
+        # Subtest: HTML script defines initComparisonDrag function
+        ok 1 - HTML script defines initComparisonDrag function
+          ---
+          duration_ms: 0.17698
+          ...
+        # Subtest: initComparisonDrag binds mousedown and touchstart with non-passive touchmove prevention
+        ok 2 - initComparisonDrag binds mousedown and touchstart with non-passive touchmove prevention
+          ---
+          duration_ms: 0.153527
+          ...
+        # Subtest: drag handlers extract clientX from touch or mouse events
+        ok 3 - drag handlers extract clientX from touch or mouse events
+          ---
+          duration_ms: 0.186287
+          ...
+        # Subtest: slider handle supports keyboard navigation (Left/Right/Home/End/PageUp/PageDown)
+        ok 4 - slider handle supports keyboard navigation (Left/Right/Home/End/PageUp/PageDown)
+          ---
+          duration_ms: 0.304709
+          ...
+        # Subtest: drag handlers support PointerEvents with touch-action: none and pointermove/up/cancel
+        ok 5 - drag handlers support PointerEvents with touch-action: none and pointermove/up/cancel
+          ---
+          duration_ms: 0.248865
+          ...
+        # Subtest: slider handle binds pointerdown to startDrag for touch and pen parity
+        ok 6 - slider handle binds pointerdown to startDrag for touch and pen parity
+          ---
+          duration_ms: 0.118441
+          ...
+        # Subtest: slider handle and window support Escape key to exit comparison view
+        ok 7 - slider handle and window support Escape key to exit comparison view
+          ---
+          duration_ms: 0.125745
+          ...
+        1..7
+    ok 4 - 4. Mouse & Touch Drag Interaction Contract
+      ---
+      duration_ms: 1.534624
+      type: 'suite'
+      ...
+    # Subtest: 5. Android Native Jetpack Compose UI Parity
+        # Subtest: MainActivity.kt imports gestures and LocalDensity for draggable divider
+        ok 1 - MainActivity.kt imports gestures and LocalDensity for draggable divider
+          ---
+          duration_ms: 0.410466
+          ...
+        # Subtest: MainActivity.kt defines CyanAccent color
+        ok 2 - MainActivity.kt defines CyanAccent color
+          ---
+          duration_ms: 0.100447
+          ...
+        # Subtest: ForgeScreen manages beforeImageUrl, beforeBitmap, afterImageUrl, isComparing, and comparisonSplit
+        ok 3 - ForgeScreen manages beforeImageUrl, beforeBitmap, afterImageUrl, isComparing, and comparisonSplit
+          ---
+          duration_ms: 0.117389
+          ...
+        # Subtest: Preview Card renders BeforeAfterComparisonView when isComparing is true
+        ok 4 - Preview Card renders BeforeAfterComparisonView when isComparing is true
+          ---
+          duration_ms: 0.291103
+          ...
+        # Subtest: MainActivity.kt defines BeforeAfterComparisonView composable function
+        ok 5 - MainActivity.kt defines BeforeAfterComparisonView composable function
+          ---
+          duration_ms: 0.24655
+          ...
+        # Subtest: BeforeAfterComparisonView provides Before and After labels and draggable divider
+        ok 6 - BeforeAfterComparisonView provides Before and After labels and draggable divider
+          ---
+          duration_ms: 0.232404
+          ...
+        # Subtest: Action buttons row provides Compare button when before and current bitmaps exist
+        ok 7 - Action buttons row provides Compare button when before and current bitmaps exist
+          ---
+          duration_ms: 0.164306
+          ...
+        # Subtest: MainActivity.kt captures preUrl and preBitmap in invert, removeBg, and polish
+        ok 8 - MainActivity.kt captures preUrl and preBitmap in invert, removeBg, and polish
+          ---
+          duration_ms: 0.170678
+          ...
+        # Subtest: MainActivity.kt resets comparison on generate, photo, discard, and gallery click
+        ok 9 - MainActivity.kt resets comparison on generate, photo, discard, and gallery click
+          ---
+          duration_ms: 0.096961
+          ...
+        # Subtest: MainActivity.kt manages afterImageUrl state and resets on clear and discard
+        ok 10 - MainActivity.kt manages afterImageUrl state and resets on clear and discard
+          ---
+          duration_ms: 0.133589
+          ...
+        # Subtest: MainActivity.kt imports BackHandler and binds it to isComparing
+        ok 11 - MainActivity.kt imports BackHandler and binds it to isComparing
+          ---
+          duration_ms: 0.206315
+          ...
+        # Subtest: MainActivity.kt Preview Card provides progress feedback for isRemovingBg with PinkAccent
+        ok 12 - MainActivity.kt Preview Card provides progress feedback for isRemovingBg with PinkAccent
+          ---
+          duration_ms: 0.343501
+          ...
+        # Subtest: android_app contains ComparisonViewTest.kt with comprehensive JUnit tests
+        ok 13 - android_app contains ComparisonViewTest.kt with comprehensive JUnit tests
+          ---
+          duration_ms: 0.288498
+          ...
+        1..13
+    ok 5 - 5. Android Native Jetpack Compose UI Parity
+      ---
+      duration_ms: 3.219236
+      type: 'suite'
+      ...
+    # Subtest: 6. Direct VM Execution of static/index.html Script
+        # Subtest: setComparisonSplit updates handle left style, aria-valuenow, and overlay clipPath
+        ok 1 - setComparisonSplit updates handle left style, aria-valuenow, and overlay clipPath
+          ---
+          duration_ms: 3.582975
+          ...
+        # Subtest: setComparisonSplit updates aria-valuetext and label opacities at extreme bounds
+        ok 2 - setComparisonSplit updates aria-valuetext and label opacities at extreme bounds
+          ---
+          duration_ms: 0.981542
+          ...
+        # Subtest: showComparisonOption configures before and after image elements and reveals compareBtn
+        ok 3 - showComparisonOption configures before and after image elements and reveals compareBtn
+          ---
+          duration_ms: 1.061541
+          ...
+        # Subtest: enterComparisonView displays comparisonContainer and hides standard outputImage
+        ok 4 - enterComparisonView displays comparisonContainer and hides standard outputImage
+          ---
+          duration_ms: 1.122384
+          ...
+        # Subtest: exitComparisonView restores outputImage and hides comparisonContainer
+        ok 5 - exitComparisonView restores outputImage and hides comparisonContainer
+          ---
+          duration_ms: 1.036344
+          ...
+        # Subtest: toggleComparisonView toggles between comparison view and single image preview
+        ok 6 - toggleComparisonView toggles between comparison view and single image preview
+          ---
+          duration_ms: 0.892055
+          ...
+        # Subtest: clearGallery resets comparison URLs and hides compareBtn in DOM
+        ok 7 - clearGallery resets comparison URLs and hides compareBtn in DOM
+          ---
+          duration_ms: 1.051082
+          ...
+        1..7
+    ok 6 - 6. Direct VM Execution of static/index.html Script
+      ---
+      duration_ms: 10.022382
+      type: 'suite'
+      ...
+    # Subtest: 7. Adversarial Edge Cases & Robustness Checks
+        # Subtest: rapid boundary split inputs clamp correctly without throwing
+        ok 1 - rapid boundary split inputs clamp correctly without throwing
+          ---
+          duration_ms: 2.067578
+          ...
+        # Subtest: enterComparisonView does not activate if URLs are empty or null
+        ok 2 - enterComparisonView does not activate if URLs are empty or null
+          ---
+          duration_ms: 1.295387
+          ...
+        # Subtest: loading overlay blocks comparison toggle during active cloud operations
+        ok 3 - loading overlay blocks comparison toggle during active cloud operations
+          ---
+          duration_ms: 1.269909
+          ...
+        # Subtest: initComparisonDrag is idempotent and guards against duplicate listener registration
+        ok 4 - initComparisonDrag is idempotent and guards against duplicate listener registration
+          ---
+          duration_ms: 1.337615
+          ...
+        # Subtest: showComparisonOption refreshes comparisonSplit when comparison view is already active
+        ok 5 - showComparisonOption refreshes comparisonSplit when comparison view is already active
+          ---
+          duration_ms: 1.421643
+          ...
+        # Subtest: Escape key cleanly exits comparison view in DOM VM
+        ok 6 - Escape key cleanly exits comparison view in DOM VM
+          ---
+          duration_ms: 1.278847
+          ...
+        # Subtest: exitComparisonView cleanly aborts active drag, resets isDraggingComparison, and removes window listeners
+        ok 7 - exitComparisonView cleanly aborts active drag, resets isDraggingComparison, and removes window listeners
+          ---
+          duration_ms: 1.179892
+          ...
+        # Subtest: slider handle can be dragged immediately after re-entering comparison view following an aborted drag (deadlock prevention)
+        ok 8 - slider handle can be dragged immediately after re-entering comparison view following an aborted drag (deadlock prevention)
+          ---
+          duration_ms: 1.970437
+          ...
+        # Subtest: window blur event terminates active dragging and detaches listeners
+        ok 9 - window blur event terminates active dragging and detaches listeners
+          ---
+          duration_ms: 0.881946
+          ...
+        # Subtest: showComparisonOption strictly synchronizes compareBtn label and active class with isComparisonActive
+        ok 10 - showComparisonOption strictly synchronizes compareBtn label and active class with isComparisonActive
+          ---
+          duration_ms: 0.799622
+          ...
+        1..10
+    ok 7 - 7. Adversarial Edge Cases & Robustness Checks
+      ---
+      duration_ms: 13.934742
+      type: 'suite'
+      ...
+    1..7
+ok 5 - Side-by-Side Comparison View (F7) - Unit & Integration Tests
+  ---
+  duration_ms: 37.384678
+  type: 'suite'
+  ...
+# Subtest: Depth Intensity Feature (F6) - Unit & Integration Tests
+    # Subtest: 1. Sanitize Depth Intensity Logic
+        # Subtest: defaults to 70 when value is undefined, null, empty or whitespace string
+        ok 1 - defaults to 70 when value is undefined, null, empty or whitespace string
+          ---
+          duration_ms: 0.993424
+          ...
+        # Subtest: defaults to 70 for invalid, non-numeric, boolean, or non-finite values
+        ok 2 - defaults to 70 for invalid, non-numeric, boolean, or non-finite values
+          ---
+          duration_ms: 0.213419
+          ...
+        # Subtest: parses and returns valid numbers within 0-100 range
+        ok 3 - parses and returns valid numbers within 0-100 range
+          ---
+          duration_ms: 0.161261
+          ...
+        # Subtest: parses numeric string representations correctly
+        ok 4 - parses numeric string representations correctly
+          ---
+          duration_ms: 0.165198
+          ...
+        # Subtest: clamps values below 0 to 0 and above 100 to 100
+        ok 5 - clamps values below 0 to 0 and above 100 to 100
+          ---
+          duration_ms: 0.131385
+          ...
+        # Subtest: rounds floating point inputs to nearest integer
+        ok 6 - rounds floating point inputs to nearest integer
+          ---
+          duration_ms: 0.123681
+          ...
+        1..6
+    ok 1 - 1. Sanitize Depth Intensity Logic
+      ---
+      duration_ms: 2.660785
+      type: 'suite'
+      ...
+    # Subtest: 2. Prompt Modifier Injection & buildFinalPrompt Logic
+        # Subtest: 0–30 returns gentle modifier and incorporates into prompt
+        ok 1 - 0–30 returns gentle modifier and incorporates into prompt
+          ---
+          duration_ms: 0.365843
+          ...
+        # Subtest: 31–69 returns empty modifier for default behavior without extreme modifiers
+        ok 2 - 31–69 returns empty modifier for default behavior without extreme modifiers
+          ---
+          duration_ms: 0.18189
+          ...
+        # Subtest: 70–100 returns dramatic modifier and incorporates into prompt
+        ok 3 - 70–100 returns dramatic modifier and incorporates into prompt
+          ---
+          duration_ms: 0.261939
+          ...
+        # Subtest: default 70 when intensity is omitted preserves dramatic expected behavior
+        ok 4 - default 70 when intensity is omitted preserves dramatic expected behavior
+          ---
+          duration_ms: 0.177923
+          ...
+        # Subtest: exact boundary conditions: 0, 30, 31, 69, 70, 100
+        ok 5 - exact boundary conditions: 0, 30, 31, 69, 70, 100
+          ---
+          duration_ms: 0.1932
+          ...
+        1..5
+    ok 2 - 2. Prompt Modifier Injection & buildFinalPrompt Logic
+      ---
+      duration_ms: 1.54862
+      type: 'suite'
+      ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (25ms)
+    # Subtest: 3. Express Server Endpoint /api/generate
+        # Subtest: applies gentle modifier when depth_intensity is <= 30
+        ok 1 - applies gentle modifier when depth_intensity is <= 30
+          ---
+          duration_ms: 93.894956
+          ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (5ms)
+        # Subtest: applies dramatic modifier when depth_intensity is >= 70
+        ok 2 - applies dramatic modifier when depth_intensity is >= 70
+          ---
+          duration_ms: 14.981846
+          ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (1ms)
+        # Subtest: applies default behavior when depth_intensity is in 31–69 range
+        ok 3 - applies default behavior when depth_intensity is in 31–69 range
+          ---
+          duration_ms: 7.659192
+          ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (2ms)
+        # Subtest: defaults to 70 with dramatic modifier when depth_intensity is omitted
+        ok 4 - defaults to 70 with dramatic modifier when depth_intensity is omitted
+          ---
+          duration_ms: 7.465981
+          ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (2ms)
+        # Subtest: accepts camelCase depthIntensity parameter fallback
+        ok 5 - accepts camelCase depthIntensity parameter fallback
+          ---
+          duration_ms: 6.645009
+          ...
+# [10:52:30 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:30 PM] 🌍 POST /api/generate - 200 (2ms)
+        # Subtest: defaults to 70 when depth_intensity is whitespace or invalid type in /api/generate
+        ok 6 - defaults to 70 when depth_intensity is whitespace or invalid type in /api/generate
+          ---
+          duration_ms: 7.757976
+          ...
+        1..6
+    ok 3 - 3. Express Server Endpoint /api/generate
+      ---
+      duration_ms: 139.217126
+      type: 'suite'
+      ...
+# [10:52:30 PM] 🌍 POST /api/photo-to-depth - 200 (11ms)
+    # Subtest: 4. Express Server Endpoint /api/photo-to-depth
+        # Subtest: applies gentle modifier when depth_intensity is <= 30 via multipart form
+        ok 1 - applies gentle modifier when depth_intensity is <= 30 via multipart form
+          ---
+          duration_ms: 19.660897
+          ...
+# [10:52:30 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+        # Subtest: applies dramatic modifier when depth_intensity is >= 70 via multipart form
+        ok 2 - applies dramatic modifier when depth_intensity is >= 70 via multipart form
+          ---
+          duration_ms: 8.832411
+          ...
+# [10:52:30 PM] 🌍 POST /api/photo-to-depth - 200 (4ms)
+        # Subtest: defaults to 70 with dramatic modifier when depth_intensity is omitted in multipart form
+        ok 3 - defaults to 70 with dramatic modifier when depth_intensity is omitted in multipart form
+          ---
+          duration_ms: 8.880481
+          ...
+# [10:52:30 PM] 🌍 POST /api/photo-to-depth - 200 (3ms)
+        # Subtest: defaults to 70 when depth_intensity is whitespace string in multipart form
+        ok 4 - defaults to 70 when depth_intensity is whitespace string in multipart form
+          ---
+          duration_ms: 9.044416
+          ...
+# [10:52:30 PM] 🌍 POST /api/photo-to-depth - 400 (1ms)
+        # Subtest: returns 400 when no photo is uploaded
+        ok 5 - returns 400 when no photo is uploaded
+          ---
+          duration_ms: 6.577243
+          ...
+        1..5
+    ok 4 - 4. Express Server Endpoint /api/photo-to-depth
+      ---
+      duration_ms: 53.686939
+      type: 'suite'
+      ...
+    # Subtest: 5. Web UI & Android Assets Parity
+        # Subtest: index.html is identical between static/ and android assets
+        ok 1 - index.html is identical between static/ and android assets
+          ---
+          duration_ms: 0.331999
+          ...
+        # Subtest: style.css is identical between static/ and android assets
+        ok 2 - style.css is identical between static/ and android assets
+          ---
+          duration_ms: 0.150721
+          ...
+        # Subtest: HTML contains depth intensity slider labeled Depth Intensity with range 0–100 and default 70
+        ok 3 - HTML contains depth intensity slider labeled Depth Intensity with range 0–100 and default 70
+          ---
+          duration_ms: 0.16078
+          ...
+        # Subtest: HTML contains dynamic value indicator showing 70%
+        ok 4 - HTML contains dynamic value indicator showing 70%
+          ---
+          duration_ms: 0.221113
+          ...
+        # Subtest: HTML contains updateDepthIntensity function
+        ok 5 - HTML contains updateDepthIntensity function
+          ---
+          duration_ms: 0.158686
+          ...
+        # Subtest: HTML range sliders include full WCAG accessibility attributes and onchange handler
+        ok 6 - HTML range sliders include full WCAG accessibility attributes and onchange handler
+          ---
+          duration_ms: 0.170999
+          ...
+        # Subtest: updateDepthIntensity updates aria-valuenow, aria-valuetext, and title dynamically
+        ok 7 - updateDepthIntensity updates aria-valuenow, aria-valuetext, and title dynamically
+          ---
+          duration_ms: 0.186067
+          ...
+        # Subtest: switchMode synchronizes depth intensity slider between tabs
+        ok 8 - switchMode synchronizes depth intensity slider between tabs
+          ---
+          duration_ms: 0.443889
+          ...
+        # Subtest: style.css defines .form-range:focus-visible for keyboard accessibility
+        ok 9 - style.css defines .form-range:focus-visible for keyboard accessibility
+          ---
+          duration_ms: 0.151823
+          ...
+        # Subtest: HTML JS sends depth_intensity in generateMap and convertPhoto
+        ok 10 - HTML JS sends depth_intensity in generateMap and convertPhoto
+          ---
+          duration_ms: 0.211724
+          ...
+        # Subtest: HTML JS preserves 0% depth intensity without converting 0 to 70 via falsy fallback
+        ok 11 - HTML JS preserves 0% depth intensity without converting 0 to 70 via falsy fallback
+          ---
+          duration_ms: 0.250117
+          ...
+        1..11
+    ok 5 - 5. Web UI & Android Assets Parity
+      ---
+      duration_ms: 3.094033
+      type: 'suite'
+      ...
+    # Subtest: 6. Android Native UI & Client Integration
+        # Subtest: ApiClient.kt has depthIntensity parameter and sends depth_intensity
+        ok 1 - ApiClient.kt has depthIntensity parameter and sends depth_intensity
+          ---
+          duration_ms: 0.213148
+          ...
+        # Subtest: ApiClient.kt delegates 2-parameter photoToDepth to 3-parameter overload
+        ok 2 - ApiClient.kt delegates 2-parameter photoToDepth to 3-parameter overload
+          ---
+          duration_ms: 0.170899
+          ...
+        # Subtest: MainActivity.kt exposes DepthIntensitySlider and connects to ApiClient
+        ok 3 - MainActivity.kt exposes DepthIntensitySlider and connects to ApiClient
+          ---
+          duration_ms: 0.183923
+          ...
+        # Subtest: MainActivity.kt DepthIntensitySlider supports enabled parameter and is guarded by !isBusy
+        ok 4 - MainActivity.kt DepthIntensitySlider supports enabled parameter and is guarded by !isBusy
+          ---
+          duration_ms: 0.151633
+          ...
+        1..4
+    ok 6 - 6. Android Native UI & Client Integration
+      ---
+      duration_ms: 0.988564
+      type: 'suite'
+      ...
+    1..6
+ok 6 - Depth Intensity Feature (F6) - Unit & Integration Tests
+  ---
+  duration_ms: 202.270492
+  type: 'suite'
+  ...
+# Subtest: validateEnvironment unit tests
+    # Subtest: passes when GEMINI_API_KEY is present and non-empty and python is available
+    ok 1 - passes when GEMINI_API_KEY is present and non-empty and python is available
+      ---
+      duration_ms: 0.981071
+      ...
+    # Subtest: fails when GEMINI_API_KEY is missing
+    ok 2 - fails when GEMINI_API_KEY is missing
+      ---
+      duration_ms: 0.323112
+      ...
+    # Subtest: fails when GEMINI_API_KEY is empty string or only whitespace
+    ok 3 - fails when GEMINI_API_KEY is empty string or only whitespace
+      ---
+      duration_ms: 0.209371
+      ...
+    # Subtest: warns when Python is not available but does not invalidate startup
+    ok 4 - warns when Python is not available but does not invalidate startup
+      ---
+      duration_ms: 0.217205
+      ...
+    # Subtest: exits with process.exit(1) when exitOnError is true and validation fails
+    ok 5 - exits with process.exit(1) when exitOnError is true and validation fails
+      ---
+      duration_ms: 0.501817
+      ...
+    1..5
+ok 7 - validateEnvironment unit tests
+  ---
+  duration_ms: 3.862908
+  ...
+# Subtest: server startup CLI validation integration tests
+    # Subtest: exits with status code 1 when GEMINI_API_KEY is missing via CLI run
+    ok 1 - exits with status code 1 when GEMINI_API_KEY is missing via CLI run
+      ---
+      duration_ms: 219.087352
+      ...
+    1..1
+ok 8 - server startup CLI validation integration tests
+  ---
+  duration_ms: 219.411736
+  ...
+# Subtest: Gemini Response Robustness (Feature F15) - Integration Tests
+    # Subtest: 1. safeJsonParse Unit Tests
+        # Subtest: parses standard valid JSON without issues
+        ok 1 - parses standard valid JSON without issues
+          ---
+          duration_ms: 1.801802
+          ...
+        # Subtest: parses JSON wrapped in markdown code blocks
+        ok 2 - parses JSON wrapped in markdown code blocks
+          ---
+          duration_ms: 0.445
+          ...
+        # Subtest: falls back safely on malformed JSON without throwing
+        ok 3 - falls back safely on malformed JSON without throwing
+          ---
+          duration_ms: 0.474586
+          ...
+        1..3
+    ok 1 - 1. safeJsonParse Unit Tests
+      ---
+      duration_ms: 3.448825
+      type: 'suite'
+      ...
+# [10:52:31 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:31 PM] 🌍 POST /api/generate - 200 (32ms)
+    # Subtest: 2. POST /api/generate Robustness Under Non-JSON Gemini Responses
+        # Subtest: recovers and generates image when Gemini returns markdown code blocks
+        ok 1 - recovers and generates image when Gemini returns markdown code blocks
+          ---
+          duration_ms: 92.257801
+          ...
+# [10:52:31 PM] 🚀 POST /api/generate - Starting generation...
+# [Gemini Response Robustness] Failed to parse JSON response: Unexpected token 'H', "Here is a "... is not valid JSON. Raw response: Here is a prompt for you: A magnificent sculpted wolf head in relief.
+# [Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: Here is a prompt for you: A magnificent sculpted wolf head in relief.
+# [10:52:31 PM] 🌍 POST /api/generate - 200 (8ms)
+        # Subtest: falls back to user prompt when Gemini returns plain text / non-JSON instead of 500 error
+        ok 2 - falls back to user prompt when Gemini returns plain text / non-JSON instead of 500 error
+          ---
+          duration_ms: 18.464704
+          ...
+# [10:52:31 PM] 🚀 POST /api/generate - Starting generation...
+# [Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: 
+# [10:52:31 PM] 🌍 POST /api/generate - 200 (2ms)
+        # Subtest: falls back to default prompt when Gemini returns empty text or missing keys
+        ok 3 - falls back to default prompt when Gemini returns empty text or missing keys
+          ---
+          duration_ms: 9.666675
+          ...
+        1..3
+    ok 2 - 2. POST /api/generate Robustness Under Non-JSON Gemini Responses
+      ---
+      duration_ms: 120.943404
+      type: 'suite'
+      ...
+# [Gemini Response Robustness] Failed to parse JSON response: Unexpected token 'I', "I detected"... is not valid JSON. Raw response: I detected a mountain landscape with deep spatial ridges.
+# [Gemini Photo-to-Depth Warning] Non-JSON or missing depth_prompt from Gemini Vision. Using fallback from raw response: I detected a mountain landscape with deep spatial ridges.
+# [10:52:31 PM] 🌍 POST /api/photo-to-depth - 200 (10ms)
+    # Subtest: 3. POST /api/photo-to-depth Robustness Under Non-JSON Gemini Responses
+        # Subtest: recovers and generates depth map when Gemini Vision returns non-JSON or plain text
+        ok 1 - recovers and generates depth map when Gemini Vision returns non-JSON or plain text
+          ---
+          duration_ms: 20.897043
+          ...
+        1..1
+    ok 3 - 3. POST /api/photo-to-depth Robustness Under Non-JSON Gemini Responses
+      ---
+      duration_ms: 21.257747
+      type: 'suite'
+      ...
+    1..3
+ok 9 - Gemini Response Robustness (Feature F15) - Integration Tests
+  ---
+  duration_ms: 146.569442
+  type: 'suite'
+  ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (10ms)
+# Subtest: Health Check Endpoint (F9) - Unit & Integration Tests
+    # Subtest: 1. HTTP 200 and JSON Schema Verification
+        # Subtest: GET /api/health returns HTTP 200 with application/json content type
+        ok 1 - GET /api/health returns HTTP 200 with application/json content type
+          ---
+          duration_ms: 80.242418
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+        # Subtest: GET /api/health response matches exact required JSON schema
+        ok 2 - GET /api/health response matches exact required JSON schema
+          ---
+          duration_ms: 10.675901
+          ...
+# [10:52:32 PM] 🌍 HEAD /api/health - 200 (1ms)
+        # Subtest: HEAD /api/health returns HTTP 200 without payload
+        ok 3 - HEAD /api/health returns HTTP 200 without payload
+          ---
+          duration_ms: 6.877764
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+        # Subtest: GET /api/health sets strict Cache-Control and anti-caching headers
+        ok 4 - GET /api/health sets strict Cache-Control and anti-caching headers
+          ---
+          duration_ms: 4.911324
+          ...
+# [10:52:32 PM] 🌍 GET /api/health?probe=liveness&verbose=1&t=1791845552143 - 200 (0ms)
+        # Subtest: GET /api/health supports query parameters gracefully without schema deviation
+        ok 5 - GET /api/health supports query parameters gracefully without schema deviation
+          ---
+          duration_ms: 6.469642
+          ...
+# [10:52:32 PM] 🌍 OPTIONS /api/health - 204 (0ms)
+        # Subtest: OPTIONS /api/health returns HTTP 204 with Allow: GET, HEAD, OPTIONS header
+        ok 6 - OPTIONS /api/health returns HTTP 204 with Allow: GET, HEAD, OPTIONS header
+          ---
+          duration_ms: 7.162264
+          ...
+# [10:52:32 PM] 🌍 POST /api/health - 405 (0ms)
+        # Subtest: POST /api/health returns HTTP 405 Method Not Allowed with Allow header and structured JSON error
+        ok 7 - POST /api/health returns HTTP 405 Method Not Allowed with Allow header and structured JSON error
+          ---
+          duration_ms: 10.740661
+          ...
+# [10:52:32 PM] 🌍 PUT /api/health - 405 (0ms)
+# [10:52:32 PM] 🌍 DELETE /api/health - 405 (1ms)
+# [10:52:32 PM] 🌍 PATCH /api/health - 405 (1ms)
+        # Subtest: PUT, DELETE, and PATCH /api/health return HTTP 405 with Allow header
+        ok 8 - PUT, DELETE, and PATCH /api/health return HTTP 405 with Allow header
+          ---
+          duration_ms: 12.118803
+          ...
+        1..8
+    ok 1 - 1. HTTP 200 and JSON Schema Verification
+      ---
+      duration_ms: 140.926933
+      type: 'suite'
+      ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+    # Subtest: 2. Dynamic package.json Version Resolution
+        # Subtest: reads current version dynamically from package.json
+        ok 1 - reads current version dynamically from package.json
+          ---
+          duration_ms: 19.953963
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+        # Subtest: reflects version changes dynamically without server restart
+        ok 2 - reflects version changes dynamically without server restart
+          ---
+          duration_ms: 105.778923
+          ...
+        # Subtest: getPackageVersion handles missing version field gracefully
+        ok 3 - getPackageVersion handles missing version field gracefully
+          ---
+          duration_ms: 1.929611
+          ...
+        # Subtest: getPackageVersion strips UTF-8 byte order mark (BOM) without failing
+        ok 4 - getPackageVersion strips UTF-8 byte order mark (BOM) without failing
+          ---
+          duration_ms: 1.038589
+          ...
+        # Subtest: getPackageVersion handles non-string or whitespace version safely
+        ok 5 - getPackageVersion handles non-string or whitespace version safely
+          ---
+          duration_ms: 1.131271
+          ...
+        # Subtest: getPackageVersion handles malformed JSON without crashing (fallback to 0.0.0)
+        ok 6 - getPackageVersion handles malformed JSON without crashing (fallback to 0.0.0)
+          ---
+          duration_ms: 0.964129
+          ...
+        # Subtest: getPackageVersion handles non-existent file or directory path safely
+        ok 7 - getPackageVersion handles non-existent file or directory path safely
+          ---
+          duration_ms: 0.663237
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+        # Subtest: GET /api/health returns HTTP 200 with fallback version 0.0.0 when package.json is corrupted
+        ok 8 - GET /api/health returns HTTP 200 with fallback version 0.0.0 when package.json is corrupted
+          ---
+          duration_ms: 5.923373
+          ...
+        1..8
+    ok 2 - 2. Dynamic package.json Version Resolution
+      ---
+      duration_ms: 137.977123
+      type: 'suite'
+      ...
+    # Subtest: 3. Accurate Python Presence Reporting
+        # Subtest: isPythonAvailable returns true when python and processor.py exist
+        ok 1 - isPythonAvailable returns true when python and processor.py exist
+          ---
+          duration_ms: 0.495675
+          ...
+        # Subtest: isPythonAvailable returns false when processor.py does not exist
+        ok 2 - isPythonAvailable returns false when processor.py does not exist
+          ---
+          duration_ms: 0.495635
+          ...
+        # Subtest: isPythonAvailable returns false when processor is a directory
+        ok 3 - isPythonAvailable returns false when processor is a directory
+          ---
+          duration_ms: 0.446823
+          ...
+        # Subtest: isPythonAvailable returns false when resolveFn returns null, undefined, or empty string
+        ok 4 - isPythonAvailable returns false when resolveFn returns null, undefined, or empty string
+          ---
+          duration_ms: 0.473263
+          ...
+        # Subtest: isPythonAvailable returns false when executable path does not exist on disk
+        ok 5 - isPythonAvailable returns false when executable path does not exist on disk
+          ---
+          duration_ms: 0.49872
+          ...
+        # Subtest: isPythonAvailable returns false when executable cannot be executed or fails
+        ok 6 - isPythonAvailable returns false when executable cannot be executed or fails
+          ---
+          duration_ms: 3.297092
+          ...
+        # Subtest: resolvePythonExecutable respects process.env.PYTHON_EXEC override
+        ok 7 - resolvePythonExecutable respects process.env.PYTHON_EXEC override
+          ---
+          duration_ms: 0.464627
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (4ms)
+        # Subtest: GET /api/health accurately reports degraded python presence over HTTP when Python is unavailable
+        ok 8 - GET /api/health accurately reports degraded python presence over HTTP when Python is unavailable
+          ---
+          duration_ms: 13.074687
+          ...
+        # Subtest: isPythonAvailable caches results to prevent event-loop starvation and respects clearPythonCache
+        ok 9 - isPythonAvailable caches results to prevent event-loop starvation and respects clearPythonCache
+          ---
+          duration_ms: 8.106016
+          ...
+        1..9
+    ok 3 - 3. Accurate Python Presence Reporting
+      ---
+      duration_ms: 27.937721
+      type: 'suite'
+      ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+    # Subtest: 4. Uptime and Timestamp Fields
+        # Subtest: uptime increases monotonically over time
+        ok 1 - uptime increases monotonically over time
+          ---
+          duration_ms: 68.886741
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+        # Subtest: timestamp reflects current system time in ISO 8601 format
+        ok 2 - timestamp reflects current system time in ISO 8601 format
+          ---
+          duration_ms: 4.020331
+          ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+        # Subtest: uptime has at most 2 decimal places of precision
+        ok 3 - uptime has at most 2 decimal places of precision
+          ---
+          duration_ms: 3.42991
+          ...
+        1..3
+    ok 4 - 4. Uptime and Timestamp Fields
+      ---
+      duration_ms: 76.675033
+      type: 'suite'
+      ...
+    # Subtest: 5. docker-compose.yaml Healthcheck Configuration
+        # Subtest: docker-compose.yaml healthcheck targets /api/health on port 8080
+        ok 1 - docker-compose.yaml healthcheck targets /api/health on port 8080
+          ---
+          duration_ms: 0.198891
+          ...
+        # Subtest: docker-compose.yaml healthcheck has required interval, timeout, and retries
+        ok 2 - docker-compose.yaml healthcheck has required interval, timeout, and retries
+          ---
+          duration_ms: 0.154218
+          ...
+        1..2
+    ok 5 - 5. docker-compose.yaml Healthcheck Configuration
+      ---
+      duration_ms: 0.461661
+      type: 'suite'
+      ...
+    # Subtest: 6. Android Native ApiClient Integration
+        # Subtest: ApiClient.kt declares checkHealth method querying /api/health via GET
+        ok 1 - ApiClient.kt declares checkHealth method querying /api/health via GET
+          ---
+          duration_ms: 0.259254
+          ...
+        # Subtest: ApiClient.kt declares isHealthy convenience helper
+        ok 2 - ApiClient.kt declares isHealthy convenience helper
+          ---
+          duration_ms: 0.213459
+          ...
+        # Subtest: ApiClient.kt handles errors safely without throwing uncaught exceptions
+        ok 3 - ApiClient.kt handles errors safely without throwing uncaught exceptions
+          ---
+          duration_ms: 0.185817
+          ...
+        # Subtest: Android test suite contains HealthCheckTest.kt
+        ok 4 - Android test suite contains HealthCheckTest.kt
+          ---
+          duration_ms: 0.164337
+          ...
+        1..4
+    ok 6 - 6. Android Native ApiClient Integration
+      ---
+      duration_ms: 0.991922
+      type: 'suite'
+      ...
+    # Subtest: 7. Documentation Parity
+        # Subtest: README.md documents GET /api/health endpoint
+        ok 1 - README.md documents GET /api/health endpoint
+          ---
+          duration_ms: 0.304227
+          ...
+        # Subtest: android_app/README.md documents health check capability
+        ok 2 - android_app/README.md documents health check capability
+          ---
+          duration_ms: 0.17203
+          ...
+        1..2
+    ok 7 - 7. Documentation Parity
+      ---
+      duration_ms: 0.587697
+      type: 'suite'
+      ...
+# [10:52:32 PM] 🌍 GET /api/health - 200 (5ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (3ms)
+# [10:52:32 PM] 🌍 GET /api/health - 200 (0ms)
+    # Subtest: 8. Concurrency, Performance & Android Contract Robustness
+        # Subtest: handles concurrent requests efficiently without blocking event loop
+        ok 1 - handles concurrent requests efficiently without blocking event loop
+          ---
+          duration_ms: 44.384781
+          ...
+        # Subtest: Android ApiClient contract: isHealthy is strictly false on HTTP error even if body contains status ok
+        ok 2 - Android ApiClient contract: isHealthy is strictly false on HTTP error even if body contains status ok
+          ---
+          duration_ms: 0.372615
+          ...
+        # Subtest: Android ApiClient contract: non-JSON body preserves HTTP statusCode
+        ok 3 - Android ApiClient contract: non-JSON body preserves HTTP statusCode
+          ---
+          duration_ms: 0.280353
+          ...
+        # Subtest: Android ApiClient contract: malformed URL safely returns error object without throwing uncaught
+        ok 4 - Android ApiClient contract: malformed URL safely returns error object without throwing uncaught
+          ---
+          duration_ms: 0.227344
+          ...
+        # Subtest: Android ApiClient contract: trims whitespace from baseUrl
+        ok 5 - Android ApiClient contract: trims whitespace from baseUrl
+          ---
+          duration_ms: 0.257
+          ...
+        1..5
+    ok 8 - 8. Concurrency, Performance & Android Contract Robustness
+      ---
+      duration_ms: 45.72379
+      type: 'suite'
+      ...
+    1..8
+ok 10 - Health Check Endpoint (F9) - Unit & Integration Tests
+  ---
+  duration_ms: 432.645683
+  type: 'suite'
+  ...
+# Subtest: Invert Depth Map Feature (F2) - Unit & Integration Tests
+    # Subtest: 1. Python OpenCV Pipeline (processor.py invert)
+        # Subtest: inverts 8-bit grayscale image (255 - pixel)
+        ok 1 - inverts 8-bit grayscale image (255 - pixel)
+          ---
+          duration_ms: 391.081437
+          ...
+        # Subtest: inverts 16-bit depth map (65535 - pixel)
+        ok 2 - inverts 16-bit depth map (65535 - pixel)
+          ---
+          duration_ms: 386.59188
+          ...
+        # Subtest: inverts 16-bit 4-channel (RGBA) preserving alpha channel
+        ok 3 - inverts 16-bit 4-channel (RGBA) preserving alpha channel
+          ---
+          duration_ms: 381.968694
+          ...
+        # Subtest: inverts 8-bit 4-channel (RGBA) preserving alpha channel
+        ok 4 - inverts 8-bit 4-channel (RGBA) preserving alpha channel
+          ---
+          duration_ms: 394.152754
+          ...
+        # Subtest: inverts 8-bit 3-channel (BGR) image across all channels
+        ok 5 - inverts 8-bit 3-channel (BGR) image across all channels
+          ---
+          duration_ms: 388.822605
+          ...
+        # Subtest: inverts 16-bit 3-channel (BGR) image across all channels
+        ok 6 - inverts 16-bit 3-channel (BGR) image across all channels
+          ---
+          duration_ms: 386.217321
+          ...
+        # Subtest: double invert produces exact identical 16-bit values (identity contract)
+        ok 7 - double invert produces exact identical 16-bit values (identity contract)
+          ---
+          duration_ms: 529.502922
+          ...
+        # Subtest: chained pipeline: invert -> smooth -> invert preserves 16-bit depth fidelity
+        ok 8 - chained pipeline: invert -> smooth -> invert preserves 16-bit depth fidelity
+          ---
+          duration_ms: 645.869068
+          ...
+        1..8
+    ok 1 - 1. Python OpenCV Pipeline (processor.py invert)
+      ---
+      duration_ms: 3505.419685
+      type: 'suite'
+      ...
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (3ms)
+    # Subtest: 2. Express Server Endpoint /api/invert
+        # Subtest: returns 400 when image_url is missing
+        ok 1 - returns 400 when image_url is missing
+          ---
+          duration_ms: 83.075413
+          ...
+# [10:52:36 PM] 🌍 POST /api/invert - 404 (0ms)
+        # Subtest: returns 404 when image is not found on server
+        ok 2 - returns 404 when image is not found on server
+          ---
+          duration_ms: 11.261956
+          ...
+# [Python] Inverting depth map from /home/runner/work/DepthForge/DepthForge/static/generated/unit_test_invert_sample.png...
+# Exporting inverted depth map to /home/runner/work/DepthForge/DepthForge/static/generated/inv_unit_test_invert_sample.png...
+# [10:52:36 PM] 🌍 POST /api/invert - 200 (132ms)
+        # Subtest: successfully inverts existing image and returns new image_url
+        ok 3 - successfully inverts existing image and returns new image_url
+          ---
+          duration_ms: 348.361531
+          ...
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (0ms)
+        # Subtest: returns 400 when image_url is blank or null
+        ok 4 - returns 400 when image_url is blank or null
+          ---
+          duration_ms: 5.499062
+          ...
+# [10:52:36 PM] 🌍 POST /api/invert - 404 (0ms)
+        # Subtest: prevents path traversal outside generated directory (returns 404)
+        ok 5 - prevents path traversal outside generated directory (returns 404)
+          ---
+          duration_ms: 4.013709
+          ...
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (0ms)
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (0ms)
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (1ms)
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (0ms)
+# [10:52:36 PM] 🌍 POST /api/invert - 400 (0ms)
+        # Subtest: returns 400 when image_url has non-string or invalid data types
+        ok 6 - returns 400 when image_url has non-string or invalid data types
+          ---
+          duration_ms: 14.261593
+          ...
+# [Python] Inverting depth map from /home/runner/work/DepthForge/DepthForge/static/generated/corrupt_test_file.png...
+# [Python] 
+# Python invert failed, bypassing: Python script failed (1): Error: Could not load /home/runner/work/DepthForge/DepthForge/static/generated/corrupt_test_file.png
+# [10:52:36 PM] 🌍 POST /api/invert - 200 (133ms)
+        # Subtest: gracefully falls back to original image url when python processor fails on corrupt file
+        ok 7 - gracefully falls back to original image url when python processor fails on corrupt file
+          ---
+          duration_ms: 137.569392
+          ...
+        1..7
+    ok 2 - 2. Express Server Endpoint /api/invert
+      ---
+      duration_ms: 604.862677
+      type: 'suite'
+      ...
+    # Subtest: 3. Web UI & Android Assets Parity
+        # Subtest: index.html is identical between static/ and android assets
+        ok 1 - index.html is identical between static/ and android assets
+          ---
+          duration_ms: 0.269443
+          ...
+        # Subtest: style.css is identical between static/ and android assets
+        ok 2 - style.css is identical between static/ and android assets
+          ---
+          duration_ms: 0.333312
+          ...
+        # Subtest: HTML contains Invert button in the action bar
+        ok 3 - HTML contains Invert button in the action bar
+          ---
+          duration_ms: 0.226493
+          ...
+        # Subtest: HTML JS defines invertDepthMap and calls /api/invert
+        ok 4 - HTML JS defines invertDepthMap and calls /api/invert
+          ---
+          duration_ms: 0.157634
+          ...
+        # Subtest: displayImageSuccess enables and shows Invert button
+        ok 5 - displayImageSuccess enables and shows Invert button
+          ---
+          duration_ms: 0.14475
+          ...
+        1..5
+    ok 3 - 3. Web UI & Android Assets Parity
+      ---
+      duration_ms: 1.390224
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native UI & Client Integration
+        # Subtest: ApiClient.kt has invert method targeting /api/invert
+        ok 1 - ApiClient.kt has invert method targeting /api/invert
+          ---
+          duration_ms: 0.136184
+          ...
+        # Subtest: MainActivity.kt exposes Invert button and connects it to ApiClient.invert
+        ok 2 - MainActivity.kt exposes Invert button and connects it to ApiClient.invert
+          ---
+          duration_ms: 0.137657
+          ...
+        1..2
+    ok 4 - 4. Android Native UI & Client Integration
+      ---
+      duration_ms: 0.389908
+      type: 'suite'
+      ...
+    1..4
+ok 11 - Invert Depth Map Feature (F2) - Unit & Integration Tests
+  ---
+  duration_ms: 4113.016153
+  type: 'suite'
+  ...
+# Subtest: Multer UUID Filenames with Extension (Feature F16) - Tests
+    # Subtest: 1. uploadStorage filename generator unit tests
+        # Subtest: generates filename with upload_ prefix, uuid, and preserved extension
+        ok 1 - generates filename with upload_ prefix, uuid, and preserved extension
+          ---
+          duration_ms: 1.6557
+          ...
+        # Subtest: preserves .jpeg and .webp extensions accurately
+        ok 2 - preserves .jpeg and .webp extensions accurately
+          ---
+          duration_ms: 0.441374
+          ...
+        # Subtest: falls back to .jpg for missing extension or invalid extension characters
+        ok 3 - falls back to .jpg for missing extension or invalid extension characters
+          ---
+          duration_ms: 0.356626
+          ...
+        # Subtest: sets destination correctly to static/uploads
+        ok 4 - sets destination correctly to static/uploads
+          ---
+          duration_ms: 0.389908
+          ...
+        1..4
+    ok 1 - 1. uploadStorage filename generator unit tests
+      ---
+      duration_ms: 4.04038
+      type: 'suite'
+      ...
+# [10:52:37 PM] 🌍 POST /api/photo-to-depth - 200 (16ms)
+    # Subtest: 2. POST /api/photo-to-depth integration tests with file creation & cleanup
+        # Subtest: creates upload file with UUID and extension in static/uploads and unlinks after success
+        ok 1 - creates upload file with UUID and extension in static/uploads and unlinks after success
+          ---
+          duration_ms: 87.822051
+          ...
+        1..1
+    ok 2 - 2. POST /api/photo-to-depth integration tests with file creation & cleanup
+      ---
+      duration_ms: 88.183415
+      type: 'suite'
+      ...
+    1..2
+ok 12 - Multer UUID Filenames with Extension (Feature F16) - Tests
+  ---
+  duration_ms: 93.092246
+  type: 'suite'
+  ...
+# Subtest: processor.py Step Comments & Order (Feature F17) - Unit Tests
+    # Subtest: processor.py exists and contains step comment banners
+    ok 1 - processor.py exists and contains step comment banners
+      ---
+      duration_ms: 0.892345
+      ...
+    # Subtest: step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+    ok 2 - step comments appear in strictly ascending sequential order 1 -> 2 -> 3 -> 4 -> 5
+      ---
+      duration_ms: 0.221393
+      ...
+    # Subtest: print statements match step sequence [STEP 1/5] through [STEP 5/5]
+    ok 3 - print statements match step sequence [STEP 1/5] through [STEP 5/5]
+      ---
+      duration_ms: 0.189133
+      ...
+    1..3
+ok 13 - processor.py Step Comments & Order (Feature F17) - Unit Tests
+  ---
+  duration_ms: 2.55123
+  type: 'suite'
+  ...
+# Subtest: Prompt History Feature (F3) - Unit & Integration Tests
+    # Subtest: 1. Web UI & Assets Parity
+        # Subtest: index.html is identical between static/ and android assets
+        ok 1 - index.html is identical between static/ and android assets
+          ---
+          duration_ms: 1.638036
+          ...
+        # Subtest: style.css is identical between static/ and android assets
+        ok 2 - style.css is identical between static/ and android assets
+          ---
+          duration_ms: 0.142996
+          ...
+        # Subtest: HTML contains prompt history container, select dropdown, list, and clear button
+        ok 3 - HTML contains prompt history container, select dropdown, list, and clear button
+          ---
+          duration_ms: 0.192409
+          ...
+        # Subtest: CSS contains classes for prompt history UI
+        ok 4 - CSS contains classes for prompt history UI
+          ---
+          duration_ms: 0.188412
+          ...
+        1..4
+    ok 1 - 1. Web UI & Assets Parity
+      ---
+      duration_ms: 2.977336
+      type: 'suite'
+      ...
+    # Subtest: 2. Client-side Prompt History Logic & Storage Contract
+        # Subtest: uses exact localStorage key "depthforge_prompt_history"
+        ok 1 - uses exact localStorage key "depthforge_prompt_history"
+          ---
+          duration_ms: 0.552711
+          ...
+        # Subtest: returns empty array when history is not set
+        ok 2 - returns empty array when history is not set
+          ---
+          duration_ms: 0.632561
+          ...
+        # Subtest: saves prompt and persists in storage under key
+        ok 3 - saves prompt and persists in storage under key
+          ---
+          duration_ms: 0.338322
+          ...
+        # Subtest: caps history at exactly 10 items (oldest removed on overflow)
+        ok 4 - caps history at exactly 10 items (oldest removed on overflow)
+          ---
+          duration_ms: 0.322983
+          ...
+        # Subtest: moves duplicated prompts to front without creating duplicate entries
+        ok 5 - moves duplicated prompts to front without creating duplicate entries
+          ---
+          duration_ms: 0.241741
+          ...
+        # Subtest: ignores empty, whitespace-only, or null prompts
+        ok 6 - ignores empty, whitespace-only, or null prompts
+          ---
+          duration_ms: 0.231111
+          ...
+        # Subtest: clears history completely on clearPromptHistory()
+        ok 7 - clears history completely on clearPromptHistory()
+          ---
+          duration_ms: 0.232854
+          ...
+        1..7
+    ok 2 - 2. Client-side Prompt History Logic & Storage Contract
+      ---
+      duration_ms: 3.09195
+      type: 'suite'
+      ...
+    # Subtest: 3. Adversarial Edge Cases & Robustness Checks
+        # Subtest: gracefully handles QuotaExceededError when saving prompt
+        ok 1 - gracefully handles QuotaExceededError when saving prompt
+          ---
+          duration_ms: 0.580303
+          ...
+        # Subtest: gracefully handles SecurityError when reading or clearing storage
+        ok 2 - gracefully handles SecurityError when reading or clearing storage
+          ---
+          duration_ms: 0.23053
+          ...
+        # Subtest: handles corrupted or non-array JSON in localStorage without throwing
+        ok 3 - handles corrupted or non-array JSON in localStorage without throwing
+          ---
+          duration_ms: 0.234508
+          ...
+        # Subtest: sanitizes array in localStorage containing mixed/invalid data types
+        ok 4 - sanitizes array in localStorage containing mixed/invalid data types
+          ---
+          duration_ms: 0.307604
+          ...
+        # Subtest: trims whitespace and deduplicates identical prompts with different spacing
+        ok 5 - trims whitespace and deduplicates identical prompts with different spacing
+          ---
+          duration_ms: 0.283199
+          ...
+        # Subtest: promotes existing prompt to top without duplicating when already in list
+        ok 6 - promotes existing prompt to top without duplicating when already in list
+          ---
+          duration_ms: 0.329305
+          ...
+        # Subtest: escapeHtml prevents XSS and safely escapes special characters
+        ok 7 - escapeHtml prevents XSS and safely escapes special characters
+          ---
+          duration_ms: 0.339644
+          ...
+        # Subtest: preserves multiline prompts, Unicode symbols, and emojis
+        ok 8 - preserves multiline prompts, Unicode symbols, and emojis
+          ---
+          duration_ms: 0.222485
+          ...
+        # Subtest: handles empty string or whitespace JSON stored in localStorage
+        ok 9 - handles empty string or whitespace JSON stored in localStorage
+          ---
+          duration_ms: 0.149379
+          ...
+        1..9
+    ok 3 - 3. Adversarial Edge Cases & Robustness Checks
+      ---
+      duration_ms: 3.021378
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native Prompt History Integration
+        # Subtest: MainActivity.kt defines PromptHistoryManager with PREFS_KEY and MAX_ITEMS
+        ok 1 - MainActivity.kt defines PromptHistoryManager with PREFS_KEY and MAX_ITEMS
+          ---
+          duration_ms: 0.176579
+          ...
+        # Subtest: MainActivity.kt renders prompt history UI only when non-empty
+        ok 2 - MainActivity.kt renders prompt history UI only when non-empty
+          ---
+          duration_ms: 0.130213
+          ...
+        # Subtest: MainActivity.kt updates promptInput on clicking a history item
+        ok 3 - MainActivity.kt updates promptInput on clicking a history item
+          ---
+          duration_ms: 0.138178
+          ...
+        # Subtest: MainActivity.kt saves prompt to history upon successful generation
+        ok 4 - MainActivity.kt saves prompt to history upon successful generation
+          ---
+          duration_ms: 0.100828
+          ...
+        # Subtest: MainActivity.kt clears prompt history on Clear button click
+        ok 5 - MainActivity.kt clears prompt history on Clear button click
+          ---
+          duration_ms: 0.103163
+          ...
+        1..5
+    ok 4 - 4. Android Native Prompt History Integration
+      ---
+      duration_ms: 0.820101
+      type: 'suite'
+      ...
+    1..4
+ok 14 - Prompt History Feature (F3) - Unit & Integration Tests
+  ---
+  duration_ms: 10.939894
+  type: 'suite'
+  ...
+# Subtest: Concurrency Queue for Python Processor (Feature F18) - Tests
+    # Subtest: pythonProcessorQueue exists and is configured with concurrency: 1
+    ok 1 - pythonProcessorQueue exists and is configured with concurrency: 1
+      ---
+      duration_ms: 0.900912
+      ...
+# [Python Queue] Request queued for 'smooth' (queue depth: 0, pending: 1)
+    # Subtest: serializes multiple concurrent runPythonProcessor requests in strict order
+    ok 2 - serializes multiple concurrent runPythonProcessor requests in strict order
+      ---
+      duration_ms: 82.204368
+      ...
+# [Python] [STEP 1/5] Loading image and converting to grayscale...
+    # Subtest: logs queue depth when request is queued behind active task
+    ok 3 - logs queue depth when request is queued behind active task
+      ---
+      duration_ms: 196.018281
+      ...
+# [Python Queue] Request queued for 'invert' (queue depth: 0, pending: 1)
+# [Python] Inverting depth map from /home/runner/work/DepthForge/DepthForge/static/generated/test_q_a.png...
+# [Python] 
+# Python invert failed, bypassing: Python script failed (1): libpng error: IDAT: CRC error
+# Error: Could not load /home/runner/work/DepthForge/DepthForge/static/generated/test_q_a.png
+# [10:52:38 PM] 🌍 POST /api/invert - 200 (186ms)
+# [Python] Inverting depth map from /home/runner/work/DepthForge/DepthForge/static/generated/test_q_b.png...
+# [Python] 
+# Python invert failed, bypassing: Python script failed (1): libpng error: IDAT: CRC error
+# Error: Could not load /home/runner/work/DepthForge/DepthForge/static/generated/test_q_b.png
+# [10:52:38 PM] 🌍 POST /api/invert - 200 (363ms)
+    # Subtest: two simultaneous /api/invert HTTP requests execute sequentially through queue
+    ok 4 - two simultaneous /api/invert HTTP requests execute sequentially through queue
+      ---
+      duration_ms: 413.674589
+      ...
+    1..4
+ok 15 - Concurrency Queue for Python Processor (Feature F18) - Tests
+  ---
+  duration_ms: 694.402925
+  type: 'suite'
+  ...
+# Subtest: Rate Limiting Feature (F10) - Unit & Integration Tests
+    # Subtest: 1. Module & Server Exports Contract
+        # Subtest: server.js exports all required rate limiting constants and functions
+        ok 1 - server.js exports all required rate limiting constants and functions
+          ---
+          duration_ms: 1.722344
+          ...
+        1..1
+    ok 1 - 1. Module & Server Exports Contract
+      ---
+      duration_ms: 2.383218
+      type: 'suite'
+      ...
+    # Subtest: 2. Environment Variable Parsing & Boundary Handling
+        # Subtest: parseRateLimitWindowMs handles defaults, empty, invalid, and custom values
+        ok 1 - parseRateLimitWindowMs handles defaults, empty, invalid, and custom values
+          ---
+          duration_ms: 0.415966
+          ...
+        # Subtest: parseRateLimitMax handles defaults, empty, invalid, and custom values
+        ok 2 - parseRateLimitMax handles defaults, empty, invalid, and custom values
+          ---
+          duration_ms: 0.43941
+          ...
+        1..2
+    ok 2 - 2. Environment Variable Parsing & Boundary Handling
+      ---
+      duration_ms: 1.024532
+      type: 'suite'
+      ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (24ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (4ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (3ms)
+    # Subtest: 3. Rate Limiter on POST /api/generate
+        # Subtest: permits requests under the limit and decrements remaining header
+        ok 1 - permits requests under the limit and decrements remaining header
+          ---
+          duration_ms: 98.511358
+          ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (3ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+        # Subtest: returns HTTP 429 with exact JSON error when limit is exceeded without calling AI
+        ok 2 - returns HTTP 429 with exact JSON error when limit is exceeded without calling AI
+          ---
+          duration_ms: 27.477065
+          ...
+        1..2
+    ok 3 - 3. Rate Limiter on POST /api/generate
+      ---
+      duration_ms: 126.381786
+      type: 'suite'
+      ...
+# [10:52:38 PM] 🌍 POST /api/photo-to-depth - 200 (12ms)
+# [10:52:38 PM] 🌍 POST /api/photo-to-depth - 200 (4ms)
+# [10:52:38 PM] 🌍 POST /api/photo-to-depth - 429 (3ms)
+    # Subtest: 4. Rate Limiter on POST /api/photo-to-depth
+        # Subtest: returns HTTP 429 when photo-to-depth exceeds rate limit
+        ok 1 - returns HTTP 429 when photo-to-depth exceeds rate limit
+          ---
+          duration_ms: 33.441414
+          ...
+        1..1
+    ok 4 - 4. Rate Limiter on POST /api/photo-to-depth
+      ---
+      duration_ms: 33.724963
+      type: 'suite'
+      ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+# [10:52:38 PM] 🌍 GET /api/health - 200 (10ms)
+# [10:52:38 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:38 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:38 PM] 🌍 GET /api/health - 200 (1ms)
+# [10:52:38 PM] 🌍 GET /api/health - 200 (0ms)
+# [10:52:38 PM] 🌍 POST /api/invert - 400 (1ms)
+# [10:52:38 PM] 🌍 POST /api/remove_bg - 400 (0ms)
+# [10:52:38 PM] 🌍 POST /api/postprocess - 400 (0ms)
+# [10:52:38 PM] 🌍 GET /api/postprocess-stream - 200 (1ms)
+    # Subtest: 5. Route Exemption Verification (Non-generation endpoints unthrottled)
+        # Subtest: non-generation endpoints remain unthrottled even after rate limit exhaustion
+        ok 1 - non-generation endpoints remain unthrottled even after rate limit exhaustion
+          ---
+          duration_ms: 49.201325
+          ...
+        1..1
+    ok 5 - 5. Route Exemption Verification (Non-generation endpoints unthrottled)
+      ---
+      duration_ms: 49.383865
+      type: 'suite'
+      ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (0ms)
+    # Subtest: 6. Environment Variable Overrides & Configurable Limits
+        # Subtest: RATE_LIMIT_MAX environment variable overrides default limit dynamically
+        ok 1 - RATE_LIMIT_MAX environment variable overrides default limit dynamically
+          ---
+          duration_ms: 12.118914
+          ...
+        # Subtest: RATE_LIMIT_WINDOW_MS environment variable configures rate limit window
+        ok 2 - RATE_LIMIT_WINDOW_MS environment variable configures rate limit window
+          ---
+          duration_ms: 0.927922
+          ...
+        1..2
+    ok 6 - 6. Environment Variable Overrides & Configurable Limits
+      ---
+      duration_ms: 13.219268
+      type: 'suite'
+      ...
+    # Subtest: 7. Web UI & Assets Parity
+        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.288158
+          ...
+        # Subtest: static/index.html handles HTTP 429 in generateMap with user-friendly error
+        ok 2 - static/index.html handles HTTP 429 in generateMap with user-friendly error
+          ---
+          duration_ms: 0.25172
+          ...
+        # Subtest: static/index.html handles HTTP 429 in convertPhoto with user-friendly error
+        ok 3 - static/index.html handles HTTP 429 in convertPhoto with user-friendly error
+          ---
+          duration_ms: 0.511785
+          ...
+        1..3
+    ok 7 - 7. Web UI & Assets Parity
+      ---
+      duration_ms: 1.27541
+      type: 'suite'
+      ...
+    # Subtest: 8. Android Native ApiClient & MainActivity Contract
+        # Subtest: ApiClient.kt declares isRateLimited helper method
+        ok 1 - ApiClient.kt declares isRateLimited helper method
+          ---
+          duration_ms: 0.27338
+          ...
+        # Subtest: ApiClient.kt handles error stream on non-200 responses in postJson
+        ok 2 - ApiClient.kt handles error stream on non-200 responses in postJson
+          ---
+          duration_ms: 0.247512
+          ...
+        # Subtest: MainActivity.kt displays 429 error message via snackbar and lastError state
+        ok 3 - MainActivity.kt displays 429 error message via snackbar and lastError state
+          ---
+          duration_ms: 0.226973
+          ...
+        # Subtest: MainActivity.kt preserves legacy test contract comments
+        ok 4 - MainActivity.kt preserves legacy test contract comments
+          ---
+          duration_ms: 0.205403
+          ...
+        # Subtest: ApiClient.kt avoids calling conn.inputStream on HTTP errors when errorStream is null
+        ok 5 - ApiClient.kt avoids calling conn.inputStream on HTTP errors when errorStream is null
+          ---
+          duration_ms: 0.187399
+          ...
+        # Subtest: ApiClient.kt sanitizes HTTP 429 raw or non-JSON error stream to user-friendly message
+        ok 6 - ApiClient.kt sanitizes HTTP 429 raw or non-JSON error stream to user-friendly message
+          ---
+          duration_ms: 0.265696
+          ...
+        # Subtest: MainActivity.kt sanitizes HTTP 429 server error strings in both text and photo modes
+        ok 7 - MainActivity.kt sanitizes HTTP 429 server error strings in both text and photo modes
+          ---
+          duration_ms: 0.201747
+          ...
+        # Subtest: RateLimitingTest.kt exists in android_app and covers JUnit rate limit contracts
+        ok 8 - RateLimitingTest.kt exists in android_app and covers JUnit rate limit contracts
+          ---
+          duration_ms: 0.287556
+          ...
+        1..8
+    ok 8 - 8. Android Native ApiClient & MainActivity Contract
+      ---
+      duration_ms: 2.228068
+      type: 'suite'
+      ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/photo-to-depth - 200 (2ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+# [10:52:38 PM] 🌍 POST /api/photo-to-depth - 429 (1ms)
+    # Subtest: 9. Adversarial Concurrency, Cross-Route Sharing & Edge Cases
+        # Subtest: enforces shared generation rate limit budget across both /api/generate and /api/photo-to-depth
+        ok 1 - enforces shared generation rate limit budget across both /api/generate and /api/photo-to-depth
+          ---
+          duration_ms: 23.808157
+          ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (3ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (3ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (0ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (4ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (0ms)
+        # Subtest: handles concurrent burst requests accurately at limit boundary without race conditions
+        ok 2 - handles concurrent burst requests accurately at limit boundary without race conditions
+          ---
+          duration_ms: 14.437671
+          ...
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+        # Subtest: handles RATE_LIMIT_MAX=0 boundary: immediately rejects with HTTP 429 without calling AI
+        ok 3 - handles RATE_LIMIT_MAX=0 boundary: immediately rejects with HTTP 429 without calling AI
+          ---
+          duration_ms: 5.124513
+          ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+        # Subtest: isolates rate limits per IP and operates cleanly when trust proxy is enabled
+        ok 4 - isolates rate limits per IP and operates cleanly when trust proxy is enabled
+          ---
+          duration_ms: 9.675385
+          ...
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+# [10:52:38 PM] 🌍 POST /api/generate - 429 (1ms)
+# [10:52:38 PM] 🚀 POST /api/generate - Starting generation...
+# [10:52:38 PM] 🌍 POST /api/generate - 200 (1ms)
+        # Subtest: resets quota and permits requests after windowMs expires
+        ok 5 - resets quota and permits requests after windowMs expires
+          ---
+          duration_ms: 85.420378
+          ...
+        1..5
+    ok 9 - 9. Adversarial Concurrency, Cross-Route Sharing & Edge Cases
+      ---
+      duration_ms: 138.898942
+      type: 'suite'
+      ...
+    1..9
+ok 16 - Rate Limiting Feature (F10) - Unit & Integration Tests
+  ---
+  duration_ms: 369.815999
+  type: 'suite'
+  ...
+# Subtest: Feature F20 (Comprehensive README Documentation Update) - Tests
+    # Subtest: 1. Core Features Documentation (F1 through F20)
+        # Subtest: README documents Feature F1 (Aspect Ratio Selector)
+        ok 1 - README documents Feature F1 (Aspect Ratio Selector)
+          ---
+          duration_ms: 1.308963
+          ...
+        # Subtest: README documents Feature F2 (Invert Depth Map)
+        ok 2 - README documents Feature F2 (Invert Depth Map)
+          ---
+          duration_ms: 1.03457
+          ...
+        # Subtest: README documents Feature F3 (Prompt History)
+        ok 3 - README documents Feature F3 (Prompt History)
+          ---
+          duration_ms: 0.157844
+          ...
+        # Subtest: README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+        ok 4 - README documents Feature F4 (Real-Time Pipeline Progress via SSE)
+          ---
+          duration_ms: 0.144249
+          ...
+        # Subtest: README documents Feature F5 (Session Gallery / History Panel)
+        ok 5 - README documents Feature F5 (Session Gallery / History Panel)
+          ---
+          duration_ms: 0.208939
+          ...
+        # Subtest: README documents Feature F6 (Depth Intensity Slider)
+        ok 6 - README documents Feature F6 (Depth Intensity Slider)
+          ---
+          duration_ms: 0.178854
+          ...
+        # Subtest: README documents Feature F7 (Side-by-Side Comparison View)
+        ok 7 - README documents Feature F7 (Side-by-Side Comparison View)
+          ---
+          duration_ms: 0.159358
+          ...
+        # Subtest: README documents Feature F8 (Automatic Generated File Cleanup)
+        ok 8 - README documents Feature F8 (Automatic Generated File Cleanup)
+          ---
+          duration_ms: 0.214931
+          ...
+        # Subtest: README documents Feature F9 (Health Check Endpoint)
+        ok 9 - README documents Feature F9 (Health Check Endpoint)
+          ---
+          duration_ms: 0.215513
+          ...
+        # Subtest: README documents Feature F10 (Rate Limiting)
+        ok 10 - README documents Feature F10 (Rate Limiting)
+          ---
+          duration_ms: 0.21454
+          ...
+        # Subtest: README documents Feature F11 (3D Live Preview)
+        ok 11 - README documents Feature F11 (3D Live Preview)
+          ---
+          duration_ms: 0.208178
+          ...
+        # Subtest: README documents Feature F12 (Style Presets)
+        ok 12 - README documents Feature F12 (Style Presets)
+          ---
+          duration_ms: 0.675009
+          ...
+        # Subtest: README documents Feature F13 (Batch Generation)
+        ok 13 - README documents Feature F13 (Batch Generation)
+          ---
+          duration_ms: 0.213148
+          ...
+        # Subtest: README documents Feature F14 (Environment Validation at Startup)
+        ok 14 - README documents Feature F14 (Environment Validation at Startup)
+          ---
+          duration_ms: 0.250508
+          ...
+        # Subtest: README documents Feature F15 (Gemini Prompt Response Robustness)
+        ok 15 - README documents Feature F15 (Gemini Prompt Response Robustness)
+          ---
+          duration_ms: 0.151723
+          ...
+        # Subtest: README documents Feature F16 (Multer UUID Filenames with Extension)
+        ok 16 - README documents Feature F16 (Multer UUID Filenames with Extension)
+          ---
+          duration_ms: 0.143608
+          ...
+        # Subtest: README documents Feature F17 (processor.py Step Order & Structure)
+        ok 17 - README documents Feature F17 (processor.py Step Order & Structure)
+          ---
+          duration_ms: 0.16069
+          ...
+        # Subtest: README documents Feature F18 (Concurrency Queue for Python Processor)
+        ok 18 - README documents Feature F18 (Concurrency Queue for Python Processor)
+          ---
+          duration_ms: 0.261698
+          ...
+        # Subtest: README documents Feature F19 (Android Share Intent)
+        ok 19 - README documents Feature F19 (Android Share Intent)
+          ---
+          duration_ms: 0.162303
+          ...
+        # Subtest: README documents Feature F20 (Comprehensive README Documentation Update)
+        ok 20 - README documents Feature F20 (Comprehensive README Documentation Update)
+          ---
+          duration_ms: 0.149009
+          ...
+        1..20
+    ok 1 - 1. Core Features Documentation (F1 through F20)
+      ---
+      duration_ms: 7.633274
+      type: 'suite'
+      ...
+    # Subtest: 2. API Endpoints Table Documentation
+        # Subtest: API Endpoints table documents /api/health
+        ok 1 - API Endpoints table documents /api/health
+          ---
+          duration_ms: 0.18758
+          ...
+        # Subtest: API Endpoints table documents /api/generate
+        ok 2 - API Endpoints table documents /api/generate
+          ---
+          duration_ms: 0.081212
+          ...
+        # Subtest: API Endpoints table documents /api/photo-to-depth
+        ok 3 - API Endpoints table documents /api/photo-to-depth
+          ---
+          duration_ms: 0.090549
+          ...
+        # Subtest: API Endpoints table documents /api/postprocess
+        ok 4 - API Endpoints table documents /api/postprocess
+          ---
+          duration_ms: 0.072776
+          ...
+        # Subtest: API Endpoints table documents /api/postprocess-stream
+        ok 5 - API Endpoints table documents /api/postprocess-stream
+          ---
+          duration_ms: 0.067215
+          ...
+        # Subtest: API Endpoints table documents /api/invert
+        ok 6 - API Endpoints table documents /api/invert
+          ---
+          duration_ms: 0.066344
+          ...
+        # Subtest: API Endpoints table documents /api/remove_bg
+        ok 7 - API Endpoints table documents /api/remove_bg
+          ---
+          duration_ms: 0.095879
+          ...
+        1..7
+    ok 2 - 2. API Endpoints Table Documentation
+      ---
+      duration_ms: 0.904929
+      type: 'suite'
+      ...
+    # Subtest: 3. Prerequisites, Environment Variables, and Dependencies
+        # Subtest: Documents Prerequisites including Node.js and Python
+        ok 1 - Documents Prerequisites including Node.js and Python
+          ---
+          duration_ms: 0.164176
+          ...
+        # Subtest: Documents all required environment variables
+        ok 2 - Documents all required environment variables
+          ---
+          duration_ms: 0.133038
+          ...
+        # Subtest: Documents required npm packages
+        ok 3 - Documents required npm packages
+          ---
+          duration_ms: 0.132457
+          ...
+        # Subtest: Documents required Python packages
+        ok 4 - Documents required Python packages
+          ---
+          duration_ms: 0.159387
+          ...
+        1..4
+    ok 3 - 3. Prerequisites, Environment Variables, and Dependencies
+      ---
+      duration_ms: 0.765147
+      type: 'suite'
+      ...
+    # Subtest: 4. Android App Features Documentation
+        # Subtest: Documents Android feature: Share Sheet
+        ok 1 - Documents Android feature: Share Sheet
+          ---
+          duration_ms: 0.255507
+          ...
+        # Subtest: Documents Android feature: Session Gallery
+        ok 2 - Documents Android feature: Session Gallery
+          ---
+          duration_ms: 0.33249
+          ...
+        # Subtest: Documents Android feature: 3D Preview WebView
+        ok 3 - Documents Android feature: 3D Preview WebView
+          ---
+          duration_ms: 0.210162
+          ...
+        # Subtest: Documents Android feature: Aspect Ratio
+        ok 4 - Documents Android feature: Aspect Ratio
+          ---
+          duration_ms: 0.199593
+          ...
+        # Subtest: Documents Android feature: Depth Intensity
+        ok 5 - Documents Android feature: Depth Intensity
+          ---
+          duration_ms: 0.1503
+          ...
+        # Subtest: Documents Android feature: Style Presets
+        ok 6 - Documents Android feature: Style Presets
+          ---
+          duration_ms: 0.147244
+          ...
+        # Subtest: Documents Android feature: Batch Candidate Grid
+        ok 7 - Documents Android feature: Batch Candidate Grid
+          ---
+          duration_ms: 0.144059
+          ...
+        1..7
+    ok 4 - 4. Android App Features Documentation
+      ---
+      duration_ms: 1.694091
+      type: 'suite'
+      ...
+    # Subtest: 5. Project Directory Structure
+        # Subtest: Directory tree includes new test suites and modules
+        ok 1 - Directory tree includes new test suites and modules
+          ---
+          duration_ms: 0.245137
+          ...
+        1..1
+    ok 5 - 5. Project Directory Structure
+      ---
+      duration_ms: 0.341607
+      type: 'suite'
+      ...
+    1..5
+ok 17 - Feature F20 (Comprehensive README Documentation Update) - Tests
+  ---
+  duration_ms: 12.486641
+  type: 'suite'
+  ...
+# Subtest: Session Gallery Feature (F5) - Unit & Integration Tests
+    # Subtest: 1. Web UI & Assets Parity
+        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.983845
+          ...
+        # Subtest: style.css is identical byte-for-byte between static/ and android assets
+        ok 2 - style.css is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.147315
+          ...
+        # Subtest: HTML contains session gallery container, header, controls, and strip
+        ok 3 - HTML contains session gallery container, header, controls, and strip
+          ---
+          duration_ms: 0.221944
+          ...
+        # Subtest: CSS contains all required session gallery styling classes
+        ok 4 - CSS contains all required session gallery styling classes
+          ---
+          duration_ms: 0.236661
+          ...
+        # Subtest: HTML thumbnails include accessibility attributes and safe event handlers
+        ok 5 - HTML thumbnails include accessibility attributes and safe event handlers
+          ---
+          duration_ms: 0.162833
+          ...
+        1..5
+    ok 1 - 1. Web UI & Assets Parity
+      ---
+      duration_ms: 2.533858
+      type: 'suite'
+      ...
+    # Subtest: 2. Client-side Gallery State Logic Contract
+        # Subtest: gallery starts empty with no active item
+        ok 1 - gallery starts empty with no active item
+          ---
+          duration_ms: 0.364621
+          ...
+        # Subtest: addToGallery appends items and updates activeGalleryItemId
+        ok 2 - addToGallery appends items and updates activeGalleryItemId
+          ---
+          duration_ms: 0.47723
+          ...
+        # Subtest: addToGallery safely ignores empty or null imageUrl
+        ok 3 - addToGallery safely ignores empty or null imageUrl
+          ---
+          duration_ms: 0.148046
+          ...
+        # Subtest: selectGalleryItem restores item as active without mutating gallery list
+        ok 4 - selectGalleryItem restores item as active without mutating gallery list
+          ---
+          duration_ms: 0.26304
+          ...
+        # Subtest: selectGalleryItem is a no-op when isProcessing is active
+        ok 5 - selectGalleryItem is a no-op when isProcessing is active
+          ---
+          duration_ms: 0.221884
+          ...
+        # Subtest: clearGallery is blocked while isProcessing is true
+        ok 6 - clearGallery is blocked while isProcessing is true
+          ---
+          duration_ms: 0.303847
+          ...
+        # Subtest: clearGallery resets gallery array, active ID, and isGalleryHidden
+        ok 7 - clearGallery resets gallery array, active ID, and isGalleryHidden
+          ---
+          duration_ms: 0.224499
+          ...
+        # Subtest: toggleGallery flips isGalleryHidden state when not processing
+        ok 8 - toggleGallery flips isGalleryHidden state when not processing
+          ---
+          duration_ms: 0.230309
+          ...
+        1..8
+    ok 2 - 2. Client-side Gallery State Logic Contract
+      ---
+      duration_ms: 2.708825
+      type: 'suite'
+      ...
+    # Subtest: 3. Web Application Wiring & Action Integration
+        # Subtest: generateMap calls addToGallery with label Generated
+        ok 1 - generateMap calls addToGallery with label Generated
+          ---
+          duration_ms: 0.233877
+          ...
+        # Subtest: convertPhoto calls addToGallery with label Photo to Depth
+        ok 2 - convertPhoto calls addToGallery with label Photo to Depth
+          ---
+          duration_ms: 0.141184
+          ...
+        # Subtest: removeBg calls addToGallery with label Remove BG
+        ok 3 - removeBg calls addToGallery with label Remove BG
+          ---
+          duration_ms: 0.188802
+          ...
+        # Subtest: invertDepthMap calls addToGallery with label Invert
+        ok 4 - invertDepthMap calls addToGallery with label Invert
+          ---
+          duration_ms: 0.141013
+          ...
+        # Subtest: polishRelief calls addToGallery with label Polished
+        ok 5 - polishRelief calls addToGallery with label Polished
+          ---
+          duration_ms: 0.251499
+          ...
+        # Subtest: displayImageSuccess restores action buttons to visible and enabled
+        ok 6 - displayImageSuccess restores action buttons to visible and enabled
+          ---
+          duration_ms: 0.168605
+          ...
+        # Subtest: selectGalleryItem triggers displayImageSuccess with restored image URL
+        ok 7 - selectGalleryItem triggers displayImageSuccess with restored image URL
+          ---
+          duration_ms: 0.117129
+          ...
+        # Subtest: isProcessing guard function checks loading and pipeline overlays
+        ok 8 - isProcessing guard function checks loading and pipeline overlays
+          ---
+          duration_ms: 0.151082
+          ...
+        1..8
+    ok 3 - 3. Web Application Wiring & Action Integration
+      ---
+      duration_ms: 2.26681
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native Jetpack Compose UI Parity
+        # Subtest: MainActivity.kt imports LazyRow, items, and rememberLazyListState
+        ok 1 - MainActivity.kt imports LazyRow, items, and rememberLazyListState
+          ---
+          duration_ms: 0.185436
+          ...
+        # Subtest: MainActivity.kt defines SessionGalleryItem data class
+        ok 2 - MainActivity.kt defines SessionGalleryItem data class
+          ---
+          duration_ms: 0.116016
+          ...
+        # Subtest: MainActivity.kt defines SessionGalleryManager with addItem, clear, findItem
+        ok 3 - MainActivity.kt defines SessionGalleryManager with addItem, clear, findItem
+          ---
+          duration_ms: 0.104655
+          ...
+        # Subtest: ForgeScreen manages sessionGallery, activeGalleryItemId, isGalleryVisible, and galleryListState
+        ok 4 - ForgeScreen manages sessionGallery, activeGalleryItemId, isGalleryVisible, and galleryListState
+          ---
+          duration_ms: 0.117118
+          ...
+        # Subtest: ForgeScreen has isBusy guard and auto-scrolls to active item
+        ok 5 - ForgeScreen has isBusy guard and auto-scrolls to active item
+          ---
+          duration_ms: 0.114444
+          ...
+        # Subtest: MainActivity.kt renders Session Gallery Card when sessionGallery is non-empty
+        ok 6 - MainActivity.kt renders Session Gallery Card when sessionGallery is non-empty
+          ---
+          duration_ms: 0.212958
+          ...
+        # Subtest: MainActivity.kt provides Clear and Hide/Show controls with busy disabled guard
+        ok 7 - MainActivity.kt provides Clear and Hide/Show controls with busy disabled guard
+          ---
+          duration_ms: 0.233316
+          ...
+        # Subtest: MainActivity.kt restores active image, downloads bitmap fallback, and guards with isBusy
+        ok 8 - MainActivity.kt restores active image, downloads bitmap fallback, and guards with isBusy
+          ---
+          duration_ms: 0.187349
+          ...
+        # Subtest: MainActivity.kt provides Download button whenever active image exists
+        ok 9 - MainActivity.kt provides Download button whenever active image exists
+          ---
+          duration_ms: 0.172552
+          ...
+        # Subtest: MainActivity.kt appends to sessionGallery on generate, photo, invert, removeBg, polish
+        ok 10 - MainActivity.kt appends to sessionGallery on generate, photo, invert, removeBg, polish
+          ---
+          duration_ms: 0.310509
+          ...
+        1..10
+    ok 4 - 4. Android Native Jetpack Compose UI Parity
+      ---
+      duration_ms: 2.039565
+      type: 'suite'
+      ...
+    # Subtest: 5. Direct VM Execution of static/index.html Script
+        # Subtest: addToGallery updates DOM container, count, and renders active thumbnail
+        ok 1 - addToGallery updates DOM container, count, and renders active thumbnail
+          ---
+          duration_ms: 3.051474
+          ...
+        # Subtest: selectGalleryItem restores preview output, download href, and updates active thumb
+        ok 2 - selectGalleryItem restores preview output, download href, and updates active thumb
+          ---
+          duration_ms: 1.703409
+          ...
+        # Subtest: selectGalleryItem and clearGallery are blocked when loadingOverlay is active
+        ok 3 - selectGalleryItem and clearGallery are blocked when loadingOverlay is active
+          ---
+          duration_ms: 1.635933
+          ...
+        # Subtest: toggleGallery hides and reveals the strip and updates button text
+        ok 4 - toggleGallery hides and reveals the strip and updates button text
+          ---
+          duration_ms: 0.974258
+          ...
+        1..4
+    ok 5 - 5. Direct VM Execution of static/index.html Script
+      ---
+      duration_ms: 7.571249
+      type: 'suite'
+      ...
+    # Subtest: 6. Adversarial Edge Cases & Robustness Checks
+        # Subtest: escapeHtml safely sanitizes malicious input in gallery item attributes
+        ok 1 - escapeHtml safely sanitizes malicious input in gallery item attributes
+          ---
+          duration_ms: 0.249335
+          ...
+        # Subtest: rapid sequential additions generate 50 distinct IDs and maintain chronological ordering
+        ok 2 - rapid sequential additions generate 50 distinct IDs and maintain chronological ordering
+          ---
+          duration_ms: 0.260837
+          ...
+        # Subtest: gallery maintains multiline or unicode/emoji labels
+        ok 3 - gallery maintains multiline or unicode/emoji labels
+          ---
+          duration_ms: 0.143047
+          ...
+        # Subtest: handles clear when already empty without throwing
+        ok 4 - handles clear when already empty without throwing
+          ---
+          duration_ms: 0.110547
+          ...
+        # Subtest: handles thumbnail click restoring earlier version for branching workflows
+        ok 5 - handles thumbnail click restoring earlier version for branching workflows
+          ---
+          duration_ms: 0.141955
+          ...
+        1..5
+    ok 6 - 6. Adversarial Edge Cases & Robustness Checks
+      ---
+      duration_ms: 1.118487
+      type: 'suite'
+      ...
+    # Subtest: 7. Adversarial Concurrency & Narrow Viewport Stress Tests
+        # Subtest: Web action handlers abort immediately when isProcessing is active
+        ok 1 - Web action handlers abort immediately when isProcessing is active
+          ---
+          duration_ms: 0.19837
+          ...
+        # Subtest: MainActivity.kt guards all user interaction points with !isBusy
+        ok 2 - MainActivity.kt guards all user interaction points with !isBusy
+          ---
+          duration_ms: 0.658278
+          ...
+        # Subtest: CSS contains responsive rules for narrow viewports and touch momentum scrolling
+        ok 3 - CSS contains responsive rules for narrow viewports and touch momentum scrolling
+          ---
+          duration_ms: 0.135383
+          ...
+        # Subtest: large session stress test: handles 25 gallery items with correct badges and active state
+        ok 4 - large session stress test: handles 25 gallery items with correct badges and active state
+          ---
+          duration_ms: 0.26279
+          ...
+        1..4
+    ok 7 - 7. Adversarial Concurrency & Narrow Viewport Stress Tests
+      ---
+      duration_ms: 1.456308
+      type: 'suite'
+      ...
+    1..7
+ok 18 - Session Gallery Feature (F5) - Unit & Integration Tests
+  ---
+  duration_ms: 20.762844
+  type: 'suite'
+  ...
+# Subtest: Real-Time Pipeline Progress via SSE (F4) - Unit & Integration Tests
+    # Subtest: 1. Step Parser Logic (parseStepFromLog)
+        # Subtest: correctly parses [STEP 1/5] to [STEP 5/5] formatted log lines
+        ok 1 - correctly parses [STEP 1/5] to [STEP 5/5] formatted log lines
+          ---
+          duration_ms: 1.005807
+          ...
+        # Subtest: handles variations in case and spacing in [step X/Y] tags
+        ok 2 - handles variations in case and spacing in [step X/Y] tags
+          ---
+          duration_ms: 0.141303
+          ...
+        # Subtest: fallback heuristic matches relevant processing keywords
+        ok 3 - fallback heuristic matches relevant processing keywords
+          ---
+          duration_ms: 0.427768
+          ...
+        # Subtest: returns null for non-step logs and invalid inputs
+        ok 4 - returns null for non-step logs and invalid inputs
+          ---
+          duration_ms: 0.284701
+          ...
+        1..4
+    ok 1 - 1. Step Parser Logic (parseStepFromLog)
+      ---
+      duration_ms: 2.681844
+      type: 'suite'
+      ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url= - 200 (4ms)
+    # Subtest: 2. Live Server SSE Endpoint (/api/postprocess-stream)
+        # Subtest: configures standard SSE streaming headers including X-Accel-Buffering
+        ok 1 - configures standard SSE streaming headers including X-Accel-Buffering
+          ---
+          duration_ms: 70.084101
+          ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream - 200 (1ms)
+        # Subtest: returns SSE error event when image_url is missing via GET
+        ok 2 - returns SSE error event when image_url is missing via GET
+          ---
+          duration_ms: 11.633569
+          ...
+# [10:52:39 PM] 🌍 POST /api/postprocess-stream - 200 (0ms)
+        # Subtest: returns SSE error event when image_url is missing via POST
+        ok 3 - returns SSE error event when image_url is missing via POST
+          ---
+          duration_ms: 19.935681
+          ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=/static/generated/non_existent_image_123.png - 200 (1ms)
+        # Subtest: returns SSE error event when image file is not found on server
+        ok 4 - returns SSE error event when image file is not found on server
+          ---
+          duration_ms: 5.221693
+          ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=../../package.json - 200 (1ms)
+        # Subtest: safely handles path traversal attempts without leaking files
+        ok 5 - safely handles path traversal attempts without leaking files
+          ---
+          duration_ms: 4.674703
+          ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=/static/generated/sample.png?v=12345 - 200 (0ms)
+        # Subtest: handles query parameters and hash fragments in image_url
+        ok 6 - handles query parameters and hash fragments in image_url
+          ---
+          duration_ms: 4.423605
+          ...
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=. - 200 (1ms)
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=.. - 200 (1ms)
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=%20%20%20 - 200 (1ms)
+# [10:52:39 PM] 🌍 GET /api/postprocess-stream?image_url=%2Fstatic%2Fgenerated%2F - 200 (0ms)
+        # Subtest: rejects directory paths and dot paths as invalid image_url
+        ok 7 - rejects directory paths and dot paths as invalid image_url
+          ---
+          duration_ms: 13.065501
+          ...
+        1..7
+    ok 2 - 2. Live Server SSE Endpoint (/api/postprocess-stream)
+      ---
+      duration_ms: 129.952349
+      type: 'suite'
+      ...
+    # Subtest: 3. Stream Line Chunk Buffering Contract
+        # Subtest: assembles fragmented chunks across line boundaries without dropping steps
+        ok 1 - assembles fragmented chunks across line boundaries without dropping steps
+          ---
+          duration_ms: 0.967616
+          ...
+        # Subtest: handles mixed CRLF and LF line separators in chunk buffering
+        ok 2 - handles mixed CRLF and LF line separators in chunk buffering
+          ---
+          duration_ms: 0.217646
+          ...
+        1..2
+    ok 3 - 3. Stream Line Chunk Buffering Contract
+      ---
+      duration_ms: 1.335903
+      type: 'suite'
+      ...
+    # Subtest: 4. Web UI & Assets Parity
+        # Subtest: index.html is identical between static/ and android assets
+        ok 1 - index.html is identical between static/ and android assets
+          ---
+          duration_ms: 0.172842
+          ...
+        # Subtest: style.css is identical between static/ and android assets
+        ok 2 - style.css is identical between static/ and android assets
+          ---
+          duration_ms: 0.130633
+          ...
+        # Subtest: HTML contains pipeline overlay with 5 discrete steps
+        ok 3 - HTML contains pipeline overlay with 5 discrete steps
+          ---
+          duration_ms: 0.218176
+          ...
+        # Subtest: HTML JS subscribes to /api/postprocess-stream using EventSource
+        ok 4 - HTML JS subscribes to /api/postprocess-stream using EventSource
+          ---
+          duration_ms: 0.188412
+          ...
+        # Subtest: HTML JS contains safety watchdog timeout and cleanup handler
+        ok 5 - HTML JS contains safety watchdog timeout and cleanup handler
+          ---
+          duration_ms: 0.254635
+          ...
+        # Subtest: HTML JS completely removes fake setTimeout pipeline step animation loop
+        ok 6 - HTML JS completely removes fake setTimeout pipeline step animation loop
+          ---
+          duration_ms: 0.234157
+          ...
+        # Subtest: HTML JS defines setPipelineStep to dynamically advance active and done steps
+        ok 7 - HTML JS defines setPipelineStep to dynamically advance active and done steps
+          ---
+          duration_ms: 0.151463
+          ...
+        1..7
+    ok 4 - 4. Web UI & Assets Parity
+      ---
+      duration_ms: 1.680696
+      type: 'suite'
+      ...
+    # Subtest: 5. Android Native Integration
+        # Subtest: ApiClient.kt implements postprocessStream with SSE parsing and progress callback
+        ok 1 - ApiClient.kt implements postprocessStream with SSE parsing and progress callback
+          ---
+          duration_ms: 0.144379
+          ...
+        # Subtest: MainActivity.kt invokes ApiClient.postprocessStream and removes fake delay loop
+        ok 2 - MainActivity.kt invokes ApiClient.postprocessStream and removes fake delay loop
+          ---
+          duration_ms: 0.207567
+          ...
+        1..2
+    ok 5 - 5. Android Native Integration
+      ---
+      duration_ms: 0.440612
+      type: 'suite'
+      ...
+    # Subtest: 6. Python OpenCV Processor Step Output
+        # Subtest: processor.py smooth_image emits [STEP 1/5] through [STEP 5/5] with flush=True
+        ok 1 - processor.py smooth_image emits [STEP 1/5] through [STEP 5/5] with flush=True
+          ---
+          duration_ms: 0.169076
+          ...
+        # Subtest: processor.py maintains all CLI commands (smooth, remove_bg, invert, mesh)
+        ok 2 - processor.py maintains all CLI commands (smooth, remove_bg, invert, mesh)
+          ---
+          duration_ms: 0.113372
+          ...
+        1..2
+    ok 6 - 6. Python OpenCV Processor Step Output
+      ---
+      duration_ms: 0.460329
+      type: 'suite'
+      ...
+    1..6
+ok 19 - Real-Time Pipeline Progress via SSE (F4) - Unit & Integration Tests
+  ---
+  duration_ms: 137.556488
+  type: 'suite'
+  ...
+# Subtest: Style Presets (F12) - Unit & Integration Tests
+    # Subtest: 1. Server Architecture & Style Presets Definition
+        # Subtest: STYLE_PRESETS contains all 6 required presets
+        ok 1 - STYLE_PRESETS contains all 6 required presets
+          ---
+          duration_ms: 2.19192
+          ...
+        # Subtest: each preset defines id, label, icon, and specific CNC guidance
+        ok 2 - each preset defines id, label, icon, and specific CNC guidance
+          ---
+          duration_ms: 0.260867
+          ...
+        # Subtest: sanitizeStylePreset accepts valid preset keys (case and whitespace insensitive)
+        ok 3 - sanitizeStylePreset accepts valid preset keys (case and whitespace insensitive)
+          ---
+          duration_ms: 0.269112
+          ...
+        # Subtest: sanitizeStylePreset rejects invalid or empty presets cleanly
+        ok 4 - sanitizeStylePreset rejects invalid or empty presets cleanly
+          ---
+          duration_ms: 0.227024
+          ...
+        # Subtest: getStyleGuidance returns matching guidance or empty string
+        ok 5 - getStyleGuidance returns matching guidance or empty string
+          ---
+          duration_ms: 0.340305
+          ...
+        # Subtest: buildImprovePrompt incorporates style guidance when preset provided
+        ok 6 - buildImprovePrompt incorporates style guidance when preset provided
+          ---
+          duration_ms: 0.293137
+          ...
+        1..6
+    ok 1 - 1. Server Architecture & Style Presets Definition
+      ---
+      duration_ms: 4.759932
+      type: 'suite'
+      ...
+    # Subtest: 2. Web UI & Assets Parity
+        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.255907
+          ...
+        # Subtest: style.css is identical byte-for-byte between static/ and android assets
+        ok 2 - style.css is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.134551
+          ...
+        # Subtest: HTML contains style presets container and 6 preset buttons in textPanel
+        ok 3 - HTML contains style presets container and 6 preset buttons in textPanel
+          ---
+          duration_ms: 0.243425
+          ...
+        # Subtest: HTML contains style presets container in photoPanel
+        ok 4 - HTML contains style presets container in photoPanel
+          ---
+          duration_ms: 0.163476
+          ...
+        # Subtest: CSS defines .style-presets-row, .preset-chip, and .preset-chip.active
+        ok 5 - CSS defines .style-presets-row, .preset-chip, and .preset-chip.active
+          ---
+          duration_ms: 0.218929
+          ...
+        1..5
+    ok 2 - 2. Web UI & Assets Parity
+      ---
+      duration_ms: 1.395184
+      type: 'suite'
+      ...
+    # Subtest: 3. Client-Side JavaScript Logic & State Management
+        # Subtest: JS defines activeStylePreset state and selectStylePreset function
+        ok 1 - JS defines activeStylePreset state and selectStylePreset function
+          ---
+          duration_ms: 0.270796
+          ...
+        # Subtest: Simulation: toggling style preset in mock DOM
+        ok 2 - Simulation: toggling style preset in mock DOM
+          ---
+          duration_ms: 1.207393
+          ...
+        # Subtest: generateMap and convertPhoto pass style_preset in payload
+        ok 3 - generateMap and convertPhoto pass style_preset in payload
+          ---
+          duration_ms: 0.153346
+          ...
+        1..3
+    ok 3 - 3. Client-Side JavaScript Logic & State Management
+      ---
+      duration_ms: 1.797925
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native UI & ApiClient Integration
+        # Subtest: ApiClient.kt generate method accepts stylePreset parameter
+        ok 1 - ApiClient.kt generate method accepts stylePreset parameter
+          ---
+          duration_ms: 0.279902
+          ...
+        # Subtest: ApiClient.kt photoToDepth method accepts stylePreset parameter
+        ok 2 - ApiClient.kt photoToDepth method accepts stylePreset parameter
+          ---
+          duration_ms: 0.176429
+          ...
+        # Subtest: MainActivity.kt defines StylePresetSelector composable with 6 presets
+        ok 3 - MainActivity.kt defines StylePresetSelector composable with 6 presets
+          ---
+          duration_ms: 0.132037
+          ...
+        # Subtest: MainActivity.kt tracks selectedStylePreset state and renders selector in text and photo modes
+        ok 4 - MainActivity.kt tracks selectedStylePreset state and renders selector in text and photo modes
+          ---
+          duration_ms: 0.240138
+          ...
+        1..4
+    ok 4 - 4. Android Native UI & ApiClient Integration
+      ---
+      duration_ms: 1.015305
+      type: 'suite'
+      ...
+    1..4
+ok 20 - Style Presets (F12) - Unit & Integration Tests
+  ---
+  duration_ms: 10.042969
+  type: 'suite'
+  ...
+# Subtest: 3D Live Preview (Three.js Displacement) (F11) - Unit & Integration Tests
+    # Subtest: 1. Web UI & Assets Parity
+        # Subtest: index.html is identical byte-for-byte between static/ and android assets
+        ok 1 - index.html is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 1.796012
+          ...
+        # Subtest: style.css is identical byte-for-byte between static/ and android assets
+        ok 2 - style.css is identical byte-for-byte between static/ and android assets
+          ---
+          duration_ms: 0.141764
+          ...
+        # Subtest: HTML loads Three.js from CDN in head
+        ok 3 - HTML loads Three.js from CDN in head
+          ---
+          duration_ms: 0.129191
+          ...
+        # Subtest: HTML contains 3D live preview container, canvas, controls, and hints
+        ok 4 - HTML contains 3D live preview container, canvas, controls, and hints
+          ---
+          duration_ms: 0.174876
+          ...
+        # Subtest: Action bar contains 3D Preview button with purple styling and toggle handler
+        ok 5 - Action bar contains 3D Preview button with purple styling and toggle handler
+          ---
+          duration_ms: 0.164006
+          ...
+        # Subtest: 3D canvas includes accessibility attributes
+        ok 6 - 3D canvas includes accessibility attributes
+          ---
+          duration_ms: 0.143127
+          ...
+        1..6
+    ok 1 - 1. Web UI & Assets Parity
+      ---
+      duration_ms: 3.495783
+      type: 'suite'
+      ...
+    # Subtest: 2. CSS Styles & Design System
+        # Subtest: CSS defines .three-d-container and .three-d-canvas viewport layout
+        ok 1 - CSS defines .three-d-container and .three-d-canvas viewport layout
+          ---
+          duration_ms: 0.272238
+          ...
+        # Subtest: CSS defines controls for 3D view (.btn-three-d-reset, .btn-three-d-exit, .three-d-hint)
+        ok 2 - CSS defines controls for 3D view (.btn-three-d-reset, .btn-three-d-exit, .three-d-hint)
+          ---
+          duration_ms: 0.183903
+          ...
+        1..2
+    ok 2 - 2. CSS Styles & Design System
+      ---
+      duration_ms: 0.808278
+      type: 'suite'
+      ...
+    # Subtest: 3. Client-Side JavaScript Logic & State Management
+        # Subtest: JS defines all required 3D preview functions and states
+        ok 1 - JS defines all required 3D preview functions and states
+          ---
+          duration_ms: 0.308065
+          ...
+        # Subtest: Simulation: 3D Preview transitions and toggle behavior in mock DOM
+        ok 2 - Simulation: 3D Preview transitions and toggle behavior in mock DOM
+          ---
+          duration_ms: 1.485522
+          ...
+        # Subtest: Generation and Comparison flows automatically exit 3D preview if active
+        ok 3 - Generation and Comparison flows automatically exit 3D preview if active
+          ---
+          duration_ms: 0.148758
+          ...
+        1..3
+    ok 3 - 3. Client-Side JavaScript Logic & State Management
+      ---
+      duration_ms: 2.154841
+      type: 'suite'
+      ...
+    # Subtest: 4. Android Native UI Integration
+        # Subtest: MainActivity.kt defines PurpleAccent color
+        ok 1 - MainActivity.kt defines PurpleAccent color
+          ---
+          duration_ms: 0.241742
+          ...
+        # Subtest: MainActivity.kt defines show3DWebView state for WebView dialog
+        ok 2 - MainActivity.kt defines show3DWebView state for WebView dialog
+          ---
+          duration_ms: 0.142896
+          ...
+        # Subtest: MainActivity.kt renders 3D Preview button with WebView trigger
+        ok 3 - MainActivity.kt renders 3D Preview button with WebView trigger
+          ---
+          duration_ms: 0.230179
+          ...
+        # Subtest: MainActivity.kt embeds WebView with JavaScript and WebGL enabled
+        ok 4 - MainActivity.kt embeds WebView with JavaScript and WebGL enabled
+          ---
+          duration_ms: 0.31657
+          ...
+        # Subtest: MainActivity.kt loads local Three.js assets in WebView
+        ok 5 - MainActivity.kt loads local Three.js assets in WebView
+          ---
+          duration_ms: 0.130954
+          ...
+        # Subtest: MainActivity.kt injects JavaScript to enter 3D preview with current image
+        ok 6 - MainActivity.kt injects JavaScript to enter 3D preview with current image
+          ---
+          duration_ms: 0.217896
+          ...
+        # Subtest: MainActivity.kt provides BackHandler and close button for 3D WebView dialog
+        ok 7 - MainActivity.kt provides BackHandler and close button for 3D WebView dialog
+          ---
+          duration_ms: 0.333933
+          ...
+        # Subtest: MainActivity.kt uses fullscreen DialogProperties for immersive 3D experience
+        ok 8 - MainActivity.kt uses fullscreen DialogProperties for immersive 3D experience
+          ---
+          duration_ms: 0.242483
+          ...
+        1..8
+    ok 4 - 4. Android Native UI Integration
+      ---
+      duration_ms: 2.258444
+      type: 'suite'
+      ...
+    1..4
+ok 21 - 3D Live Preview (Three.js Displacement) (F11) - Unit & Integration Tests
+  ---
+  duration_ms: 9.716291
+  type: 'suite'
+  ...
+1..21
+# tests 475
+# suites 112
+# pass 475
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11567.732187
