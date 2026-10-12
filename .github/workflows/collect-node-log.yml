@@ -1,83 +1,72 @@
 name: Collect PR 4 Node test log
-
 on:
   push:
     branches: [chore/remove-vercel]
     paths: [.github/workflows/collect-node-log.yml]
   workflow_dispatch:
-
 permissions:
   contents: read
   actions: read
-
 jobs:
   collect-node-log:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
+    timeout-minutes: 10
     steps:
-      - name: Fetch Node test log (auto-resolve job ID)
+      - name: Fetch Node test log
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_RUN_ID: "38297312351"
-        run: |
-          set -euo pipefail
-
-          gh api \
-            "repos/${TARGET_REPO}/actions/runs/${TARGET_RUN_ID}/jobs?filter=latest&per_page=100" \
-            > jobs.json
-
-          job_id=$(jq -r \
-            '[.jobs[] | select(.name == "node-tests")][0].id // empty' \
-            jobs.json)
-
-          if [ -z "$job_id" ]; then
-            echo "No node-tests job found in run ${TARGET_RUN_ID}"
-            exit 1
-          fi
-
-          job_status=$(jq -r --argjson id "$job_id" \
-            '.jobs[] | select(.id == $id) | .status' \
-            jobs.json)
-
-          if [ "$job_status" != "completed" ]; then
-            echo "Node job ${job_id} is ${job_status}; logs are not ready."
-            exit 1
-          fi
-
-          echo "Fetching node-tests job ${job_id} from run ${TARGET_RUN_ID}"
-
-          gh run view \
-            --repo "$TARGET_REPO" \
-            --job "$job_id" \
-            --log > node-tests.log
-
-          test -s node-tests.log
-
-      - name: Extract failing diagnostics
-        if: always()
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p diagnostics
-
-          if [ ! -s node-tests.log ]; then
-            echo "Node test log was not retrieved. Inspect the fetch step." \
-              | tee diagnostics/node-test-errors.txt
+          exec > >(tee diagnostics/fetch.log) 2>&1
+          ready=false
+          for attempt in $(seq 1 12); do
+            gh api "repos/${TARGET_REPO}/actions/runs/${TARGET_RUN_ID}/jobs?filter=latest&per_page=100" > jobs.json
+            job_id=$(jq -r '[.jobs[] | select(.name == "node-tests")][0].id // empty' jobs.json)
+            if [ -z "$job_id" ]; then
+              echo "No node-tests job found in run ${TARGET_RUN_ID}"
+              exit 1
+            fi
+            job_status=$(jq -r --argjson id "$job_id" '.jobs[] | select(.id == $id) | .status' jobs.json)
+            echo "Attempt ${attempt}: job ${job_id} is ${job_status}"
+            if [ "$job_status" = completed ]; then
+              ready=true
+              break
+            fi
+            if [ "$attempt" -lt 12 ]; then sleep 15; fi
+          done
+          if [ "$ready" != true ]; then
+            echo "Target job is still running. Rerun this collector after it completes."
             exit 1
           fi
-
-          grep -Ein -B 8 -A 30 \
-            'AssertionError|not ok|TypeError|ReferenceError|SyntaxError|Traceback|ModuleNotFoundError' \
-            node-tests.log > diagnostics/node-test-errors.txt || true
-
-          if [ -s diagnostics/node-test-errors.txt ]; then
-            cat diagnostics/node-test-errors.txt
-          else
-            echo "No selected failure markers found; inspect the full log." \
-              | tee diagnostics/node-test-errors.txt
+          downloaded=false
+          for attempt in $(seq 1 3); do
+            if gh run view --repo "$TARGET_REPO" --job "$job_id" --log > node-tests.log && test -s node-tests.log; then
+              downloaded=true
+              break
+            fi
+            echo "Log download attempt ${attempt} failed or returned an empty log"
+            if [ "$attempt" -lt 3 ]; then sleep 10; fi
+          done
+          test "$downloaded" = true
+      - name: Extract failing diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          if [ ! -s node-tests.log ]; then
+            echo "Node test log unavailable. See fetch.log and jobs.json for the cause." | tee diagnostics/node-test-errors.txt
+            exit 1
           fi
-
+          grep -Ein -B 8 -A 30 'AssertionError|not ok|TypeError|ReferenceError|SyntaxError|Traceback|ModuleNotFoundError' node-tests.log > diagnostics/node-test-errors.txt || true
+          if [ ! -s diagnostics/node-test-errors.txt ]; then
+            echo "No selected failure markers found; inspect the full log." > diagnostics/node-test-errors.txt
+          fi
+          cat diagnostics/node-test-errors.txt
       - name: Upload Node test diagnostics artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +75,6 @@ jobs:
           path: |
             jobs.json
             node-tests.log
-            diagnostics/node-test-errors.txt
+            diagnostics/
           retention-days: 7
           if-no-files-found: warn
