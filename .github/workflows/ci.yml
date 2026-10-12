@@ -1,0 +1,96 @@
+name: DepthForge CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [chore/remove-vercel]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: depthforge-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          GEMINI_API_KEY: ci-placeholder-not-a-real-api-key
+  compose-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose version
+      - name: Validate without .env
+        run: |
+          test ! -e .env
+          docker compose config --quiet
+      - name: Validate with temporary .env
+        run: |
+          trap 'rm -f .env' EXIT
+          umask 077
+          printf '%s\n' 'GEMINI_API_KEY=ci-placeholder-not-a-real-api-key' 'RATE_LIMIT_MAX=10' > .env
+          docker compose config --quiet
+  docker-build:
+    needs: [node-tests, compose-validation]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY_IMAGE: ghcr.io/el-jefe702/depthforge
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --tag depthforge:ci .
+      - name: Start container
+        run: docker run --detach --name depthforge-ci --publish 127.0.0.1:18080:8080 --env PORT=8080 --env GEMINI_API_KEY=ci-placeholder-not-a-real-api-key depthforge:ci
+      - name: Check application and Python health
+        run: |
+          for attempt in $(seq 1 30); do
+            test "$(docker inspect --format '{{.State.Running}}' depthforge-ci)" = true || exit 1
+            if curl --fail --silent --show-error --connect-timeout 2 --max-time 5 http://127.0.0.1:18080/api/health -o /tmp/health.json; then
+              if python3 -c 'import json; h=json.load(open("/tmp/health.json")); assert h.get("status")=="ok" and h.get("python") is True'; then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          exit 1
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/chore/remove-vercel'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USERNAME: ${{ github.actor }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+      - name: Publish tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/chore/remove-vercel'
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker tag depthforge:ci "${REGISTRY_IMAGE}:sha-${COMMIT_SHA}"
+          docker tag depthforge:ci "${REGISTRY_IMAGE}:pr-4"
+          docker push "${REGISTRY_IMAGE}:sha-${COMMIT_SHA}"
+          docker push "${REGISTRY_IMAGE}:pr-4"
+      - name: Diagnostics
+        if: always()
+        run: |
+          if docker container inspect depthforge-ci >/dev/null 2>&1; then
+            docker inspect --format '{{json .State}}' depthforge-ci
+            docker logs --tail 200 depthforge-ci
+          fi
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm --force depthforge-ci || true
+          docker logout ghcr.io || true
