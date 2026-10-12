@@ -10,7 +10,7 @@ DepthForge combines Google Gemini prompt enhancement and image generation with P
 
 The deployment target is a VPS running the Express server, either directly or through Docker Compose. Browser and Android clients use the same REST/SSE API. Python processing runs on the server.
 
-Vercel deployment configuration and its serverless wrapper have been removed in this branch. Legacy Vercel detection remains in server.js pending cleanup; do not set VERCEL or VERCEL_ENV on the VPS.
+Vercel deployment configuration and its serverless wrapper were removed from this branch. Legacy Vercel detection remains in `server.js` pending cleanup; do not set `VERCEL` or `VERCEL_ENV` on the VPS.
 
 ## Core Features
 
@@ -32,7 +32,7 @@ Vercel deployment configuration and its serverless wrapper have been removed in 
 - Environment Validation at Startup (F14): environment validation helpers and diagnostics.
 - Gemini Prompt Response Robustness (F15): JSON parsing and fallback handling.
 - Multer UUID Filenames with Extension (F16): uniquely named image uploads.
-- processor.py Step Order & Structure (F17): five-stage processing and progress labels.
+- `processor.py` Step Order & Structure (F17): five-stage processing and progress labels.
 - Concurrency Queue for Python Processor (F18): p-queue serialization for queued processing operations. The streaming route currently launches its subprocess directly; do not assume all processing is serialized.
 - Android Share Intent (F19): share PNGs through Android FileProvider.
 - Comprehensive README Documentation Update (F20): setup, deployment, API, and project reference.
@@ -55,13 +55,13 @@ python3 -m venv .venv
 pip install -r requirements.txt
 ```
 
-Create .env only if it does not already exist. This command uses exclusive creation and will not overwrite existing secrets:
+Create `.env` only if it does not already exist. This command uses exclusive creation and will not overwrite existing secrets:
 
 ```bash
 node --input-type=module -e 'import fs from "node:fs"; try { fs.writeFileSync(".env", "GEMINI_API_KEY=\nPORT=8000\n", {flag: "wx", mode: 0o600}); } catch (e) { if (e.code !== "EEXIST") throw e; console.log("Existing .env preserved"); }'
 ```
 
-Edit .env and enter your key. Never commit it or paste it into an issue. Set PYTHON_EXEC to your virtual environment interpreter if needed.
+Edit `.env` and set a real `GEMINI_API_KEY` before starting the app. Never commit it or paste it into an issue. Set `PYTHON_EXEC` to your virtual environment interpreter if needed.
 
 ```bash
 npm start
@@ -71,98 +71,99 @@ npm run dev
 npm test
 ```
 
-With PORT=8000, open http://localhost:8000.
+With `PORT=8000`, open `http://localhost:8000`.
 
 ## VPS deployment with Docker Compose
 
-Keep the real .env on the VPS host, outside the image. This branch's Compose configuration forwards GEMINI_API_KEY and fixes the container port at 8080, exposed on host port 8000.
+Set the real `.env` on the VPS host before starting the service. This branch's Compose file reads `GEMINI_API_KEY` from the host environment and fails fast if it is missing or empty.
 
 ```bash
+export GEMINI_API_KEY="your_key_here"
 docker compose up --build -d
 docker compose ps
 docker compose logs --tail=100 depthforge
 curl --fail http://localhost:8000/api/health
 ```
 
-Put a TLS reverse proxy in front of the service for public access. Restrict direct access to port 8000 according to your VPS firewall and proxy arrangement. Configure TRUST_PROXY to match the actual trusted proxy chain, rather than enabling unrestricted trust.
+Put a TLS reverse proxy in front of the service for public access. Restrict direct access to port 8000 according to your VPS firewall and proxy arrangement. Configure `TRUST_PROXY` to match the actual trusted proxy chain rather than leaving it unset.
 
 ### Environment persistence changes in PR #3
 
 PR #3 is separate from this branch. Once merged, it adds:
 
-- .env.example as a secret-free template.
-- Compose env_file loading from the host, with optional-file syntax requiring Docker Compose v2.24+.
-- A named app_data volume at /app/data for the subscription database.
-- Ignore rules for .env variants.
+- `.env.example` as a secret-free template.
+- Compose `env_file` loading from the host, with optional-file syntax requiring Docker Compose v2.24+.
+- A named `app_data` volume at `/app/data` for the subscription database.
+- Ignore rules for `.env` variants.
 
-Do not assume these changes are present merely because this README was merged. The original Compose file only forwards selected variables; additional host .env settings are not automatically passed into the container.
+Do not assume these changes are present merely because this README was merged. The original Compose file only forwards selected variables; additional host `.env` settings are not automatically passed into the container.
 
-With PR #3 merged, recreate the service after editing .env:
+With PR #3 merged, recreate the service after editing `.env`:
 
 ```bash
 docker compose up -d --force-recreate depthforge
 ```
 
-Image rebuilds do not update or delete a host-side .env. A new clone does not include secrets: restore the host file from your secure backup. Avoid overwrite commands such as echo ... > .env or unconditional copying of the template.
+Image rebuilds do not update or delete a host-side `.env`. A new clone does not include secrets: restore the host file from your secure backup. Avoid overwrite commands such as `echo ... > .env` or unconditional copying of the template.
 
 ### Persistent data and backups
 
-The generated_data volume stores /app/static/generated. Generated files remain subject to GENERATED_TTL_HOURS cleanup: persistence does not disable expiration. PR #3 adds app_data for /app/data. Uploads are not currently mounted on a persistent volume.
+The `generated_data` volume stores `/app/static/generated`. Generated files remain subject to `GENERATED_TTL_HOURS` cleanup: persistence does not disable expiration. PR #3 adds `app_data` for `/app/data`. Uploads are not currently mounted on a persistent volume.
 
-Keep secure backups of .env and persistent data. Do not run docker compose down -v unless you intend to delete named volumes. These changes do not recover secrets or data that were already lost.
+Keep secure backups of `.env` and persistent data. Do not run `docker compose down -v` unless you intend to delete named volumes. These changes do not recover secrets or data already lost.
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| GEMINI_API_KEY | Required | Google generation API credential. |
-| PORT | 8000 directly; 8080 in Compose | Express listening port. |
-| PYTHON_EXEC | Auto-detected | Python interpreter override. Docker sets python3. |
-| GENERATED_TTL_HOURS | 24 | Generated-file retention window. |
-| RATE_LIMIT_WINDOW_MS | 900000 | Generation rate-limit window in milliseconds. |
-| RATE_LIMIT_MAX | 10 | Requests per IP per window. |
-| TRUST_PROXY | Disabled | Trusted proxy configuration for client IP handling. |
-| SUBSCRIPTIONS_DB_PATH | ./data/subscriptions.db in PR #2 | SQLite location; PR #3 sets /app/data/subscriptions.db in Compose. |
+| `GEMINI_API_KEY` | Required | Google generation API credential. |
+| `PORT` | `8000` locally; `8080` in Compose | Express listening port. |
+| `PYTHON_EXEC` | Auto-detected | Python interpreter override. Docker sets `python3`. |
+| `GENERATED_TTL_HOURS` | `24` | Generated-file retention window. |
+| `RATE_LIMIT_WINDOW_MS` | `900000` | Generation rate-limit window in milliseconds. |
+| `RATE_LIMIT_MAX` | `10` | Requests per IP per window. |
+| `TRUST_PROXY` | Disabled | Trusted proxy configuration for client IP handling. |
+| `SUBSCRIPTIONS_DB_PATH` | `./data/subscriptions.db` in PR #2 | SQLite location; PR #3 sets `/app/data/subscriptions.db` in Compose. |
 
 ## Dependencies
 
-Node packages include @google/genai, express, express-rate-limit, multer, p-queue, uuid, and dotenv. Python processing uses opencv-python, numpy, and rembg; install requirements.txt for the declared dependency set.
+Node packages include `@google/genai`, `express`, `express-rate-limit`, `multer`, `p-queue`, `uuid`, and `dotenv`. Python processing uses `opencv-python`, `numpy`, and `rembg`; install `requirements.txt` for the declared dependency set.
 
 ## API Endpoints
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| /api/health | GET, HEAD, OPTIONS | Health, version, Python availability, uptime. |
-| /api/generate | POST | Text generation; JSON prompt and optional aspectRatio, depth_intensity, style_preset, batch. |
-| /api/photo-to-depth | POST | Multipart photo upload and optional generation settings. |
-| /api/postprocess | POST | Polish the image identified by image_url. |
-| /api/postprocess-stream | GET / POST | SSE progress for image_url. |
-| /api/invert | POST | Invert the image identified by image_url. |
-| /api/remove_bg | POST | Remove background from the image identified by image_url. |
+| `/api/health` | `GET`, `HEAD`, `OPTIONS` | Health, version, Python availability, uptime. |
+| `/api/generate` | `POST` | Text generation; JSON prompt and optional `aspectRatio`, `depth_intensity`, `style_preset`, `batch`. |
+| `/api/photo-to-depth` | `POST` | Multipart photo upload and optional generation settings. |
+| `/api/postprocess` | `POST` | Polish the image identified by `image_url`. |
+| `/api/postprocess-stream` | `GET` / `POST` | SSE progress for `image_url`. |
+| `/api/invert` | `POST` | Invert the image identified by `image_url`. |
+| `/api/remove_bg` | `POST` | Remove background from the image identified by `image_url`. |
 
-Generation routes are rate limited. Image URLs are returned under /static/generated/. Inspect source and tests for full response contracts.
+Generation routes are rate limited. Image URLs are returned under `/static/generated/`. Inspect source and tests for full response contracts.
 
 ## Post-processing pipeline
 
-The latest float32 pipeline replaces the previous 8-bit times-257 conversion:
+The latest float32 pipeline replaces the previous 8-bit `times-257` conversion:
 
 1. Load the image into normalized float32 data.
-2. Inpaint holes using a temporary uint8 representation and merge the results back.
+2. Inpaint holes using a temporary `uint8` representation and merge the results back.
 3. Apply bilateral filtering and Gaussian smoothing while retaining floating-point data.
 4. Normalize the depth range.
-5. Quantize once to uint16 and export PNG.
+5. Quantize once to `uint16` and export PNG.
 
 Smoothing can interpolate between input levels but cannot recover true geometry missing from the source. Confirm toolpaths, scale, and relief depth in your CAM workflow.
 
 ## Android App
 
-The native Jetpack Compose client includes Share Sheet, Session Gallery, 3D Preview WebView, Aspect Ratio controls, Depth Intensity, Style Presets, and a Batch Candidate Grid. Configure its server URL to your VPS endpoint. See android_app/README.md for client setup.
+The native Jetpack Compose client includes Share Sheet, Session Gallery, 3D Preview WebView, Aspect Ratio controls, Depth Intensity, Style Presets, and a Batch Candidate Grid. Configure its server URL to your VPS endpoint. See `android_app/README.md` for client setup.
 
 ## Subscription database work in PR #2
 
-PR #2 adds db/subscriptions.js with users, usage, subscriptions, initialization, and helper functions, plus better-sqlite3. This branch does not include that module.
+PR #2 adds `db/subscriptions.js` with users, usage, subscriptions, initialization, and helper functions, plus `better-sqlite3`. This branch does not include that module.
 
-The proposed free/pro/studio quotas are placeholders. The module is not wired into server.js, its lockfile update is outstanding, and tests have not been added. It does not yet provide production billing or quota enforcement.
+The proposed free/pro/studio quotas are placeholders. The module is not wired into `server.js`, its lockfile update is outstanding, and tests have not been added. It does not yet provide production billing or quota enforcement.
 
 ## Project Directory Tree Structure
 
@@ -179,7 +180,7 @@ DepthForge/
   static/                           Browser UI assets
   tests/                            Node test suites
     readme_verification.test.js      Documentation checks
-    android_share.test.js           Android sharing checks
+    android_share.test.js            Android sharing checks
     python_queue.test.js            Queue checks
     processor_steps.test.js         Processing-step checks
   android_app/                      Native Android client
@@ -192,4 +193,4 @@ Documentation updates are not proof of a successful build or deployment. The rec
 
 ## License
 
-See LICENSE. SLCreations, LLC, 2026.
+See `LICENSE`. SLCreations, LLC, 2026.
