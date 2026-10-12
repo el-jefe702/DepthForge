@@ -9,6 +9,8 @@
 
 <hr />
 
+This repository is deployed on a VPS; Vercel config has been removed.
+
 ## Overview
 
 DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC laser engraving. It combines **Google Gemini** for intelligent prompt expansion, **Google Imagen 4** for depth map generation, and an **OpenCV post-processing pipeline** for production-quality output.

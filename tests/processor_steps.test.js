@@ -14,9 +14,9 @@ describe('processor.py Step Comments & Order (Feature F17) - Unit Tests', () => 
 
     test('processor.py exists and contains step comment banners', () => {
         assert.ok(fs.existsSync(processorPath));
-        assert.ok(content.includes('STEP 1: LOAD & CONVERT TO 16-BIT GRAYSCALE'));
-        assert.ok(content.includes('STEP 2: CLEAN UP MISSING DATA (INPAINTING)'));
-        assert.ok(content.includes('STEP 3: SPATIAL FILTERING (FIX BANDING)'));
+        assert.ok(content.includes('STEP 1: LOAD & CONVERT TO FLOAT32 GRAYSCALE'));
+        assert.ok(content.includes('STEP 2: FILL HOLES (INPAINTING)'));
+        assert.ok(content.includes('STEP 3: SPATIAL FILTERING (SMOOTH GRADIENTS)'));
         assert.ok(content.includes('STEP 4: NORMALIZE THE DEPTH RANGE'));
         assert.ok(content.includes('STEP 5: EXPORT AS LOSSLESS 16-BIT PNG'));
     });
