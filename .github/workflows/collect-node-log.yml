@@ -1,0 +1,48 @@
+name: Collect PR 4 Node test log
+on:
+  push:
+    branches: [chore/remove-vercel]
+    paths: [.github/workflows/collect-node-log.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect-node-log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Retrieve existing Node job log
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/el-jefe702/DepthForge/actions/jobs/114768184133 > job.json
+          python3 -c 'import json; j=json.load(open("job.json")); print("Node job:", j["status"], j.get("conclusion")); assert j["status"] == "completed", "Job must finish before its log can be downloaded"'
+          gh api repos/el-jefe702/DepthForge/actions/jobs/114768184133/logs > node-tests.log
+          test -s node-tests.log
+      - name: Extract Invert test section
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('node-tests.log').read_text(errors='replace')
+          lines = text.splitlines()
+          start = next((i for i, line in enumerate(lines) if '# Subtest: Invert Depth Map Feature (F2)' in line), None)
+          if start is None:
+              section = 'Invert suite header not found. Inspect the full node-tests.log artifact.'
+          else:
+              end = next((i for i in range(start + 1, len(lines)) if ('not ok ' in lines[i] or 'ok ' in lines[i]) and '- Invert Depth Map Feature (F2)' in lines[i]), len(lines) - 1)
+              section = '\n'.join(lines[start:min(end + 12, len(lines))])
+          Path('invert-tests.log').write_text(section + '\n')
+          print(section)
+          PY
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr4-node-test-diagnostics
+          path: |
+            job.json
+            node-tests.log
+            invert-tests.log
+          retention-days: 7
+          if-no-files-found: warn
