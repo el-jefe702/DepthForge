@@ -30,7 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose version
-      - name: Validate without .env
+      - name: Validate without .env using a host API key
+        env:
+          GEMINI_API_KEY: ci-placeholder-not-a-real-api-key
         run: |
           test ! -e .env
           docker compose config --quiet
