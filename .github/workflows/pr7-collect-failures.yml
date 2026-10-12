@@ -1,0 +1,64 @@
+name: Collect PR 7 comparison failures
+on:
+  push:
+    branches: [pr4-finished]
+    paths: [.github/workflows/pr7-collect-failures.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TARGET_REPO: ${{ github.repository }}
+      TARGET_RUN: '38306543321'
+    steps:
+      - name: Fetch comparison job logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          gh api "repos/${TARGET_REPO}/actions/runs/${TARGET_RUN}/jobs?filter=latest&per_page=100" > diagnostics/jobs.json
+          for target in pr7 main-baseline; do
+            job_name="tests (${target})"
+            job_id=$(jq -r --arg name "$job_name" '[.jobs[] | select(.name == $name)][0].id // empty' diagnostics/jobs.json)
+            test -n "$job_id"
+            status=$(jq -r --argjson id "$job_id" '.jobs[] | select(.id == $id) | .status' diagnostics/jobs.json)
+            test "$status" = completed
+            gh run view --repo "$TARGET_REPO" --job "$job_id" --log > "diagnostics/${target}.log"
+            test -s "diagnostics/${target}.log"
+          done
+      - name: Extract raw failures
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          echo '## Comparison run 38306543321 — raw failure evidence' >> "$GITHUB_STEP_SUMMARY"
+          for target in pr7 main-baseline; do
+            echo "### ${target}" >> "$GITHUB_STEP_SUMMARY"
+            if [ ! -s "diagnostics/${target}.log" ]; then
+              echo 'Log retrieval failed; inspect Fetch comparison job logs.' | tee "diagnostics/${target}-errors.txt"
+            else
+              grep -Ein -B 8 -A 45 'not ok|AssertionError|ModuleNotFoundError|TypeError|ReferenceError|SyntaxError|npm error|npm ERR!' "diagnostics/${target}.log" > "diagnostics/${target}-errors.txt" || true
+              if [ ! -s "diagnostics/${target}-errors.txt" ]; then
+                echo 'No selected failure markers found. Inspect the full job log.' > "diagnostics/${target}-errors.txt"
+              fi
+            fi
+            cat "diagnostics/${target}-errors.txt"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            head -c 400000 "diagnostics/${target}-errors.txt" >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: Upload raw comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-comparison-failures-38306543321
+          path: diagnostics/
+          retention-days: 7
+          if-no-files-found: error
