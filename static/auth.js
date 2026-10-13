@@ -14,6 +14,7 @@ const sessionStatus = document.getElementById('session-status');
 const signOut = document.getElementById('sign-out');
 
 let mode = 'signin';
+let recoveryMode = false;
 
 function showMessage(text, isError = false) {
   message.textContent = text;
@@ -46,6 +47,30 @@ function setMode(nextMode) {
   }
 }
 
+function setRecoveryMode(enabled) {
+  recoveryMode = enabled;
+  clearMessage();
+
+  if (enabled) {
+    primaryAction.textContent = 'Update password';
+    toggleMode.hidden = true;
+    forgotPassword.hidden = true;
+    emailInput.closest('.field')?.setAttribute('hidden', '');
+    passwordInput.autocomplete = 'new-password';
+    passwordInput.placeholder = 'New password';
+    passwordInput.value = '';
+    passwordInput.focus();
+    showMessage('Choose a new password for your account.');
+  } else {
+    primaryAction.textContent = mode === 'signin' ? 'Sign in' : 'Create account';
+    toggleMode.hidden = false;
+    forgotPassword.hidden = false;
+    emailInput.closest('.field')?.removeAttribute('hidden');
+    passwordInput.placeholder = 'Password';
+    passwordInput.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
+  }
+}
+
 function setSession(user) {
   if (user) {
     sessionStatus.textContent = `Signed in as ${user.email}`;
@@ -67,10 +92,25 @@ form.addEventListener('submit', async (event) => {
   clearMessage();
   setBusy(true);
 
-  const email = emailInput.value.trim();
   const password = passwordInput.value;
 
   try {
+    if (recoveryMode) {
+      if (password.length < 8) {
+        throw new Error('New password must be at least 8 characters.');
+      }
+
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+
+      recoveryMode = false;
+      setRecoveryMode(false);
+      showMessage('Password updated. You can now continue.');
+      await refreshSession();
+      return;
+    }
+
+    const email = emailInput.value.trim();
     const result = mode === 'signin'
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password });
@@ -121,7 +161,12 @@ async function refreshSession() {
   setSession(data?.session?.user || null);
 }
 
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    setRecoveryMode(true);
+    return;
+  }
+
   setSession(session?.user || null);
 });
 
