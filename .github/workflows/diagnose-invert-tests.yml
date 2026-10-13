@@ -1,0 +1,50 @@
+name: Diagnose Invert tests
+
+on:
+  push:
+    branches:
+      - feature/supabase-auth
+    paths:
+      - .github/workflows/diagnose-invert-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-invert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run only invert tests and capture output
+        id: invert_tests
+        shell: bash
+        run: |
+          set +e
+          node --test tests/invert.test.js 2>&1 | tee invert-test.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload invert test log
+        uses: actions/upload-artifact@v4
+        with:
+          name: invert-test-log
+          path: invert-test.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Fail when invert tests failed
+        if: steps.invert_tests.outputs.status != '0'
+        run: exit 1
