@@ -1,0 +1,38 @@
+name: Deploy Supabase Auth (safe)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 22 "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy Supabase Auth validation workflow
+        run: |
+          ssh -i ~/.ssh/deploy_key -p 22 \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            cd /var/www/depthforge
+            git pull --ff-only
+            npm ci
+            npm run build
+          '
+
+      - name: Restart DepthForge service
+        run: |
+          ssh -i ~/.ssh/deploy_key -p 22 \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            sudo systemctl restart depthforge
+            sudo systemctl status depthforge --no-pager
+          '
