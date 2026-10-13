@@ -17,22 +17,13 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p 22 "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy Supabase Auth validation workflow
+      - name: Deploy DepthForge with Docker Compose
         run: |
-          ssh -i ~/.ssh/deploy_key -p 22 \
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p 22 \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
             set -e
-            cd /var/www/depthforge
+            cd /opt/depthforge
             git pull --ff-only
-            npm ci
-            npm run build
-          '
-
-      - name: Restart DepthForge service
-        run: |
-          ssh -i ~/.ssh/deploy_key -p 22 \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
-            set -e
-            sudo systemctl restart depthforge
-            sudo systemctl status depthforge --no-pager
+            docker compose up -d --build
+            docker compose ps
           '
