@@ -33,7 +33,7 @@ jobs:
 
       - name: Run focused Supabase Auth validation
         run: |
-          npm test -- --runInBand \
+          node --test \
             tests/supabase-auth-middleware.test.js \
             tests/web-android-ui-parity.test.js \
             tests/generation-batch.test.js
