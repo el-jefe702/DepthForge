@@ -34,6 +34,5 @@ jobs:
       - name: Run focused Supabase Auth validation
         run: |
           node --test \
-            tests/supabase-auth-middleware.test.js \
-            tests/web-android-ui-parity.test.js \
-            tests/generation-batch.test.js
+            tests/auth.test.js \
+            tests/batch_generation.test.js
