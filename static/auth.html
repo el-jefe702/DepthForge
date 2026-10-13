@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DepthForge — Sign in</title>
+  <link rel="stylesheet" href="/static/auth.css">
+</head>
+<body>
+  <main class="auth-card">
+    <img class="auth-logo" src="/static/logo.png" alt="DepthForge">
+    <h1>DepthForge</h1>
+    <p class="auth-subtitle">Create an account or sign in to generate depth maps.</p>
+
+    <div id="auth-message" class="auth-message" hidden></div>
+
+    <form id="auth-form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+
+      <button id="primary-action" type="submit">Sign in</button>
+    </form>
+
+    <div class="auth-links">
+      <button id="toggle-mode" type="button">Need an account? Sign up</button>
+      <button id="forgot-password" type="button">Forgot password?</button>
+    </div>
+
+    <p id="session-status" class="session-status"></p>
+    <button id="sign-out" type="button" hidden>Sign out</button>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="/static/auth.js"></script>
+</body>
+</html>
