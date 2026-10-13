@@ -1,0 +1,74 @@
+name: Deploy Supabase Auth (safe)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out deployment branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/supabase-auth
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Back up current server and environment
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            cd /var/www/depthforge
+            timestamp=$(date +%Y%m%d%H%M%S)
+            cp server.js "server.js.backup-$timestamp"
+            cp .env ".env.backup-$timestamp"
+          '
+
+      - name: Upload application files
+        run: |
+          scp -i ~/.ssh/id_ed25519 -r \
+            server.js package.json package-lock.json static android_app \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/depthforge/"
+
+      - name: Keep Supabase API enforcement disabled
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            cd /var/www/depthforge
+            touch .env
+            if grep -q "^SUPABASE_AUTH_ENABLED=" .env; then
+              sed -i "s/^SUPABASE_AUTH_ENABLED=.*/SUPABASE_AUTH_ENABLED=false/" .env
+            else
+              printf "\nSUPABASE_AUTH_ENABLED=false\n" >> .env
+            fi
+            grep -q "^SUPABASE_AUTH_ENABLED=false$" .env
+          '
+
+      - name: Install dependencies and restart service
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            cd /var/www/depthforge
+            npm ci --omit=dev
+            sudo systemctl restart depthforge
+            sudo systemctl is-active --quiet depthforge
+          '
+
+      - name: Verify application health
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 10 https://depthforge.spatialops.llc/ > /dev/null; then
+              echo "DepthForge is healthy."
+              exit 0
+            fi
+            echo "Waiting for application to become healthy ($attempt/5)..."
+            sleep 10
+          done
+          echo "Application health check failed."
+          exit 1
