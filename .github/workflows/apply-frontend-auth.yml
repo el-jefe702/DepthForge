@@ -1,0 +1,94 @@
+name: Apply Supabase frontend authentication
+
+on:
+  push:
+    branches:
+      - feature/supabase-auth
+    paths:
+      - .github/workflows/apply-frontend-auth.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-frontend-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: feature/supabase-auth
+
+      - name: Apply checked frontend authentication patch
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+
+          const webPath = 'static/index.html';
+          const androidPath = 'android_app/app/src/main/assets/index.html';
+          let source = fs.readFileSync(webPath, 'utf8');
+          const androidSource = fs.readFileSync(androidPath, 'utf8');
+
+          if (source !== androidSource) {
+            throw new Error('Web and Android index.html files differ; refusing to break asset parity.');
+          }
+
+          const requireReplace = (from, to, label) => {
+            if (source.includes(to)) return;
+            if (!source.includes(from)) throw new Error(`Expected pattern not found for ${label}`);
+            source = source.replace(from, to);
+          };
+
+          requireReplace(
+            '    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>\n',
+            '    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>\n    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\n',
+            'Supabase CDN import'
+          );
+
+          requireReplace(
+            '            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">v2.0</span>\n',
+            '            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">v2.0</span>\n            <div id="authControls" style="display:flex; align-items:center; gap:8px;">\n                <span id="authUserEmail" style="display:none; color:var(--text-muted); font-size:13px;"></span>\n                <a id="signInLink" class="btn btn-outline" href="/static/auth.html" style="padding:7px 10px; font-size:13px;">Sign in</a>\n                <button id="signOutBtn" class="btn btn-outline" type="button" onclick="signOutDepthForge()" style="display:none; padding:7px 10px; font-size:13px;">Sign out</button>\n            </div>\n',
+            'header account controls'
+          );
+
+          const scriptStart = '    <script>\n        let currentImageUrl = \'\';\n';
+          const authStart = `    <script>\n        const SUPABASE_URL = 'https://qvesjthnzneimllpujng.supabase.co';\n        const SUPABASE_ANON_KEY = 'sb_publishable_ZB_b365K0Q-JTYpKoYPswQ_Y8JJ6qZ9';\n        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);\n\n        function redirectToSignIn() {\n            const next = \`${'${window.location.pathname}${window.location.search}${window.location.hash}'}\`;\n            window.location.assign(\`/static/auth.html?next=${'${encodeURIComponent(next)}'}\`);\n        }\n\n        function updateAuthControls(user) {\n            const email = document.getElementById('authUserEmail');\n            const signIn = document.getElementById('signInLink');\n            const signOut = document.getElementById('signOutBtn');\n            const signedIn = Boolean(user);\n            if (email) {\n                email.textContent = signedIn ? user.email : '';\n                email.style.display = signedIn ? 'inline' : 'none';\n            }\n            if (signIn) signIn.style.display = signedIn ? 'none' : 'inline-flex';\n            if (signOut) signOut.style.display = signedIn ? 'inline-flex' : 'none';\n        }\n\n        async function refreshAuthControls() {\n            const { data, error } = await supabase.auth.getSession();\n            if (error) console.warn('[Auth] Could not restore session:', error.message);\n            updateAuthControls(data?.session?.user || null);\n            return data?.session || null;\n        }\n\n        async function getAuthenticatedHeaders(existingHeaders = {}) {\n            const { data, error } = await supabase.auth.getSession();\n            const session = data?.session;\n            if (error || !session?.access_token) {\n                redirectToSignIn();\n                throw new Error('Authentication required.');\n            }\n            return { ...existingHeaders, Authorization: \`Bearer ${'${session.access_token}'}\` };\n        }\n\n        async function handleProtectedResponse(response) {\n            if (response.status === 401) {\n                await supabase.auth.signOut();\n                redirectToSignIn();\n                throw new Error('Your session has expired. Please sign in again.');\n            }\n            return response;\n        }\n\n        async function signOutDepthForge() {\n            await supabase.auth.signOut();\n            updateAuthControls(null);\n            redirectToSignIn();\n        }\n\n        supabase.auth.onAuthStateChange((_event, session) => updateAuthControls(session?.user || null));\n        document.addEventListener('DOMContentLoaded', () => { refreshAuthControls(); });\n\n        let currentImageUrl = '';\n`;
+          requireReplace(scriptStart, authStart, 'Supabase auth helpers');
+
+          const jsonFetches = [
+            '/api/generate',
+            '/api/postprocess',
+            '/api/invert',
+            '/api/remove-bg'
+          ];
+          for (const endpoint of jsonFetches) {
+            const basic = `const response = await fetch('${endpoint}', {\n                method: 'POST',\n                headers: { 'Content-Type': 'application/json' },`;
+            const secured = `const response = await handleProtectedResponse(await fetch('${endpoint}', {\n                method: 'POST',\n                headers: await getAuthenticatedHeaders({ 'Content-Type': 'application/json' }),`;
+            if (source.includes(basic)) source = source.replace(basic, secured);
+          }
+
+          const photoBasic = "const response = await fetch('/api/photo-to-depth', {\n                method: 'POST',\n                body: formData";
+          const photoSecured = "const response = await handleProtectedResponse(await fetch('/api/photo-to-depth', {\n                method: 'POST',\n                headers: await getAuthenticatedHeaders(),\n                body: formData";
+          if (source.includes(photoBasic)) source = source.replace(photoBasic, photoSecured);
+
+          const protectedEndpoints = ['/api/generate', '/api/photo-to-depth', '/api/postprocess'];
+          for (const endpoint of protectedEndpoints) {
+            if (!source.includes(endpoint)) throw new Error(`Protected endpoint missing from UI: ${endpoint}`);
+          }
+          if (!source.includes('getAuthenticatedHeaders')) throw new Error('Auth headers helper missing after patch.');
+
+          fs.writeFileSync(webPath, source);
+          fs.writeFileSync(androidPath, source);
+          EOF
+
+      - name: Commit frontend patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add static/index.html android_app/app/src/main/assets/index.html
+          if git diff --cached --quiet; then
+            echo "Frontend authentication patch already applied"
+          else
+            git commit -m "feat: wire Supabase session tokens into web UI [skip ci]"
+            git push origin HEAD:feature/supabase-auth
+          fi
