@@ -1,4 +1,4 @@
-name: Update package-lock.json
+name: Apply Supabase API authentication
 
 on:
   push:
@@ -11,13 +11,13 @@ permissions:
   contents: write
 
 jobs:
-  update-lockfile:
+  apply-auth:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: feature/supabase-auth
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -28,14 +28,66 @@ jobs:
       - name: Install dependencies and update lockfile
         run: npm install
 
-      - name: Commit updated lockfile
+      - name: Apply checked Supabase middleware patch
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+
+          const file = 'server.js';
+          let source = fs.readFileSync(file, 'utf8');
+          const replacements = [
+            [
+              "import PQueue from 'p-queue';\n",
+              "import PQueue from 'p-queue';\nimport { createAuth } from './auth.js';\n"
+            ],
+            [
+              "dotenv.config();\n",
+              "dotenv.config();\n\nconst { requireAuth } = createAuth();\n"
+            ],
+            [
+              "app.post('/api/generate', generateLimiter, async (req, res) => {",
+              "app.post('/api/generate', generateLimiter, requireAuth, async (req, res) => {"
+            ],
+            [
+              "app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo'), async (req, res) => {",
+              "app.post('/api/photo-to-depth', photoToDepthLimiter, requireAuth, photoUpload.single('photo'), async (req, res) => {"
+            ],
+            [
+              "app.post('/api/postprocess', async (req, res) => {",
+              "app.post('/api/postprocess', requireAuth, async (req, res) => {"
+            ],
+            [
+              "app.get('/api/postprocess/stream', handlePostprocessStream);",
+              "app.get('/api/postprocess/stream', requireAuth, handlePostprocessStream);"
+            ],
+            [
+              "app.post('/api/postprocess/stream', handlePostprocessStream);",
+              "app.post('/api/postprocess/stream', requireAuth, handlePostprocessStream);"
+            ]
+          ];
+
+          for (const [from, to] of replacements) {
+            if (source.includes(to)) continue;
+            if (!source.includes(from)) {
+              throw new Error(`Expected server.js pattern not found: ${from}`);
+            }
+            source = source.replace(from, to);
+          }
+
+          if (!source.includes("app.route('/api/health')")) {
+            throw new Error('Health route check failed; refusing to write server.js.');
+          }
+          fs.writeFileSync(file, source);
+          EOF
+
+      - name: Commit generated lockfile and API patch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json is already up to date"
+          git add package-lock.json server.js
+          if git diff --cached --quiet; then
+            echo "No lockfile or server patch changes to commit"
           else
-            git add package-lock.json
-            git commit -m "chore: update package-lock.json for Supabase Auth [skip ci]"
+            git commit -m "feat: protect generation APIs with Supabase Auth [skip ci]"
             git push origin HEAD:feature/supabase-auth
           fi
