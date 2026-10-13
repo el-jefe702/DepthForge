@@ -2,6 +2,8 @@ name: Backup DepthForge VPS
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '15 3 * * *'
 
 permissions:
   contents: read
@@ -17,12 +19,13 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p 22 "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Create and retain VPS backup
+      - name: Create, retain, and upload VPS backup
         run: |
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p 22 \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
               set -euo pipefail
               backup_dir=/root/backups/depthforge
+              drive_remote=drive:DepthForge-Backups
               timestamp=$(date -u +%Y%m%dT%H%M%SZ)
               staging_dir=$(mktemp -d)
               archive="$backup_dir/depthforge_$timestamp.tar.gz"
@@ -54,6 +57,8 @@ jobs:
               find "$backup_dir" -maxdepth 1 -type f -name "depthforge_*.tar.gz" -printf "%T@ %p\n" \
                 | sort -nr | awk "NR > 14 {print \$2}" | xargs -r rm -f
 
-              echo "Backup created: $(basename "$archive")"
+              rclone copy "$backup_dir" "$drive_remote" --transfers 4 --checkers 8
+
+              echo "Backup created and uploaded: $(basename "$archive")"
               du -h "$archive" | cut -f1
             '
