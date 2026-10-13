@@ -1,7 +1,11 @@
 name: Update package-lock.json
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - feature/supabase-auth
+    paths:
+      - .github/workflows/update-lockfile.yml
 
 permissions:
   contents: write
@@ -13,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: feature/supabase-auth
+          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -32,6 +36,6 @@ jobs:
             echo "package-lock.json is already up to date"
           else
             git add package-lock.json
-            git commit -m "chore: update package-lock.json for Supabase Auth"
-            git push
+            git commit -m "chore: update package-lock.json for Supabase Auth [skip ci]"
+            git push origin HEAD:feature/supabase-auth
           fi
