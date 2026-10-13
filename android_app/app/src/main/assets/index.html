@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <header class="app-header">
@@ -18,6 +19,11 @@
         <div class="header-meta">
             <div class="status-badge"><span class="pulse-dot"></span> 16-Bit CNC Precision</div>
             <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">v2.0</span>
+            <div id="authControls" style="display:flex; align-items:center; gap:8px;">
+                <span id="authUserEmail" style="display:none; color:var(--text-muted); font-size:13px;"></span>
+                <a id="signInLink" class="btn btn-outline" href="/static/auth.html" style="padding:7px 10px; font-size:13px;">Sign in</a>
+                <button id="signOutBtn" class="btn btn-outline" type="button" onclick="signOutDepthForge()" style="display:none; padding:7px 10px; font-size:13px;">Sign out</button>
+            </div>
         </div>
     </header>
 
@@ -233,6 +239,63 @@
     </footer>
 
     <script>
+        const SUPABASE_URL = 'https://qvesjthnzneimllpujng.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_ZB_b365K0Q-JTYpKoYPswQ_Y8JJ6qZ9';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function redirectToSignIn() {
+            const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            window.location.assign(`/static/auth.html?next=${encodeURIComponent(next)}`);
+        }
+
+        function updateAuthControls(user) {
+            const email = document.getElementById('authUserEmail');
+            const signIn = document.getElementById('signInLink');
+            const signOut = document.getElementById('signOutBtn');
+            const signedIn = Boolean(user);
+            if (email) {
+                email.textContent = signedIn ? user.email : '';
+                email.style.display = signedIn ? 'inline' : 'none';
+            }
+            if (signIn) signIn.style.display = signedIn ? 'none' : 'inline-flex';
+            if (signOut) signOut.style.display = signedIn ? 'inline-flex' : 'none';
+        }
+
+        async function refreshAuthControls() {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) console.warn('[Auth] Could not restore session:', error.message);
+            updateAuthControls(data?.session?.user || null);
+            return data?.session || null;
+        }
+
+        async function getAuthenticatedHeaders(existingHeaders = {}) {
+            const { data, error } = await supabase.auth.getSession();
+            const session = data?.session;
+            if (error || !session?.access_token) {
+                redirectToSignIn();
+                throw new Error('Authentication required.');
+            }
+            return { ...existingHeaders, Authorization: `Bearer ${session.access_token}` };
+        }
+
+        async function handleProtectedResponse(response) {
+            if (response.status === 401) {
+                await supabase.auth.signOut();
+                redirectToSignIn();
+                throw new Error('Your session has expired. Please sign in again.');
+            }
+            return response;
+        }
+
+        async function signOutDepthForge() {
+            await supabase.auth.signOut();
+            updateAuthControls(null);
+            redirectToSignIn();
+        }
+
+        supabase.auth.onAuthStateChange((_event, session) => updateAuthControls(session?.user || null));
+        document.addEventListener('DOMContentLoaded', () => { refreshAuthControls(); });
+
         let currentImageUrl = '';
         let currentMode = 'text';
         let selectedPhotoFile = null;
