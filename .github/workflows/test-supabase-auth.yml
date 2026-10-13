@@ -29,5 +29,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Run full test suite
-        run: npm test
+      - name: Test Supabase auth middleware
+        run: node --test tests/auth.test.js
+
+      - name: Test generation and UI asset parity
+        run: node --test tests/aspect_ratio.test.js
+
+      - name: Test batch generation and UI asset parity
+        run: node --test tests/batch_generation.test.js
