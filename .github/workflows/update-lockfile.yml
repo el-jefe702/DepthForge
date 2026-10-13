@@ -55,14 +55,6 @@ jobs:
             [
               "app.post('/api/postprocess', async (req, res) => {",
               "app.post('/api/postprocess', requireAuth, async (req, res) => {"
-            ],
-            [
-              "app.get('/api/postprocess/stream', handlePostprocessStream);",
-              "app.get('/api/postprocess/stream', requireAuth, handlePostprocessStream);"
-            ],
-            [
-              "app.post('/api/postprocess/stream', handlePostprocessStream);",
-              "app.post('/api/postprocess/stream', requireAuth, handlePostprocessStream);"
             ]
           ];
 
