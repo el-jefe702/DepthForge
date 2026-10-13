@@ -29,10 +29,14 @@ jobs:
           '
 
       - name: Verify public health endpoint
+        env:
+          BASIC_AUTH_USER: ${{ secrets.DEPTHFORGE_BASIC_AUTH_USER }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.DEPTHFORGE_BASIC_AUTH_PASSWORD }}
         run: |
+          auth="$(printf '%s:%s' "$BASIC_AUTH_USER" "$BASIC_AUTH_PASSWORD" | base64 -w 0)"
           for attempt in 1 2 3 4 5 6; do
             if curl --fail --silent --show-error --max-time 15 \
-              --user "${{ secrets.DEPTHFORGE_BASIC_AUTH_USER }}:${{ secrets.DEPTHFORGE_BASIC_AUTH_PASSWORD }}" \
+              -H "Authorization: Basic $auth" \
               https://depthforge.spatialops.llc/api/health; then
               exit 0
             fi
