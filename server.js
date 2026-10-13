@@ -9,8 +9,11 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import PQueue from 'p-queue';
+import { createAuth } from './auth.js';
 
 dotenv.config();
+
+const { requireAuth } = createAuth();
 
 import {
     cleanupGeneratedFiles,
@@ -557,7 +560,7 @@ app.route('/api/health')
         });
     });
 
-app.post('/api/generate', generateLimiter, async (req, res) => {
+app.post('/api/generate', generateLimiter, requireAuth, async (req, res) => {
     console.log(`[${new Date().toLocaleTimeString()}] 🚀 POST /api/generate - Starting generation...`);
     try {
         const studentPrompt = req.body.prompt || "";
@@ -620,7 +623,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/postprocess', async (req, res) => {
+app.post('/api/postprocess', requireAuth, async (req, res) => {
     const rawUrl = typeof req.body?.image_url === 'string' ? req.body.image_url.trim() : '';
     const cleanUrl = rawUrl.split('?')[0].split('#')[0];
     const filename = path.basename(cleanUrl);
@@ -803,7 +806,7 @@ app.post('/api/invert', async (req, res) => {
     }
 });
 
-app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo'), async (req, res) => {
+app.post('/api/photo-to-depth', photoToDepthLimiter, requireAuth, photoUpload.single('photo'), async (req, res) => {
     const uploadedPath = req.file?.path;
     try {
         if (!req.file) return res.status(400).json({ error: 'No photo uploaded.' });
