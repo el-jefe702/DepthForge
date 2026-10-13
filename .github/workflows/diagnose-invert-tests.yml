@@ -37,11 +37,33 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Upload invert test log
+      - name: Extract failure blocks for mobile review
+        shell: bash
+        run: |
+          awk '
+            /^[[:space:]]*not ok [0-9]+ - / { capture=1; count++; print "============================================================"; print; next }
+            capture && /^[[:space:]]*ok [0-9]+ - / { capture=0 }
+            capture { print }
+            END {
+              if (count === 0) print "No individual failing TAP blocks found. See invert-test.log for complete output."
+            }
+          ' invert-test.log > invert-failures.txt
+          echo "--- Failure summary ---" >> invert-failures.txt
+          grep -E 'not ok|error:|failureType:|expected:|actual:|ERR_TEST_FAILURE' invert-test.log || true >> invert-failures.txt
+
+      - name: Upload full invert test log
         uses: actions/upload-artifact@v4
         with:
           name: invert-test-log
           path: invert-test.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload concise invert failures
+        uses: actions/upload-artifact@v4
+        with:
+          name: invert-failures
+          path: invert-failures.txt
           if-no-files-found: error
           retention-days: 7
 
