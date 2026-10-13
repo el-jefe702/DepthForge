@@ -1,0 +1,59 @@
+name: Backup DepthForge VPS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 22 "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Create and retain VPS backup
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p 22 \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+              set -euo pipefail
+              backup_dir=/root/backups/depthforge
+              timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+              staging_dir=$(mktemp -d)
+              archive="$backup_dir/depthforge_$timestamp.tar.gz"
+              cleanup() { rm -rf "$staging_dir"; }
+              trap cleanup EXIT
+
+              mkdir -p "$backup_dir" "$staging_dir/config" "$staging_dir/volumes"
+
+              if [ -f /opt/depthforge/.env ]; then
+                install -m 600 /opt/depthforge/.env "$staging_dir/config/depthforge.env"
+              fi
+              if [ -f /etc/nginx/sites-available/depthforge.conf ]; then
+                install -m 600 /etc/nginx/sites-available/depthforge.conf "$staging_dir/config/depthforge.conf"
+              fi
+              cp -a /etc/letsencrypt "$staging_dir/config/letsencrypt"
+
+              docker run --rm \
+                -v depthforge_app_data:/source:ro \
+                -v "$staging_dir/volumes":/backup \
+                alpine:3.20 sh -c "cd /source && tar czf /backup/app_data.tar.gz ."
+              docker run --rm \
+                -v depthforge_generated_data:/source:ro \
+                -v "$staging_dir/volumes":/backup \
+                alpine:3.20 sh -c "cd /source && tar czf /backup/generated_data.tar.gz ."
+
+              tar -C "$staging_dir" -czf "$archive" .
+              chmod 600 "$archive"
+
+              find "$backup_dir" -maxdepth 1 -type f -name "depthforge_*.tar.gz" -printf "%T@ %p\n" \
+                | sort -nr | awk "NR > 14 {print \$2}" | xargs -r rm -f
+
+              echo "Backup created: $(basename "$archive")"
+              du -h "$archive" | cut -f1
+            '
