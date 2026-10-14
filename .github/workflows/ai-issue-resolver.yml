@@ -1,11 +1,6 @@
 name: Autonomous Self-Evolving AI Issue Resolver & PR Reviewer
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/ai-issue-resolver.yml"
   issues:
     types: [opened, labeled, reopened]
   pull_request_target:
@@ -34,7 +29,7 @@ permissions:
 env:
   TRUST_PROXY: "1"
   NODE_ENV: "test"
-  GEMINI_MODEL: "gemini-2.5-pro"
+  GEMINI_MODEL: "gemini-3.1-pro-preview"
   MAX_HEAL_ATTEMPTS: "3"
   LEDGER_PATH: ".ai-memory/evolution_ledger.json"
 
@@ -81,16 +76,16 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install System, Node & Python Dependencies
+      - name: Install System, Node & Python Dependencies (OpenCV Fix)
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y jq libgl1 libglib2.0-0
+          sudo apt-get install -y jq libgl1 libglib2.0-0 python3-opencv python3-numpy
           npm ci || npm install
+          pip install --upgrade pip
+          pip install opencv-python-headless numpy trimesh google-genai requests --break-system-packages
           if [ -f requirements.txt ]; then
-            pip install --upgrade pip
-            pip install -r requirements.txt
+            pip install -r requirements.txt --break-system-packages
           fi
-          pip install google-genai requests
 
       - name: Configure Git Identity
         run: |
@@ -110,8 +105,8 @@ jobs:
             "invariants": [
               "Always maintain TRUST_PROXY=1 for Express rate-limiters behind Caddy/VPS reverse proxies.",
               "Always preserve strict 16-bit uint16 (0-65535) PNG output in processor.py after float32 Gaussian/bilateral smoothing.",
-              "Lazy-load heavy ML libraries like rembg inside conditional blocks to prevent cold-start CLI latency.",
-              "Keep public/ web assets synchronized with android/app/src/main/assets/ via npm run sync:android if applicable."
+              "Always install python3-opencv and opencv-python-headless to prevent ModuleNotFoundError: No module named 'cv2' during tests.",
+              "Use gemini-3.1-pro-preview for all generative API tasks."
             ],
             "learned_heuristics": [],
             "history": []
@@ -175,7 +170,7 @@ jobs:
           ISSUE_NUMBER = os.environ.get("ISSUE_NUMBER", "").strip()
           PR_NUMBER = os.environ.get("PR_NUMBER", "").strip()
           GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-          MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
+          MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
           LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
 
@@ -467,79 +462,4 @@ jobs:
           checklist_rows = "\n".join([
               f"| {c.get('criterion')} | {'✅ PASS' if c.get('met') else '❌ FAIL'} | {c.get('evidence')} |"
               for c in review_result.get("criteria_checklist", [])
-          ])
-          full_review_md = (
-              f"## 🤖 Autonomous Adversarial PR Review & Win Assessment\n\n"
-              f"- **Verdict:** `{verdict}`\n"
-              f"- **Win Confidence Score:** `{confidence}%`\n"
-              f"- **F1–F20 Test Suite:** `{'PASSED' if test_passed else 'FAILED'}`\n"
-              f"- **Self-Heal Retries:** `{used_retries}`\n\n"
-              f"### Acceptance Criteria Audit\n"
-              f"| Criterion | Status | Evidence |\n"
-              f"| :--- | :--- | :--- |\n"
-              f"{checklist_rows or '| Core Validation | ✅ PASS | Verified via F1–F20 suite |'}\n\n"
-              f"### Reviewer Assessment\n"
-              f"{review_result.get('review_summary_markdown', '')}\n\n"
-              f"### Closeout Notes\n"
-              f"{review_result.get('closeout_notes_markdown', '')}\n"
-          )
-          Path("/tmp/review_notes.md").write_text(full_review_md, encoding="utf-8")
-
-          if PR_NUMBER:
-              sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/review_notes.md || true")
-              sh(f"gh pr edit {PR_NUMBER} --repo '{REPO}' --add-label 'ai-reviewed' || true")
-
-              if verdict == "WIN_MERGE" and has_code_changes and test_passed:
-                  print(f"=== WIN ASSESSED ({confidence}%): Squash-Merging PR #{PR_NUMBER} ===")
-                  sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --approve --body '✅ Autonomous Win Assessment Verified. Approving for squash-merge.' || true")
-                  rc, merge_out = sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch")
-                  if rc != 0:
-                      print(f"Merge fallback triggered: {merge_out}")
-                      sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch --admin || true")
-                  sh(f"gh pr comment {PR_NUMBER} --repo '{REPO}' --body '🏁 **PR Closed & Merged via Autonomous Win Assessment.** All F1–F20 validations passed and closeout notes have been logged.' || true")
-
-              elif verdict == "ALREADY_RESOLVED_CLOSE":
-                  print(f"=== ALREADY RESOLVED: Closing PR #{PR_NUMBER} with Closeout Notes ===")
-                  sh(f"gh pr close {PR_NUMBER} --repo '{REPO}' --delete-branch --comment '🏁 **Closing PR (Already Resolved on `main`).** See closeout review notes above.' || true")
-
-              else:
-                  print(f"=== NEEDS HUMAN REVIEW: Flagging PR #{PR_NUMBER} ===")
-                  sh(f"gh pr edit {PR_NUMBER} --repo '{REPO}' --add-label 'needs-human-review' || true")
-
-          if ISSUE_NUMBER:
-              sh(f"gh issue comment {ISSUE_NUMBER} --repo '{REPO}' --body-file /tmp/review_notes.md || true")
-              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --remove-label 'in-progress' || true")
-
-              if verdict in ("WIN_MERGE", "ALREADY_RESOLVED_CLOSE"):
-                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'ai-resolved' || true")
-                  sh(f"gh issue close {ISSUE_NUMBER} --repo '{REPO}' --reason completed || true")
-              else:
-                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'needs-human-review' || true")
-
-          sh("git checkout main && git pull origin main --rebase || true")
-          save_ledger(ledger)
-          sh(f"git add '{LEDGER_PATH}'")
-          _, ledger_diff = sh("git status --porcelain")
-          if ledger_diff.strip():
-              sh("git commit -m 'chore(ai-memory): evolve resolver heuristics and win ledger [skip ci]' || true")
-              sh("git push origin main || true")
-
-          print(f"✅ Autonomous cycle finished with verdict: {verdict}")
-          PYEOF
-          python3 /tmp/autonomous_evolver.py
-
-      - name: Advance Queue to Next Open Issue
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          NEXT_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 30 --json number,labels \
-            --jq '[.[] | select(([.labels[].name] | inside(["needs-human-review", "wontfix", "in-progress"]) | not))] | sort_by(.number) | .[0].number // empty')
-
-          if [ -n "$NEXT_ISSUE" ]; then
-            echo "🚀 Advancing autonomous queue to next open Issue #$NEXT_ISSUE..."
-            gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT_ISSUE" || true
-          else
-            echo "🎉 Queue clear! No remaining open actionable issues."
-          fi
+      
