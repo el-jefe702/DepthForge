@@ -1,0 +1,29 @@
+name: Database migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_file:
+        description: "SQL migration file to apply"
+        required: true
+        default: "supabase/migrations/001_credit_wallet.sql"
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply migration
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          test -f "${{ inputs.migration_file }}"
+          psql "$SUPABASE_DB_URL" \
+            -v ON_ERROR_STOP=1 \
+            -f "${{ inputs.migration_file }}"
