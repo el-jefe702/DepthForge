@@ -677,6 +677,221 @@ jobs:
           checklist_rows = "\n".join([
               f"| {c.get('criterion')} | {'✅ PASS' if c.get('met') else '❌ FAIL'} | {c.get('evidence')} |"
               for c in review_result.get("criteria_checklist", [])
+      e, "\n".join(logs) if logs else "All validation checks passed."
+
+          def call_gemini_json(system_instruction, prompt):
+              response = client.models.generate_content(
+                  model=MODEL_NAME,
+                  contents=prompt,
+                  config=types.GenerateContentConfig(
+                      system_instruction=system_instruction,
+                      response_mime_type="application/json",
+                      temperature=0.15,
+                  ),
+              )
+              return json.loads(response.text)
+
+          ledger = load_ledger()
+          ledger["total_runs"] = ledger.get("total_runs", 0) + 1
+
+          for lbl in ["in-progress", "ai-resolved", "needs-human-review", "ai-reviewed"]:
+              sh(f"gh label create '{lbl}' --repo '{REPO}' --force || true")
+
+          issue_data = {}
+          if ISSUE_NUMBER:
+              rc, out = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body,labels,state")
+              if rc == 0 and out:
+                  issue_data = json.loads(out)
+
+          if ISSUE_NUMBER and not PR_NUMBER:
+              _, existing_pr = sh(
+                  f"gh pr list --repo '{REPO}' --state open --json number,headRefName,title "
+                  f"--jq '[.[] | select(.headRefName == \"fix/issue-{ISSUE_NUMBER}\" or (.title | contains(\"#{ISSUE_NUMBER}\")))] | .[0].number // empty'"
+              )
+              if existing_pr:
+                  PR_NUMBER = existing_pr.strip()
+                  print(f"Found existing open PR #{PR_NUMBER} for Issue #{ISSUE_NUMBER}")
+
+          branch_name = f"fix/issue-{ISSUE_NUMBER}" if ISSUE_NUMBER else f"audit/pr-{PR_NUMBER}"
+
+          if PR_NUMBER and not ISSUE_NUMBER:
+              sh(f"gh pr checkout {PR_NUMBER} --repo '{REPO}'", check=True)
+              _, pr_meta_raw = sh(f"gh pr view {PR_NUMBER} --repo '{REPO}' --json number,title,body,headRefName")
+              pr_meta = json.loads(pr_meta_raw)
+              branch_name = pr_meta["headRefName"]
+              issue_data = {"number": PR_NUMBER, "title": pr_meta["title"], "body": pr_meta["body"]}
+          else:
+              sh(f"git checkout -B '{branch_name}' origin/main", check=True)
+
+          if ISSUE_NUMBER:
+              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'in-progress' || true")
+
+          tree, snippets = get_repo_snapshot()
+
+          issue_body = issue_data.get("body") or ""
+          issue_title = issue_data.get("title") or ""
+          for line in tree.splitlines():
+              fname = line.strip()
+              if fname and fname in issue_body and fname not in snippets and Path(fname).exists():
+                  snippets[fname] = Path(fname).read_text(encoding="utf-8", errors="ignore")[:15000]
+
+          solver_system = f"""You are the SpatialOps Autonomous Self-Evolving Code Architect for DepthForge.
+          You resolve GitHub issues accurately, adhere strictly to repository invariants, and output valid JSON only.
+
+          EVOLUTION LEDGER INVARIANTS:
+          {json.dumps(ledger.get("invariants", []), indent=2)}
+
+          LEARNED HEURISTICS FROM PAST RUNS:
+          {json.dumps(ledger.get("learned_heuristics", []), indent=2)}
+
+          Return a JSON object matching this exact schema:
+          {{
+            "already_resolved": boolean,
+            "resolution_rationale": "Detailed explanation of the root cause and fix (or why it is already resolved)",
+            "files_to_write": [
+              {{
+                "path": "relative/path/to/file",
+                "content": "COMPLETE, UNTRUNCATED file content"
+              }}
+            ],
+            "files_to_delete": ["relative/path/to/obsolete_file"],
+            "new_heuristic_learned": "A concise 1-sentence technical takeaway to store in the evolution ledger for future runs"
+          }}
+          """
+
+          last_test_log = ""
+          test_passed = False
+          already_resolved = False
+          solver_output = {}
+          used_retries = 0
+
+          for attempt in range(1, MAX_ATTEMPTS + 1):
+              print(f"=== Solver Attempt {attempt}/{MAX_ATTEMPTS} ===")
+              user_prompt = f"""
+              TARGET ISSUE #{issue_data.get('number')}: {issue_title}
+              ISSUE DESCRIPTION:
+              {issue_body}
+
+              REPOSITORY FILE TREE:
+              {tree}
+
+              CURRENT FILE CONTENTS:
+              {json.dumps(snippets, indent=2)}
+
+              PREVIOUS ATTEMPT TEST FAILURE LOGS (if any):
+              {last_test_log if last_test_log else "None (First Attempt)"}
+              """
+
+              solver_output = call_gemini_json(solver_system, user_prompt)
+              already_resolved = bool(solver_output.get("already_resolved", False))
+
+              for del_path in solver_output.get("files_to_delete", []):
+                  p = Path(del_path)
+                  if p.exists() and p.is_file():
+                      p.unlink()
+
+              for file_obj in solver_output.get("files_to_write", []):
+                  p = Path(file_obj["path"])
+                  p.parent.mkdir(parents=True, exist_ok=True)
+                  p.write_text(file_obj["content"], encoding="utf-8")
+                  snippets[file_obj["path"]] = file_obj["content"][:15000]
+
+              test_passed, last_test_log = run_validation_suite()
+              if test_passed:
+                  if attempt > 1:
+                      ledger["self_healed_recoveries"] = ledger.get("self_healed_recoveries", 0) + 1
+                  used_retries = attempt - 1
+                  break
+              else:
+                  print(f"Validation failed on attempt {attempt}. Self-healing...")
+
+          _, git_status = sh("git status --porcelain")
+          has_code_changes = bool(git_status.strip())
+
+          if has_code_changes and test_passed:
+              sh("git add -A", check=True)
+              commit_msg = f"fix: resolve #{ISSUE_NUMBER or PR_NUMBER} - {issue_title[:60]}"
+              sh(f"git commit -m \"{commit_msg}\"", check=True)
+              sh(f"git push -u origin '{branch_name}' --force", check=True)
+
+              if not PR_NUMBER:
+                  pr_body = (
+                      f"## Autonomous Resolution for #{ISSUE_NUMBER}\n\n"
+                      f"Closes #{ISSUE_NUMBER}\n\n"
+                      f"### Root Cause & Changes\n{solver_output.get('resolution_rationale', '')}\n\n"
+                      f"### Self-Healing Telemetry\n"
+                      f"- **Validation Suite (`F1–F20`):** PASSED\n"
+                      f"- **Self-Heal Retries Used:** `{used_retries}`\n"
+                  )
+                  Path("/tmp/pr_body.md").write_text(pr_body, encoding="utf-8")
+                  rc, pr_url = sh(
+                      f"gh pr create --repo '{REPO}' --base main --head '{branch_name}' "
+                      f"--title \"fix(#{ISSUE_NUMBER}): {issue_title[:65]}\" --body-file /tmp/pr_body.md"
+                  )
+                  _, PR_NUMBER = sh(f"gh pr view '{branch_name}' --repo '{REPO}' --json number --jq '.number'")
+                  PR_NUMBER = PR_NUMBER.strip()
+
+          _, git_diff = sh("git diff origin/main...HEAD")
+          reviewer_system = """You are the Principal Adversarial PR Reviewer & Win Assessor for SpatialOps, LLC.
+          Evaluate the proposed git diff (or already-resolved state), test suite output, and original issue requirements.
+          Output strict JSON matching this schema:
+          {
+            "verdict": "WIN_MERGE" | "ALREADY_RESOLVED_CLOSE" | "NEEDS_HUMAN",
+            "confidence_score": number (0 to 100),
+            "criteria_checklist": [
+              {"criterion": "string", "met": boolean, "evidence": "string"}
+            ],
+            "review_summary_markdown": "Comprehensive PR review markdown table and technical critique",
+            "closeout_notes_markdown": "Executive closeout summary detailing what won, how F1-F20 validated, and production impact",
+            "prompt_evolution_rule": "A concrete rule to add to the agent's learned_heuristics to make future runs faster or safer"
+          }
+          """
+
+          reviewer_prompt = f"""
+          ISSUE #{ISSUE_NUMBER}: {issue_title}
+          ISSUE BODY:
+          {issue_body}
+
+          SOLVER RATIONALE:
+          {solver_output.get("resolution_rationale", "")}
+          SOLVER CLAIMED ALREADY RESOLVED: {already_resolved}
+          HAS CODE CHANGES: {has_code_changes}
+          TEST SUITE PASSED: {test_passed}
+          TEST SUITE LOGS:
+          {last_test_log[-6000:]}
+
+          GIT DIFF AGAINST origin/main:
+          {git_diff[:18000] if git_diff else "(No diff - clean working tree)"}
+          """
+
+          review_result = call_gemini_json(reviewer_system, reviewer_prompt)
+          verdict = review_result.get("verdict", "NEEDS_HUMAN")
+          confidence = review_result.get("confidence_score", 0)
+
+          if not test_passed:
+              verdict = "NEEDS_HUMAN"
+          elif not has_code_changes and already_resolved and test_passed:
+              verdict = "ALREADY_RESOLVED_CLOSE"
+
+          for h in [solver_output.get("new_heuristic_learned"), review_result.get("prompt_evolution_rule")]:
+              if h and isinstance(h, str) and len(h.strip()) > 10:
+                  ledger.setdefault("learned_heuristics", []).append(h.strip())
+
+          if verdict in ("WIN_MERGE", "ALREADY_RESOLVED_CLOSE"):
+              ledger["wins"] = ledger.get("wins", 0) + 1
+
+          ledger.setdefault("history", []).append({
+              "timestamp": datetime.now(timezone.utc).isoformat(),
+              "issue": ISSUE_NUMBER,
+              "pr": PR_NUMBER,
+              "verdict": verdict,
+              "confidence": confidence,
+              "retries": used_retries,
+          })
+
+          checklist_rows = "\n".join([
+              f"| {c.get('criterion')} | {'✅ PASS' if c.get('met') else '❌ FAIL'} | {c.get('evidence')} |"
+              for c in review_result.get("criteria_checklist", [])
       n(logs)
               return True, "\n".join(logs) if logs else "All validation checks passed."
 
