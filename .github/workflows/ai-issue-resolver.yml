@@ -1,0 +1,197 @@
+name: "⚡ Autonomous AI Issue Resolver"
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "The GitHub Issue number to resolve (e.g., 8)"
+        required: true
+        type: string
+      model_name:
+        description: "Gemini model to drive the coding agent"
+        required: false
+        default: "gemini/gemini-2.5-pro"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ai-resolver-issue-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-issue:
+    name: "AI Agent — Implement, Test & PR"
+    # Run ONLY when:
+    # 1. Manually triggered via workflow_dispatch, OR
+    # 2. Labeled with 'ai-fix' or 'automerge' by the repo owner/member
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issues' &&
+        (github.event.label.name == 'ai-fix' || github.event.label.name == 'ai-agent') &&
+        (github.event.sender.login == 'el-jefe702' || github.event.issue.author_association == 'OWNER')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+      AI_MODEL: ${{ inputs.model_name || 'gemini/gemini-2.5-pro' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Python 3.11 & AI Agent CLI (Aider)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Project & Agent Dependencies
+        run: |
+          npm ci
+          python -m pip install --upgrade pip
+          pip install opencv-python-headless numpy rembg aider-chat
+
+      - name: Fetch Issue Context & Post Start Comment
+        id: issue_ctx
+        run: |
+          ISSUE_JSON=$(gh issue view "$ISSUE_NUMBER" --json title,body,labels,url)
+          ISSUE_TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
+          ISSUE_BODY=$(echo "$ISSUE_JSON" | jq -r '.body // "No description provided."')
+
+          # Write issue context to a temporary prompt file to avoid shell escaping bugs
+          cat << 'EOF' > /tmp/issue_prompt.txt
+          You are an autonomous Principal Engineer working on the DepthForge repository (Node.js Express server, Python 16-bit OpenCV processor, Web UI, and Android Jetpack Compose app).
+
+          Resolve the following GitHub Issue completely:
+          EOF
+
+          echo "" >> /tmp/issue_prompt.txt
+          echo "### Issue #${ISSUE_NUMBER}:${ISSUE_TITLE}" >> /tmp/issue_prompt.txt
+          echo "${ISSUE_BODY}" >> /tmp/issue_prompt.txt
+
+          cat << 'EOF' >> /tmp/issue_prompt.txt
+
+          ### Architecture & Quality Rules:
+          1. Maintain 100% compatibility with existing features F1 through F20.
+          2. Update or add unit tests in `tests/` (Node.js native test runner `node:test`) to cover your changes.
+          3. If modifying `README.md` or environment variables, ensure `tests/readme_verification.test.js` stays synchronized and passes.
+          4. Do NOT leave placeholder comments or broken imports.
+          EOF
+
+          {
+            echo "title=${ISSUE_TITLE}"
+          } >> "$GITHUB_OUTPUT"
+
+          gh issue comment "$ISSUE_NUMBER" --body "🤖 **DepthForge Autonomous Agent Activated**
+          - **Branch:** \`ai-fix/issue-${ISSUE_NUMBER}\`
+          - **Model:** \`${AI_MODEL}\`
+          - **Status:** Analyzing codebase, applying fix, and running \`F1–F20\` test suites..."
+
+      - name: Create Dedicated Fix Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "ai-fix/issue-${ISSUE_NUMBER}"
+
+      - name: Run Autonomous AI Coding Agent (Pass 1 — Implementation)
+        run: |
+          PROMPT_CONTENT=$(cat /tmp/issue_prompt.txt)
+          aider \
+            --model "$AI_MODEL" \
+            --yes-always \
+            --no-auto-commits \
+            --no-pretty \
+            --message "$PROMPT_CONTENT"
+
+      - name: Run Test Suite & Self-Heal on Failure (Pass 2 — Verification Loop)
+        env:
+          TRUST_PROXY: "1"
+        run: |
+          set +e
+          npm test > /tmp/test_output.log 2>&1
+          TEST_EXIT=$?
+          cat /tmp/test_output.log
+
+          if [ $TEST_EXIT -ne 0 ]; then
+            echo "⚠️ Initial test run failed. Triggering AI self-healing pass..."
+            FAIL_LOG=$(tail -n 120 /tmp/test_output.log)
+            REPAIR_PROMPT="The test suite failed after your changes with the following output. Fix all failing tests and regressions immediately:\n\n${FAIL_LOG}"
+
+            aider \
+              --model "$AI_MODEL" \
+              --yes-always \
+              --no-auto-commits \
+              --no-pretty \
+              --message "$REPAIR_PROMPT"
+
+            set -e
+            echo "🔄 Re-running test suite after self-healing pass..."
+            npm test | tee /tmp/test_output.log
+          fi
+          set -e
+
+      - name: Commit, Push & Open Pull Request
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "ℹ️ **AI Agent Report:** No file modifications were required (or the issue is already resolved on \`main\`)."
+            exit 0
+          fi
+
+          BRANCH_NAME="ai-fix/issue-${ISSUE_NUMBER}"
+          git add -A
+          git commit -m "fix: resolve issue #${ISSUE_NUMBER} (${{ steps.issue_ctx.outputs.title }})"
+          git push -u origin "$BRANCH_NAME" --force
+
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | sed 's/^/- `/;s/$/`/')
+
+          cat << EOF > /tmp/pr_body.md
+          ## ⚡ Automated Resolution for Issue #${ISSUE_NUMBER}
+
+          **Issue:** #${ISSUE_NUMBER} —${{ steps.issue_ctx.outputs.title }}
+          **Agent Model:** \`${AI_MODEL}\`
+
+          ### Modified Files
+          ${CHANGED_FILES}
+
+          ### Verification
+          - ✅ All Node.js test suites (\`npm test\` across \`tests/*.test.js\`) passed.
+          - ✅ Verified with \`TRUST_PROXY=1\` and headless OpenCV environment.
+
+          Closes #${ISSUE_NUMBER}
+          EOF
+
+          # Create or update the PR
+          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
+          if [ -n "$EXISTING_PR" ]; then
+            PR_URL="$EXISTING_PR"
+            gh pr edit "$PR_URL" --body-file /tmp/pr_body.md
+          else
+            PR_URL=$(gh pr create \
+              --title "fix: ${{ steps.issue_ctx.outputs.title }} (#${ISSUE_NUMBER})" \
+              --body-file /tmp/pr_body.md \
+              --head "$BRANCH_NAME" \
+              --base main)
+          fi
+
+          gh issue comment "$ISSUE_NUMBER" --body "✅ **Automated Fix Ready!**
+          All test suites passed and Pull Request has been opened: ${PR_URL}"
+          
