@@ -61,7 +61,7 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install System & Python Dependencies (Strict Environment Fix)
+      - name: Install System & Python Dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq libgl1 libglib2.0-0
@@ -134,7 +134,12 @@ jobs:
           def sh(cmd, check=False, capture=True):
               print(f"$ {cmd}")
               res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE if capture else None, stderr=subprocess.STDOUT if capture else None)
-              return res.returncode, (res.stdout or "").strip()
+              out = (res.stdout or "").strip()
+              if out:
+                  print(out)
+              if check and res.returncode != 0:
+                  raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}")
+              return res.returncode, out
 
           def get_repo_snapshot():
               _, tree = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 160")
@@ -144,7 +149,6 @@ jobs:
 
           def run_validation_suite():
               logs = []
-              # Ensure python environment is perfect before running tests
               sh("python -m pip install opencv-python-headless numpy trimesh requests || true")
               pkg = Path("package.json")
               if pkg.exists():
@@ -154,7 +158,6 @@ jobs:
                   
                   pkg_data = json.loads(pkg.read_text(encoding="utf-8"))
                   if "test" in pkg_data.get("scripts", {}):
-                      # Run actual test suite with strict pass/fail
                       rc, out = sh("TRUST_PROXY=1 npm test")
                       logs.append(f"=== npm test ===\n{out}")
                       if rc != 0: return False, "\n".join(logs)
@@ -186,9 +189,7 @@ jobs:
           test_passed = False
           last_log = ""
           solver_out = {}
-          retries = 0
 
-          # Restored strict validation loop
           for attempt in range(1, MAX_ATTEMPTS + 1):
               print(f"=== Attempt {attempt} ===")
               prompt = f"ISSUE: {issue_title}\n{issue_body}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}\nPREVIOUS LOGS:\n{last_log}"
@@ -201,10 +202,9 @@ jobs:
 
               test_passed, last_log = run_validation_suite()
               if test_passed:
-                  retries = attempt - 1
                   break
               else:
-                  print(f"Failed. Healing...\n{last_log[-1000:]}")
+                  print(f"Failed. Healing...")
 
           _, stat = sh("git status --porcelain")
           has_changes = bool(stat.strip())
@@ -229,15 +229,15 @@ jobs:
           Path("/tmp/rev.md").write_text(f"## Verdict: {verdict}\nTests: {'PASSED' if test_passed else 'FAILED'}\n{rev_out.get('closeout_notes_markdown', '')}", encoding="utf-8")
 
           if PR_NUMBER:
-              sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/rev.md || true")
+              sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/rev.md")
               if verdict == "WIN_MERGE":
-                  sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch || true")
+                  sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch")
 
           if ISSUE_NUMBER:
               if verdict in ("WIN_MERGE", "ALREADY_RESOLVED_CLOSE"):
-                  sh(f"gh issue close {ISSUE_NUMBER} --repo '{REPO}' --reason completed || true")
+                  sh(f"gh issue close {ISSUE_NUMBER} --repo '{REPO}' --reason completed")
               else:
-                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'needs-human-review' || true")
+                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'needs-human-review'")
 
           sh("git checkout main && git reset --hard origin/main || true")
           PYEOF
