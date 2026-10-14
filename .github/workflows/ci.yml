@@ -4,40 +4,91 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  test:
+  validate:
+    name: Validate repository and pipeline
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install OpenCV system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0
-
-      - name: Install Node dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Create generated test directory
-        run: mkdir -p static/generated
-
       - name: Run tests
-        env:
-          PYTHON_EXEC: python
         run: npm test --if-present
+
+      - name: README must not document removed Vercel deployment
+        run: |
+          if grep -qi 'Deploying to Vercel' README.md; then
+            echo '::error::README.md still contains the removed Vercel deployment section.'
+            exit 1
+          fi
+
+      - name: README must document active top-level directories
+        run: |
+          missing=0
+          for dir in blender_plugin scripts supabase/migrations systemd; do
+            if ! grep -q "$dir" README.md; then
+              echo "::error::README.md does not document $dir"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: VPS environment must document trusted proxy setting
+        run: |
+          if [ ! -f .env.example ]; then
+            echo '::error::.env.example is missing.'
+            exit 1
+          fi
+          grep -q 'TRUST_PROXY' .env.example || {
+            echo '::error::.env.example must document TRUST_PROXY for reverse-proxy deployments.'
+            exit 1
+          }
+
+      - name: rembg must be lazily imported
+        run: |
+          if grep -Eq '^from rembg import remove' processor.py; then
+            echo '::error::processor.py imports rembg at module scope; move it inside the remove_bg branch.'
+            exit 1
+          fi
+          grep -q 'if mode == "remove_bg"' processor.py || {
+            echo '::error::Could not find the remove_bg branch in processor.py.'
+            exit 1
+          }
+
+      - name: SSE stream must expose queued status
+        run: |
+          grep -q 'queuePosition' server.js || {
+            echo '::error::server.js does not expose queuePosition in the SSE stream.'
+            exit 1
+          }
+          grep -q 'queued' server.js || {
+            echo '::error::server.js does not emit a queued status.'
+            exit 1
+          }
+
+      - name: Verify Android shared assets are synchronized
+        run: |
+          fail=0
+          for asset in index.html style.css; do
+            src="static/$asset"
+            dest="android_app/app/src/main/assets/$asset"
+            if [ ! -f "$dest" ]; then
+              echo "::error::Missing Android asset: $dest"
+              fail=1
+            elif ! cmp -s "$src" "$dest"; then
+              echo "::error::$dest differs from $src. Run the sync-android-assets workflow."
+              fail=1
+            fi
+          done
+          exit $fail

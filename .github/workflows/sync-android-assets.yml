@@ -1,0 +1,39 @@
+name: Sync Android assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'static/index.html'
+      - 'static/style.css'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Copy shared web assets to Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy shared assets
+        run: |
+          mkdir -p android_app/app/src/main/assets
+          cp static/index.html android_app/app/src/main/assets/index.html
+          cp static/style.css android_app/app/src/main/assets/style.css
+
+      - name: Commit synchronized assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Android assets are already synchronized."
+            exit 0
+          fi
+          git add android_app/app/src/main/assets/index.html android_app/app/src/main/assets/style.css
+          git commit -m "chore: synchronize Android shared assets"
+          git push
