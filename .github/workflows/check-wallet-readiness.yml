@@ -1,0 +1,27 @@
+name: Check live wallet readiness
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: credit-wallet-database-migrations
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'psycopg[binary]==3.2.3'
+      - name: Check installed wallet configuration without writes
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '15'
+          PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000'
+        run: python scripts/check_wallet_readiness.py
