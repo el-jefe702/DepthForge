@@ -42,3 +42,4 @@ Thumbs.db
 # Workspace / Agent metadata
 .agents/
 ORIGINAL_REQUEST.md
+.aider*
