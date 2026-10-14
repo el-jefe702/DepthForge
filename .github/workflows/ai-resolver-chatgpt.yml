@@ -1,0 +1,121 @@
+name: AI resolver — ChatGPT final fallback
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to resolve'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: depthforge-ai-resolver
+  cancel-in-progress: false
+
+env:
+  OPENAI_MODEL: gpt-4o
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Load issue
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          gh issue view "$ISSUE_NUMBER" --json title,body > issue.json
+          echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "title=$(jq -r .title issue.json)" >> "$GITHUB_OUTPUT"
+          jq -r .body issue.json > issue-body.md
+
+      - name: Build compact context
+        env:
+          ISSUE_NUMBER: ${{ steps.select.outputs.number }}
+          ISSUE_TITLE: ${{ steps.select.outputs.title }}
+        run: |
+          mkdir -p .ai
+          {
+            echo "Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+            cat issue-body.md
+            echo '## Files'
+            find . -type f -not -path './.git/*' -not -path './node_modules/*' -not -path './.venv/*' | sort | head -200
+            for file in package.json server.js processor.py; do
+              [ -f "$file" ] && { echo "## $file"; sed -n '1,500p' "$file"; }
+            done
+          } > .ai/context.md
+
+      - name: Resolve with ChatGPT
+        env:
+          OPENAI_API_KEY: ${{ secrets.FALLBACK_API_KEY1 }}
+          ISSUE_NUMBER: ${{ steps.select.outputs.number }}
+          ISSUE_TITLE: ${{ steps.select.outputs.title }}
+        run: |
+          set -euo pipefail
+          SYSTEM='Return only JSON: {"already_resolved":bool,"resolution_rationale":"str","files_to_write":[{"path":"str","content":"str"}],"files_to_delete":["str"]}. Make the smallest safe complete-file changes.'
+          jq -n --arg system "$SYSTEM" --rawfile context .ai/context.md --arg model "$OPENAI_MODEL" '{model:$model,input:[{role:"system",content:$system},{role:"user",content:$context}]}' > request.json
+          HTTP_CODE=$(curl -sS -o response.json -w '%{http_code}' https://api.openai.com/v1/responses -H "Authorization: Bearer $OPENAI_API_KEY" -H 'Content-Type: application/json' --data @request.json)
+          if [ "$HTTP_CODE" != "200" ]; then echo "::error::ChatGPT HTTP $HTTP_CODE"; cat response.json; exit 1; fi
+          jq -r '.output_text' response.json > result.json
+
+      - name: Apply and validate
+        env:
+          ISSUE_NUMBER: ${{ steps.select.outputs.number }}
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('result.json').read_text(encoding='utf-8'))
+          for path in result.get('files_to_delete', []):
+              p = Path(path)
+              if p.is_file(): p.unlink()
+          for item in result.get('files_to_write', []):
+              p = Path(item['path']); p.parent.mkdir(parents=True, exist_ok=True); p.write_text(item['content'], encoding='utf-8')
+          Path('rationale.md').write_text(result.get('resolution_rationale', ''), encoding='utf-8')
+          PY
+          npm test --if-present
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.select.outputs.number }}
+          ISSUE_TITLE: ${{ steps.select.outputs.title }}
+        run: |
+          BRANCH="fix/issue-$ISSUE_NUMBER"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add -A
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "fix: resolve issue #$ISSUE_NUMBER"
+          git push -u origin "$BRANCH" --force
+          { echo "Closes #$ISSUE_NUMBER."; echo; cat rationale.md; } > pr.md
+          gh pr create --base main --head "$BRANCH" --title "fix(#$ISSUE_NUMBER): $ISSUE_TITLE" --body-file pr.md
+
+      - name: Mark for human review
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.select.outputs.number }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --add-label 'needs-human-review'
