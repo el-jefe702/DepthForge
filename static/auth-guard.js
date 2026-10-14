@@ -8,11 +8,11 @@
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
       const { data, error } = await supabase.auth.getSession();
       if (error || !data.session) {
-        location.replace('/login.html');
+        location.replace('/static/login.html');
       }
     } catch (err) {
       console.error('Authentication check failed:', err);
-      location.replace('/login.html');
+      location.replace('/static/login.html');
     }
   });
 })();
