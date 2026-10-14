@@ -1,8 +1,9 @@
 services:
   depthforge:
     build: .
+    image: depthforge-depthforge:104053b
     ports:
-      - "8000:8080"
+      - "127.0.0.1:8001:8080"
     # .env stays on the host and is read at runtime; it is never copied into the
     # image, so rebuilds cannot destroy it. Requires Docker Compose v2.24+.
     env_file:
@@ -10,9 +11,10 @@ services:
         required: false
     environment:
       PORT: "8080"
+      PYTHON_EXEC: "/opt/venv/bin/python"
       SUBSCRIPTIONS_DB_PATH: "/app/data/subscriptions.db"
     volumes:
-      - generated_data:/app/static/generated
+      - depthforge_generated_data:/app/static/generated
       - app_data:/app/data
     restart: unless-stopped
     healthcheck:
@@ -23,7 +25,8 @@ services:
       start_period: 15s
 
 volumes:
-  generated_data:
-    driver: local
+  depthforge_generated_data:
+    external: true
+    name: depthforge_generated_data
   app_data:
     driver: local
