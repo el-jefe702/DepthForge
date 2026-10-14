@@ -178,7 +178,7 @@ jobs:
                           payload = json.dumps({
                               "model": model,
                               "messages": [
-                                  {"role": "system", "content": sys_inst + "\n\nCRITICAL: Return strictly valid JSON only, with no extra markdown text outside the JSON block."},
+                                  {"role": "system", "content": sys_inst + "\n\nCRITICAL: Return strictly valid JSON only inside a ```json markdown block."},
                                   {"role": "user", "content": prompt}
                               ],
                               "temperature": 0.15
