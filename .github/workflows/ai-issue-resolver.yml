@@ -118,7 +118,7 @@ jobs:
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
         run: |
           cat << 'PYEOF' > /tmp/autonomous_evolver.py
-          import json, os, subprocess, sys
+          import json, os, subprocess, sys, urllib.request
           from datetime import datetime, timezone
           from pathlib import Path
           from google import genai
@@ -136,33 +136,62 @@ jobs:
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
 
           def call_llm(sys_inst, prompt):
-              keys = [("Primary Gemini", PRIMARY_KEY), ("Fallback 1", FB_KEY), ("Fallback 2", FB_KEY1)]
-              active_keys = [(name, k) for name, k in keys if k]
+              tiers = [
+                  ("Primary Gemini", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
+                  ("Groq/XAI Fallback", FB_KEY, "https://api.x.ai/v1", "grok-beta", "openai"),
+                  ("ChatGPT Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o", "openai")
+              ]
               
-              if not active_keys:
+              active_tiers = [t for t in tiers if t[1]]
+              if not active_tiers:
                   raise RuntimeError("No API keys provided in environment secrets.")
 
               last_err = None
-              for name, key in active_keys:
+              for name, key, base_url, model, p_type in active_tiers:
                   try:
-                      print(f"Attempting LLM call with {name} using model {MODEL_NAME}...")
-                      client = genai.Client(api_key=key)
-                      resp = client.models.generate_content(
-                          model=MODEL_NAME,
-                          contents=prompt,
-                          config=types.GenerateContentConfig(
-                              system_instruction=sys_inst,
-                              response_mime_type="application/json",
-                              temperature=0.15
+                      print(f"Attempting LLM call with {name} using model {model}...")
+                      if p_type == "gemini":
+                          client = genai.Client(api_key=key)
+                          resp = client.models.generate_content(
+                              model=model,
+                              contents=prompt,
+                              config=types.GenerateContentConfig(
+                                  system_instruction=sys_inst,
+                                  response_mime_type="application/json",
+                                  temperature=0.15
+                              )
                           )
-                      )
-                      return json.loads(resp.text)
+                          return json.loads(resp.text)
+                      else:
+                          payload = json.dumps({
+                              "model": model,
+                              "messages": [
+                                  {"role": "system", "content": sys_inst},
+                                  {"role": "user", "content": prompt}
+                              ],
+                              "response_format": {"type": "json_object"},
+                              "temperature": 0.15
+                          }).encode("utf-8")
+                          
+                          req = urllib.request.Request(
+                              f"{base_url}/chat/completions",
+                              data=payload,
+                              headers={
+                                  "Authorization": f"Bearer {key}",
+                                  "Content-Type": "application/json"
+                              },
+                              method="POST"
+                          )
+                          with urllib.request.urlopen(req) as response:
+                              res_data = json.loads(response.read().decode("utf-8"))
+                              content = res_data["choices"][0]["message"]["content"]
+                              return json.loads(content)
                   except Exception as e:
                       print(f"⚠️ {name} failed: {e}")
                       last_err = e
                       continue
               
-              raise RuntimeError(f"All available LLM keys exhausted. Last error: {last_err}")
+              raise RuntimeError(f"All available LLM tiers exhausted. Last error: {last_err}")
 
           def sh(cmd, check=False, capture=True):
               print(f"$ {cmd}")
