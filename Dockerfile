@@ -4,30 +4,31 @@ FROM node:20-bullseye-slim
 # Set working directory
 WORKDIR /app
 
-# Install Python and OpenCV system dependencies
-# libgl1-mesa-glx and libglib2.0-0 are required by opencv-python
+# Install Python, virtual-environment support, and OpenCV system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-venv \
     libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variable so the Node app can find the Python executable
-ENV PYTHON_EXEC=python3
+# Create an isolated Python environment and install its dependencies
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHON_EXEC=/opt/venv/bin/python
 
 # Copy Node dependency definitions
 COPY package.json package-lock.json* ./
 
 # Install Node modules
-# Using npm ci for deterministic builds if package-lock.json exists, falling back to npm install
 RUN npm ci || npm install
 
 # Copy Python dependency definitions
 COPY requirements.txt ./
 
-# Install Python modules
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install Python modules into the virtual environment
+RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
