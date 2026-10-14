@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0.0",
+  "total_runs": 0,
+  "wins": 0,
+  "self_healed_recoveries": 0,
+  "invariants": [
+    "Always maintain TRUST_PROXY=1 for Express rate-limiters behind Caddy/VPS reverse proxies.",
+    "Always preserve strict 16-bit uint16 (0-65535) PNG output in processor.py after float32 Gaussian/bilateral smoothing.",
+    "Always install python3-opencv and opencv-python-headless to prevent ModuleNotFoundError: No module named 'cv2' during tests.",
+    "Use gemini-3.1-pro-preview for all generative API tasks."
+  ],
+  "learned_heuristics": [],
+  "history": []
+}
