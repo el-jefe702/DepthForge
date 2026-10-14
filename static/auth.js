@@ -1,7 +1,7 @@
 // DepthForge Supabase authentication helper.
 // Uses the public/anon key only. Never place a service-role or secret key here.
-const SUPABASE_URL = 'REPLACE_WITH_SUPABASE_URL';
-const SUPABASE_PUBLISHABLE_KEY = 'REPLACE_WITH_SUPABASE_ANON_OR_PUBLISHABLE_KEY';
+const SUPABASE_URL = 'https://qvesjthnzneimllpujng.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ZB_b365K0Q-JTYpKoYPswQ_Y8JJ6qZ9';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
