@@ -1,0 +1,31 @@
+name: Install credit lifecycle
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: credit-wallet-database-migrations
+  cancel-in-progress: false
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install lifecycle function
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '15'
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo 'Missing repository secret SUPABASE_DB_URL'
+            exit 1
+          fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/002_credit_wallet_security.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/003_credit_lifecycle.sql
