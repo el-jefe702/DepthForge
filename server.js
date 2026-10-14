@@ -1,4 +1,5 @@
 import express from 'express';
+import { creditGate } from './middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -60,6 +61,8 @@ if (isVercel) {
     app.use('/static/uploads', express.static(uploadsDir));
 }
 app.use(express.json({ limit: '50kb' }));
+app.use('/api/generate', creditGate);
+app.use('/api/invert', creditGate);
 
 // Global unhandled rejection guard — prevents silent process crashes
 process.on('unhandledRejection', (reason) => {

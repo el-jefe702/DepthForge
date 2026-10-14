@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
+    "prestart": "node patch.js",
+    "predev": "node patch.js",
+    "pretest": "node patch.js",
     "start": "node db/init.js && node server.js",
     "dev": "node db/init.js && node --watch server.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js"
