@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import PQueue from 'p-queue';
 import Stripe from 'stripe';
-import { addCredits } from './credit-backend.js';
+import { addCredits, deductCredit } from './credit-backend.js';
 
 dotenv.config();
 
@@ -102,6 +102,31 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
 app.use(express.json({ limit: '50kb' }));
 app.use('/api/generate', creditGate);
+
+const creditDeductionMiddleware = (req, res, next) => {
+    const originalJson = res.json;
+    res.json = function (body) {
+        const userId = req.user?.id || req.userId || (typeof req.user === 'string' ? req.user : null);
+        if (res.statusCode === 200 && body && !body.error && userId) {
+            Promise.resolve().then(async () => {
+                try {
+                    const imageUrl = body.imageUrl || body.url || body.image_url || (body.generatedImages && body.generatedImages[0] && body.generatedImages[0].url) || '';
+                    const newBalance = await deductCredit(userId, req.body.prompt || 'Generation', imageUrl);
+                    body.credits_balance = newBalance;
+                } catch (err) {
+                    console.error('Credit deduction failed:', err);
+                }
+                originalJson.call(this, body);
+            });
+            return this;
+        }
+        return originalJson.call(this, body);
+    };
+    next();
+};
+app.use('/api/generate', creditDeductionMiddleware);
+app.use('/api/photo-to-depth', creditDeductionMiddleware);
+
 app.use('/api/invert', creditGate);
 
 // Global unhandled rejection guard — prevents silent process crashes
