@@ -1,0 +1,125 @@
+name: Resolve one issue
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Specific issue number to resolve. Leave blank to select the oldest open ai-fix issue.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: depthforge-issue-resolver
+  cancel-in-progress: false
+
+jobs:
+  select-issue:
+    name: Select next issue
+    runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.select.outputs.issue_number }}
+      issue_title: ${{ steps.select.outputs.issue_title }}
+      skip: ${{ steps.select.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select issue
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUESTED_ISSUE: ${{ inputs.issue_number }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$REQUESTED_ISSUE" ]; then
+            ISSUE_NUMBER="$REQUESTED_ISSUE"
+            ISSUE_TITLE="$(gh issue view "$ISSUE_NUMBER" --json title --jq .title)"
+            LABELS="$(gh issue view "$ISSUE_NUMBER" --json labels --jq '[.[].name] | join(",")')"
+            case ",$LABELS," in
+              *,ai-fix,*) ;;
+              *) echo "::error::Issue #$ISSUE_NUMBER does not have the ai-fix label."; exit 1 ;;
+            esac
+          else
+            mapfile -t ISSUES < <(gh issue list \
+              --state open \
+              --label ai-fix \
+              --limit 100 \
+              --json number,title \
+              --jq 'sort_by(.number)[] | "\(.number)\t\(.title)"')
+
+            if [ "${#ISSUES[@]}" -eq 0 ]; then
+              echo "No open ai-fix issues found."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            IFS=$'\t' read -r ISSUE_NUMBER ISSUE_TITLE <<< "${ISSUES[0]}"
+          fi
+
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "issue_title=$ISSUE_TITLE" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Selected issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+
+  resolve-issue:
+    name: Resolve selected issue
+    needs: select-issue
+    if: needs.select-issue.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create resolution branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.select-issue.outputs.issue_number }}
+        run: |
+          BRANCH="ai-fix/issue-$ISSUE_NUMBER"
+          if git ls-remote --heads origin "$BRANCH" | grep -q "refs/heads/$BRANCH"; then
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+          else
+            git checkout -b "$BRANCH"
+            git push origin "$BRANCH"
+          fi
+
+      - name: Resolve issue with Claude Code
+        uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          prompt: |-
+            Resolve GitHub issue #${{ needs.select-issue.outputs.issue_number }} in this repository.
+
+            Issue title: ${{ needs.select-issue.outputs.issue_title }}
+
+            Requirements:
+            - Read the full issue and inspect the relevant repository files before changing anything.
+            - Implement the smallest safe, production-quality change that satisfies the issue.
+            - Preserve existing behavior and avoid unrelated refactors.
+            - Run the most relevant available tests. If package.json defines a test script, run `npm test`.
+            - If tests cannot run, explain why in the pull request.
+            - Create or update a pull request from the current branch to main.
+            - Use `Closes #${{ needs.select-issue.outputs.issue_number }}` in the pull-request body.
+            - Summarize the change, files touched, test results, and any follow-up work.
+          claude_args: '--allowedTools "Bash,Read,Edit,Write,Glob,Grep,Task,WebFetch,WebSearch"'
+
+      - name: Comment resolution result
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.select-issue.outputs.issue_number }}
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "Automated resolution started for this issue. Check the pull request opened from branch `ai-fix/issue-$ISSUE_NUMBER`."
+          else
+            gh issue comment "$ISSUE_NUMBER" --body "Automated resolution failed. Review the workflow run logs, then retry this issue manually or adjust its requirements."
+          fi
