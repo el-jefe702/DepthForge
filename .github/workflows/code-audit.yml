@@ -1,0 +1,175 @@
+name: Full code audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Audit focus'
+        type: choice
+        options:
+          - full
+          - security
+          - performance
+          - reliability
+          - tests
+          - deployment
+        default: full
+      max_issues:
+        description: 'Maximum new issues to create in this run'
+        required: false
+        type: string
+        default: '5'
+      dry_run:
+        description: 'Report findings without creating issues'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: depthforge-code-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit repository
+    runs-on: ubuntu-latest
+    env:
+      AUDIT_SCOPE: ${{ inputs.scope || 'full' }}
+      MAX_ISSUES: ${{ inputs.max_issues || '5' }}
+      DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare audit workspace
+        run: |
+          mkdir -p .audit
+          echo "# DepthForge code audit — $AUDIT_SCOPE" > .audit/findings.md
+          echo "_Run started: $(date -u +%Y-%m-%dT%H:%M:%SZ)_" >> .audit/findings.md
+
+      - name: Run Claude Code repository audit
+        uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          prompt: |-
+            Perform a rigorous, production-focused code audit of the DepthForge repository.
+
+            Audit scope: $AUDIT_SCOPE
+            Maximum new issues to create: $MAX_ISSUES
+            Dry run: $DRY_RUN
+
+            ## Audit objective
+
+            Identify real, actionable defects and high-value improvements—not speculative style complaints. Favor findings that affect correctness, security, data integrity, reliability, performance, deployment safety, API compatibility, test coverage, or maintainability.
+
+            ## Required audit areas
+
+            Review the repository systematically, including but not limited to:
+
+            1. **Correctness and logic** — server routes, Python processor stages, error paths, race conditions, boundary conditions, and inconsistent state transitions.
+            2. **Security** — authentication, authorization, input validation, path traversal, upload handling, secrets exposure, CORS, headers, rate limiting, and unsafe subprocess use.
+            3. **Reliability** — unhandled promise rejections, process lifecycle, cleanup, queue behavior, SSE disconnects, timeouts, retries, and resource exhaustion.
+            4. **Performance** — repeated Python startup cost, unnecessary synchronous work, memory growth, inefficient image operations, and avoidable model loading.
+            5. **API and compatibility** — Web and Android contract drift, response shapes, status codes, multipart handling, and backward compatibility.
+            6. **Testing** — missing critical tests, brittle assertions, untested failure paths, and gaps in integration coverage.
+            7. **Deployment and operations** — Docker, systemd, environment variables, reverse-proxy assumptions, logging, health checks, persistence, and rollback safety.
+            8. **Documentation** — inaccurate README claims, missing operational instructions, and drift between documentation and implementation.
+
+            ## Investigation rules
+
+            - Read the actual source before claiming a problem. Do not rely only on file names or assumptions.
+            - Trace each suspected issue through the relevant call path.
+            - Distinguish confirmed defects from risks or improvements.
+            - Do not report a finding without concrete file-and-line evidence.
+            - Do not create an issue if an existing open issue already covers the same root cause.
+            - Prefer fewer, high-quality findings over many low-value findings.
+            - Never expose secret values in issue text; refer to redacted environment-variable names only.
+
+            ## Deduplication
+
+            Before creating each issue, run:
+
+            ```bash
+            gh issue list --state open --limit 100 --json number,title,body,labels
+            ```
+
+            Skip a finding if an existing open issue already addresses the same root cause, even if its wording differs. If a finding extends but does not duplicate an existing issue, add a focused comment to that issue instead of creating a duplicate.
+
+            ## Issue creation rules
+
+            Create at most $MAX_ISSUES new issues.
+
+            For each new issue:
+
+            - Title must begin with `[Audit]` followed by a concise, specific problem statement.
+            - Apply labels `ai-fix` and `audit`.
+            - Add a priority label: `P0`, `P1`, or `P2`.
+            - Use this exact Markdown structure:
+
+            ```markdown
+            ## Summary
+            <One-paragraph explanation of the problem and user impact.>
+
+            ## Evidence
+            - File: `<path>`
+            - Lines: <range or function name>
+            - Observation: <what the code actually does>
+            - Expected: <what it should do and why>
+
+            ## Impact
+            - <Correctness, security, reliability, performance, deployment, or maintainability impact>
+            - <Concrete failure scenario or risk>
+
+            ## Logical resolution steps
+            1. <Investigation or reproduction step>
+            2. <Implementation step>
+            3. <Safety or compatibility check>
+            4. <Validation step>
+
+            ## Acceptance criteria
+            - [ ] <Observable outcome that proves the issue is fixed>
+            - [ ] <Regression guard or test requirement>
+            - [ ] <Documentation or deployment requirement, if applicable>
+
+            ## Test plan
+            - [ ] <Unit, integration, or manual verification step>
+            - [ ] <Edge case to cover>
+
+            ## Files likely affected
+            - `<path>`
+            ```
+
+            ## Execution
+
+            1. Audit the repository and record candidate findings in `.audit/findings.md`.
+            2. Deduplicate candidates against open issues.
+            3. Rank remaining findings by severity and user impact.
+            4. If `DRY_RUN` is `true`, do not create issues; write the final findings, proposed issue titles, priorities, and evidence to `.audit/findings.md` and the job summary.
+            5. If `DRY_RUN` is `false`, create at most $MAX_ISSUES issues using `gh issue create`, then append their URLs to `.audit/findings.md`.
+            6. Write a concise audit summary to `$GITHUB_STEP_SUMMARY` containing: scope, files reviewed, findings considered, duplicates skipped, issues created, and recommended next resolution order.
+
+            Do not attempt to fix the findings in this workflow. This run is for audit and issue creation only.
+          claude_args: '--allowedTools "Bash,Read,Edit,Write,Glob,Grep,Task,WebFetch,WebSearch"'
+
+      - name: Upload audit findings
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-audit-findings-${{ github.run_id }}
+          path: .audit/findings.md
+          if-no-files-found: warn
