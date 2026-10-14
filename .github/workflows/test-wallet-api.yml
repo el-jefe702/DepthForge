@@ -1,0 +1,23 @@
+name: Test Supabase wallet API
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test authenticated wallet reads and row isolation
+        env:
+          WALLET_TEST_SUPABASE_URL: ${{ secrets.WALLET_TEST_SUPABASE_URL }}
+          WALLET_TEST_ANON_KEY: ${{ secrets.WALLET_TEST_ANON_KEY }}
+          WALLET_TEST_EMAIL: ${{ secrets.WALLET_TEST_EMAIL }}
+          WALLET_TEST_PASSWORD: ${{ secrets.WALLET_TEST_PASSWORD }}
+        run: python scripts/test_wallet_api.py
