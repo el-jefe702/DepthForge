@@ -3,12 +3,13 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "prestart": "node patch.js && node patch_issue32.js",
-    "predev": "node patch.js && node patch_issue32.js",
-    "pretest": "node patch.js && node patch_issue32.js",
+    "prestart": "node patch.js && node patch_issue32.js && node patch_issue33.js",
+    "predev": "node patch.js && node patch_issue32.js && node patch_issue33.js",
+    "pretest": "node patch.js && node patch_issue32.js && node patch_issue33.js",
     "start": "node db/init.js && node server.js",
     "dev": "node db/init.js && node --watch server.js",
-    "test": "node --test --test-concurrency=1 tests/*.test.js"
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "sync:android": "node sync_android.js"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
