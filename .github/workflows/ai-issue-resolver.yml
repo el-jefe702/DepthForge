@@ -118,7 +118,7 @@ jobs:
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
         run: |
           cat << 'PYEOF' > /tmp/autonomous_evolver.py
-          import json, os, subprocess, sys, urllib.request
+          import json, os, subprocess, sys, urllib.request, re
           from datetime import datetime, timezone
           from pathlib import Path
           from google import genai
@@ -135,10 +135,22 @@ jobs:
           MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
 
+          def clean_json_response(raw_text):
+              try:
+                  return json.loads(raw_text)
+              except Exception:
+                  match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_text, re.DOTALL)
+                  if match:
+                      return json.loads(match.group(1))
+                  match_brace = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                  if match_brace:
+                      return json.loads(match_brace.group(0))
+                  raise
+
           def call_llm(sys_inst, prompt):
               tiers = [
                   ("Primary Gemini", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
-                  ("Groq/XAI Fallback", FB_KEY, "https://api.x.ai/v1", "grok-beta", "openai"),
+                  ("Grok Fallback", FB_KEY, "https://api.x.ai/v1", "grok-4.7", "openai"),
                   ("ChatGPT Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o", "openai")
               ]
               
@@ -161,15 +173,14 @@ jobs:
                                   temperature=0.15
                               )
                           )
-                          return json.loads(resp.text)
+                          return clean_json_response(resp.text)
                       else:
                           payload = json.dumps({
                               "model": model,
                               "messages": [
-                                  {"role": "system", "content": sys_inst},
+                                  {"role": "system", "content": sys_inst + "\n\nCRITICAL: Return strictly valid JSON only, with no extra markdown text outside the JSON block."},
                                   {"role": "user", "content": prompt}
                               ],
-                              "response_format": {"type": "json_object"},
                               "temperature": 0.15
                           }).encode("utf-8")
                           
@@ -185,7 +196,7 @@ jobs:
                           with urllib.request.urlopen(req) as response:
                               res_data = json.loads(response.read().decode("utf-8"))
                               content = res_data["choices"][0]["message"]["content"]
-                              return json.loads(content)
+                              return clean_json_response(content)
                   except Exception as e:
                       print(f"⚠️ {name} failed: {e}")
                       last_err = e
