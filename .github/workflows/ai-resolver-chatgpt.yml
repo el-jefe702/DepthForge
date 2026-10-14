@@ -110,7 +110,7 @@ jobs:
           Path('result.json').write_text(json.dumps(parsed), encoding='utf-8')
           PY
 
-      - name: Apply and validate
+      - name: Apply AI changes
         env:
           ISSUE_NUMBER: ${{ steps.select.outputs.number }}
         run: |
@@ -130,9 +130,23 @@ jobs:
               path.write_text(item['content'], encoding='utf-8')
           Path('rationale.md').write_text(result.get('resolution_rationale', ''), encoding='utf-8')
           PY
-          npm test --if-present
+
+      - name: Synchronize Android shared assets
+        run: |
+          if [ -f sync_android.js ]; then
+            node sync_android.js || true
+          fi
+
+          mkdir -p android_app/app/src/main/assets/static
+          cp static/index.html android_app/app/src/main/assets/index.html
+          cp static/style.css android_app/app/src/main/assets/style.css
+          cp static/style.css android_app/app/src/main/assets/static/style.css
+
+      - name: Run tests
+        run: npm test --if-present
 
       - name: Create PR
+        if: success()
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.select.outputs.number }}
