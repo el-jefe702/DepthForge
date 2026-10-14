@@ -1,0 +1,47 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to deploy'
+        required: false
+        default: 'main'
+
+jobs:
+  deploy:
+    name: Deploy DepthForge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/depthforge
+
+            echo "Deploying ${{ github.event.inputs.ref || 'main' }}"
+
+            # Preserve any uncommitted edits to the two actively edited web files.
+            if git diff --quiet -- static/auth.js static/index.html; then
+              echo "No local web-file edits to preserve."
+            else
+              git stash push -m "deployment-backup-$(date +%s)" -- static/auth.js static/index.html || true
+            fi
+
+            git fetch origin
+            git checkout "${{ github.event.inputs.ref || 'main' }}"
+            git pull --rebase origin "${{ github.event.inputs.ref || 'main' }}"
+
+            # Restore local edits only if the stash exists and applies cleanly.
+            if git stash list | grep -q 'deployment-backup'; then
+              git stash pop || {
+                echo "::warning::Local edits could not be restored automatically. They remain in git stash."
+              }
+            fi
+
+            docker compose up -d --build
+            docker compose ps
