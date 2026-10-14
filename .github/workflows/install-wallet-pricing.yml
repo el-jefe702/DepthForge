@@ -1,0 +1,55 @@
+name: Install wallet creation and pricing
+on:
+  workflow_dispatch:
+    inputs:
+      single_credits:
+        description: 'Positive integer credits per single-image generation'
+        required: true
+        type: string
+      batch_credits:
+        description: 'Positive integer total credits per four-image batch'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: credit-wallet-database-migrations
+  cancel-in-progress: false
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Validate prices
+        env:
+          SINGLE: ${{ inputs.single_credits }}
+          BATCH: ${{ inputs.batch_credits }}
+        run: |
+          python - <<'PY'
+          import os, re
+          for key in ('SINGLE', 'BATCH'):
+              value = os.environ[key]
+              if not re.fullmatch(r'[1-9][0-9]{0,9}', value) or int(value) > 2147483647:
+                  raise SystemExit(f'{key} must be a positive PostgreSQL integer')
+          PY
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install wallet provisioning and prices
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SINGLE: ${{ inputs.single_credits }}
+          BATCH: ${{ inputs.batch_credits }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '15'
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo 'Missing repository secret SUPABASE_DB_URL'
+            exit 1
+          fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -v single_credits="$SINGLE" -v batch_credits="$BATCH" \
+            -f supabase/migrations/004_wallet_creation_pricing.sql
