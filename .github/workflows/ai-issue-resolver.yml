@@ -111,6 +111,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FALLBACK_API_KEY: ${{ secrets.FALLBACK_API_KEY }}
+          FALLBACK_API_KEY1: ${{ secrets.FALLBACK_API_KEY1 }}
           REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ steps.target.outputs.issue_number }}
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
@@ -125,18 +127,48 @@ jobs:
           REPO = os.environ.get("REPO", "")
           ISSUE_NUMBER = os.environ.get("ISSUE_NUMBER", "").strip()
           PR_NUMBER = os.environ.get("PR_NUMBER", "").strip()
-          GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+          
+          PRIMARY_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+          FB_KEY = os.environ.get("FALLBACK_API_KEY", "").strip()
+          FB_KEY1 = os.environ.get("FALLBACK_API_KEY1", "").strip()
+          
           MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
 
-          client = genai.Client(api_key=GEMINI_API_KEY)
+          def call_llm(sys_inst, prompt):
+              keys = [("Primary Gemini", PRIMARY_KEY), ("Fallback 1", FB_KEY), ("Fallback 2", FB_KEY1)]
+              active_keys = [(name, k) for name, k in keys if k]
+              
+              if not active_keys:
+                  raise RuntimeError("No API keys provided in environment secrets.")
+
+              last_err = None
+              for name, key in active_keys:
+                  try:
+                      print(f"Attempting LLM call with {name} using model {MODEL_NAME}...")
+                      client = genai.Client(api_key=key)
+                      resp = client.models.generate_content(
+                          model=MODEL_NAME,
+                          contents=prompt,
+                          config=types.GenerateContentConfig(
+                              system_instruction=sys_inst,
+                              response_mime_type="application/json",
+                              temperature=0.15
+                          )
+                      )
+                      return json.loads(resp.text)
+                  except Exception as e:
+                      print(f"⚠️ {name} failed: {e}")
+                      last_err = e
+                      continue
+              
+              raise RuntimeError(f"All available LLM keys exhausted. Last error: {last_err}")
 
           def sh(cmd, check=False, capture=True):
               print(f"$ {cmd}")
               res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE if capture else None, stderr=subprocess.STDOUT if capture else None)
               out = (res.stdout or "").strip()
-              if out:
-                  print(out)
+              if out: print(out)
               if check and res.returncode != 0:
                   raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}")
               return res.returncode, out
@@ -162,10 +194,6 @@ jobs:
                       logs.append(f"=== npm test ===\n{out}")
                       if rc != 0: return False, "\n".join(logs)
               return True, "\n".join(logs) if logs else "Tests passed."
-
-          def call_gemini(sys_inst, prompt):
-              resp = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=types.GenerateContentConfig(system_instruction=sys_inst, response_mime_type="application/json", temperature=0.15))
-              return json.loads(resp.text)
 
           issue_data = {}
           if ISSUE_NUMBER:
@@ -193,7 +221,7 @@ jobs:
           for attempt in range(1, MAX_ATTEMPTS + 1):
               print(f"=== Attempt {attempt} ===")
               prompt = f"ISSUE: {issue_title}\n{issue_body}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}\nPREVIOUS LOGS:\n{last_log}"
-              solver_out = call_gemini(solver_sys, prompt)
+              solver_out = call_llm(solver_sys, prompt)
               
               for f in solver_out.get("files_to_write", []):
                   Path(f["path"]).parent.mkdir(parents=True, exist_ok=True)
@@ -221,7 +249,7 @@ jobs:
 
           rev_sys = """You are the PR Assessor. Output strict JSON: {"verdict": "WIN_MERGE" | "ALREADY_RESOLVED_CLOSE" | "NEEDS_HUMAN", "closeout_notes_markdown": "str"}"""
           rev_prompt = f"ISSUE: {issue_body}\nCHANGES: {has_changes}\nTEST_PASSED: {test_passed}\nLOG: {last_log[-2000:]}"
-          rev_out = call_gemini(rev_sys, rev_prompt)
+          rev_out = call_llm(rev_sys, rev_prompt)
           
           verdict = rev_out.get("verdict", "NEEDS_HUMAN") if test_passed else "NEEDS_HUMAN"
           if not has_changes and solver_out.get("already_resolved") and test_passed: verdict = "ALREADY_RESOLVED_CLOSE"
