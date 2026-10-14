@@ -42,6 +42,29 @@ DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC 
 - **Background Removal**: Isolate subjects onto pure black backgrounds with `rembg`
 - **Lossless Export**: Export production-ready 16-bit PNG depth maps
 - **Modern Luxury Forge Aesthetic**: Custom 3D volcanic obsidian & molten laser gold branding, frosted glassmorphism interface (`backdrop-filter: blur(16px)`), specular border highlights, responsive blueprint grid preview canvas, glowing range sliders, animated status badges, and enhanced interactive states across Web and Android WebView mirroring.
+- **Stripe Webhook Integration**: Listens for `checkout.session.completed` events to automatically update user credit balances in the SQLite ledger.
+
+### Testing Stripe Webhooks Locally
+
+You can test the Stripe webhook integration locally using the Stripe CLI:
+
+1. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli).
+2. Log in to your Stripe account:
+   ```bash
+   stripe login
+   ```
+3. Forward webhook events to your local server:
+   ```bash
+   stripe listen --forward-to localhost:8000/api/webhooks/stripe
+   ```
+4. Note the webhook signing secret printed in the console and add it to your `.env` file:
+   ```env
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+5. Trigger a mock `checkout.session.completed` event:
+   ```bash
+   stripe trigger checkout.session.completed --add checkout_session:metadata.user_id=test_user_123 --add checkout_session:metadata.credits=50
+   ```
 
 ### Platforms
 
@@ -70,229 +93,4 @@ DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC 
 │  POST /api/invert              → Serialized Python processor invert (PQueue concurrency:1)│
 │  POST /api/remove_bg           → Serialized Python processor remove_bg (rembg ML)         │
 │  Scheduled Task (cleanup.js)   → Automated hourly TTL cleanup of static/generated/        │
-└─────────────────────────────────────────────┬─────────────────────────────────────────────┘
-                                              │ child_process.spawn via PQueue (concurrency: 1)
-                                              ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│  Python Processor (processor.py)                                                          │
-│                                                                                           │
-│  invert:     pixel inversion (65535 - pixel for 16-bit / 255 - pixel for 8-bit)           │
-│  smooth:     STEP 1 (16-bit upscale) → STEP 2 (inpaint) → STEP 3 (bilateral) →            │
-│              STEP 4 (normalize) → STEP 5 (lossless 16-bit PNG export)                     │
-│  remove_bg:  rembg U2Net foreground segmentation → pure black background                  │
-└───────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Node.js** 18+
-- **Python** 3.10+ with `opencv-python`, `numpy`, and `rembg`
-- **Google Gemini API Key** (configured as `GEMINI_API_KEY` in `.env`)
-
-### Setup
-
-```bash
-# Clone
-git clone https://github.com/el-jefe702/DepthForge.git
-cd DepthForge
-
-# Install Node dependencies
-npm install
-
-# Install Python dependencies
-pip install opencv-python numpy rembg
-
-# Configure environment (.env)
-echo "GEMINI_API_KEY=your_key_here" > .env
-```
-
-### Environment Variables
-
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `GEMINI_API_KEY` | String | *Required* | API key for Google Gemini and Google Imagen 4 access via `@google/genai`. Validated at startup (F14). |
-| `GENERATED_TTL_HOURS` | Number / String | `24` | Time-to-live in hours for generated files in `static/generated/`. Purged by background cleanup scheduler (F8). |
-| `RATE_LIMIT_WINDOW_MS` | Number / String | `900000` | Window size in milliseconds for IP rate limiting on AI generation endpoints (default: 15 minutes = `900000` ms) (F10). |
-| `RATE_LIMIT_MAX` | Number / String | `10` | Maximum number of AI generation requests permitted per IP within the rate limit window (F10). |
-| `TRUST_PROXY` | Boolean / String / Number | `false` | Express trust proxy setting (`true`, `false`, hop count, or subnet) for accurate client IP resolution behind reverse proxies (F10). |
-| `PORT` | Number / String | `8000` | Port number for Express HTTP and SSE server binding. |
-
-### Key Dependencies
-
-#### Node.js (`package.json`)
-- `@google/genai` (`^2.8.0`): Official Google Gen AI SDK for Gemini prompt enhancement and Imagen 4 generation.
-- `express` (`^4.21.0`): Core HTTP web server and REST/SSE routing framework.
-- `express-rate-limit` (`^8.7.0`): IP-based rate limiting protecting AI generation routes (`/api/generate`, `/api/photo-to-depth`).
-- `multer` (`^1.4.5-lts.1`): Multipart form-data handling for photo uploads with UUID and extension preservation.
-- `p-queue` (`^9.3.3`): Promise-based concurrency queue serializing Python subprocess execution (`concurrency: 1`).
-- `uuid` (`^14.0.0`): Cryptographically secure UUIDv4 generation for file naming.
-- `dotenv` (`^16.4.5`): Environment variable loader from `.env`.
-
-#### Python (`processor.py`)
-- `opencv-python`: High-performance computer vision library for bilateral filtering, inpainting, and 16-bit PNG I/O.
-- `numpy`: Fast multidimensional array math for 16-bit depth scaling, channel indexing, and normalization.
-- `rembg`: Machine learning background removal model (U2Net) isolating foreground subjects onto black backgrounds.
-
-### Starting the Server
-
-```bash
-# Start the server (runs initial cleanup and schedules hourly maintenance)
-npm start
-
-# Development mode with hot-reload
-npm run dev
-
-# Run automated test suites
-npm test
-
-# Run generated file cleanup manually via CLI
-node cleanup.js [dir] [ttlHours]
-```
-
-Open **http://localhost:8000** in your browser.
-
-### Deploying to Vercel (Serverless Version)
-
-DepthForge includes native Vercel serverless deployment support configured through `vercel.json` and `api/index.js`.
-
-#### Method 1: Deploy with Vercel CLI
-```bash
-# Install Vercel CLI if not already installed
-npm install -g vercel
-
-# Test locally using Vercel Dev server
-vercel dev
-
-# Deploy to Vercel production
-vercel --prod
-```
-
-#### Method 2: Deploy via Vercel Web Dashboard (Git)
-1. Push your repository to GitHub / GitLab / Bitbucket.
-2. In the [Vercel Dashboard](https://vercel.com/dashboard), click **Add New...** → **Project**.
-3. Import your DepthForge repository.
-4. In **Project Settings** → **Environment Variables**, add:
-   - `GEMINI_API_KEY`: Your Google Gemini API Key.
-5. Click **Deploy**. Vercel will build and serve your static frontend and route API calls to the serverless function handler.
-
-*Note: In the Vercel serverless environment, generated depth maps are created in `/tmp` and served ephemerally. High-resolution Gemini 3.6 & Imagen generation, aspect ratio selection, style presets, batch candidates, and 3D live preview run completely serverless.*
-
----
-
-## API Endpoints
-
-| Endpoint | Method | Body / Query Params | Response | Description |
-|---|---|---|---|---|
-| `/api/health` | GET, HEAD, OPTIONS | None | `{"status": "ok", "version": "2.0.0", "python": true, "uptime": 12.34, "timestamp": "..."}` | Returns service health status, dynamic package.json version, Python engine availability, uptime, and timestamp. Disallowed methods (POST, PUT, DELETE, PATCH) return 405 Method Not Allowed with Allow header. |
-| `/api/generate` | POST | `{"prompt": "...", "aspectRatio": "1:1", "depth_intensity": 70, "style_preset": "Wildlife", "batch": false}` | `{"status": "success", "image_url": "/static/generated/xxx.png"}` (or HTTP 429: `{"error": "..."}`) | Generates depth map from text prompt. `aspectRatio` defaults to `1:1` (`1:1`, `4:3`, `3:2`, `16:9`, `2:3`). `depth_intensity` (0–100) defaults to `70`. Protected by rate limiter (default 10 req / 15 min per IP; configurable via `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_MS`). |
-| `/api/photo-to-depth` | POST | Multipart `photo` file, optional `aspectRatio`, optional `depth_intensity`, optional `style_preset`, optional `batch` | `{"status": "success", "image_url": "...", "subject": "..."}` (or HTTP 429: `{"error": "..."}`) | Analyzes photo and generates depth map with requested aspect ratio and depth intensity (default 70). Protected by rate limiter (default 10 req / 15 min per IP; configurable via `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_MS`). |
-| `/api/postprocess` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/forge_xxx.png"}` | Synchronously smooths depth map via 5-step Python processor pipeline. Serialized through PQueue. |
-| `/api/postprocess-stream` | GET / POST | `?image_url=...` | `text/event-stream` | Streams 5-step smoothing progress in real-time over Server-Sent Events (SSE). |
-| `/api/invert` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/inv_xxx.png"}` | Inverts depth map pixel values (16-bit or 8-bit) via serialized Python processor. |
-| `/api/remove_bg` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/iso_xxx.png"}` | Isolates subject onto pure black background using rembg U2Net model. |
-
----
-
-## Post-Processing Pipeline
-
-The Python processor (`processor.py`) applies a 5-stage pipeline:
-
-1. **STEP 1 — 16-Bit Upscaling**: Converts 8-bit (0–255) → 16-bit (0–65535) via ×257 multiplication
-2. **STEP 2 — Inpainting**: Detects and fills zero-value holes using morphological closing + Telea inpainting
-3. **STEP 3 — Bilateral Filtering**: `cv2.bilateralFilter(d=9, sigmaColor=5000, sigmaSpace=5)` — removes banding while preserving edges
-4. **STEP 4 — Normalization**: Linear stretch to full 0–65535 range for maximum Z-axis depth utilization
-5. **STEP 5 — Lossless Export**: 16-bit PNG with compression level 9
-
----
-
-## Android App
-
-The Android app (`android_app/`) is a native Jetpack Compose application providing the same forge experience on mobile:
-
-- **Share Sheet**: Native Android system share sheet integration (`Intent.ACTION_SEND`, `type = "image/png"`) sharing depth maps with external apps via secure Android FileProvider (`cacheDir/share/`).
-- **Session Gallery**: Horizontal scrollable thumbnail strip (`LazyRow`) displaying all session variations with one-tap restore and Hide/Show/Clear controls.
-- **3D Preview WebView**: Fullscreen dialog hosting an embedded WebGL Three.js displacement engine in a native WebView, featuring orbit drag controls, pinch zoom, and lighting.
-- **Aspect Ratio Selector**: Selectable chip controls (`1:1`, `4:3`, `3:2`, `16:9`, `2:3`) for custom dimensions in text prompt and photo modes.
-- **Depth Intensity Slider**: Native Material 2 `Slider` (0–100%, default 70%) adjusting relief contrast and carving depth dynamically.
-- **Style Presets**: Interactive chip selector for domain preambles (`Portrait`, `Wildlife`, `Ornamental`, `Floral`, `Architecture`, `Abstract`).
-- **Batch Candidate Grid**: 2-column candidate grid (`BatchCandidateGrid`) displaying 4 generated variations simultaneously with candidate badges (`#1`–`#4`), selection borders, and one-tap preview assignment.
-- **Side-by-Side Comparison View**: Split-screen comparison view (`BeforeAfterComparisonView`) with a draggable vertical divider slider and high-contrast badges.
-- **Real-Time SSE Pipeline Animation**: Real-time progress bar and step indicators driven by live Server-Sent Events from `/api/postprocess-stream`.
-- **Health Check & Service Status**: Automated backend health checks via `ApiClient.checkHealth()` and `ApiClient.isHealthy()`.
-- **Configurable Server URL**: Settings dialog allowing dynamic updates to the backend URL for local or LAN-based development.
-
----
-
-## Project Directory Tree Structure
-
-```
-DepthForge/
-├── server.js                          # Express API server, routes, rate limiting, and PQueue runner
-├── cleanup.js                         # Automated TTL cleanup routine & background scheduler
-├── processor.py                       # OpenCV 16-bit post-processing pipeline & rembg integration
-├── package.json                       # Node.js project manifest & script declarations
-├── package-lock.json                  # Deterministic Node dependency lockfile
-├── Dockerfile                         # Container definition with Node, Python, and OpenCV
-├── vercel.json                        # Vercel serverless deployment & route rewrites
-├── api/                               # Vercel serverless functions
-│   └── index.js                       # Serverless entrypoint wrapping Express app
-├── static/                            # Web frontend assets (served at /static)
-│   ├── index.html                     # Single-page web UI (Three.js, 3D preview, compare slider)
-│   └── style.css                      # Modern dark-theme responsive design system
-├── tests/                             # Node.js native test runner test suites
-│   ├── aspect_ratio.test.js           # F1: Aspect ratio selector tests
-│   ├── invert.test.js                 # F2: Pixel inversion tests
-│   ├── prompt_history.test.js         # F3: Prompt history persistence tests
-│   ├── sse_pipeline.test.js           # F4: Server-Sent Events streaming tests
-│   ├── session_gallery.test.js        # F5: Session gallery thumbnail tests
-│   ├── depth_intensity.test.js        # F6: Depth intensity slider tests
-│   ├── comparison_view.test.js        # F7: Side-by-side comparison slider tests
-│   ├── cleanup.test.js                # F8: File TTL cleanup scheduler tests
-│   ├── health.test.js                 # F9: Health check endpoint tests
-│   ├── rate_limit.test.js             # F10: Rate limiting & HTTP 429 tests
-│   ├── three_d_preview.test.js        # F11: Three.js 3D live preview tests
-│   ├── style_presets.test.js          # F12: Style presets prompt injection tests
-│   ├── batch_generation.test.js       # F13: Batch generation ×4 tests
-│   ├── env_validation.test.js         # F14: Startup environment validation tests
-│   ├── gemini_response_robustness.test.js # F15: Gemini JSON response robustness tests
-│   ├── multer_uuid.test.js            # F16: Multer UUID filename preservation tests
-│   ├── processor_steps.test.js        # F17: processor.py step comment alignment tests
-│   ├── python_queue.test.js           # F18: Python processor concurrency queue tests
-│   ├── android_share.test.js          # F19: Android Share Intent & FileProvider tests
-│   └── readme_verification.test.js    # F20: README documentation verification tests
-└── android_app/                       # Native Android application
-    ├── README.md                      # Android app architecture & setup guide
-    └── app/
-        └── src/
-            ├── main/
-            │   ├── AndroidManifest.xml# Manifest with FileProvider and network permissions
-            │   ├── assets/            # Mirrored web assets for 3D WebView integration
-            │   │   ├── index.html
-            │   │   └── style.css
-            │   ├── res/xml/
-            │   │   └── file_paths.xml # FileProvider cache sharing paths
-            │   └── kotlin/com/depthforge/app/
-            │       ├── MainActivity.kt# Jetpack Compose UI, ForgeScreen & ShareSheet
-            │       └── ApiClient.kt   # OkHttp3 HTTP/SSE client & Health API
-            └── test/kotlin/com/depthforge/app/
-                ├── AspectRatioTest.kt
-                ├── BatchGenerationTest.kt
-                ├── ComparisonViewTest.kt
-                ├── HealthCheckTest.kt
-                ├── InvertTest.kt
-                ├── PromptHistoryTest.kt
-                ├── RateLimitingTest.kt
-                ├── SessionGalleryTest.kt
-                ├── StylePresetsTest.kt
-                └── ThreeDPreviewTest.kt
-```
-
----
-
-## License
-
-SLCreations, LLC © 2026
+└─────────────────────────────────────────────┬────────────────────────────────────────
