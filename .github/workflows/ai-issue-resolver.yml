@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: "Specific Issue Number to resolve (leave blank to auto-pick next open issue)"
+        description: "Specific Issue Number to resolve"
         required: false
         type: string
       pr_number:
-        description: "Specific PR Number to audit/review/close (optional)"
+        description: "Specific PR Number to audit"
         required: false
         type: string
 
@@ -43,7 +43,7 @@ jobs:
       github.event_name == 'workflow_dispatch'
 
     steps:
-      - name: Checkout Repository (Full History)
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -61,43 +61,21 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install System, Node & Python Dependencies
+      - name: Install System & Python Dependencies (Strict Environment Fix)
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y jq libgl1 libglib2.0-0 python3-opencv python3-numpy
+          sudo apt-get install -y jq libgl1 libglib2.0-0
           npm ci || npm install
-          pip install --upgrade pip
-          pip install opencv-python-headless numpy trimesh google-genai requests --break-system-packages
+          python -m pip install --upgrade pip
+          python -m pip install opencv-python-headless numpy trimesh google-genai requests
           if [ -f requirements.txt ]; then
-            pip install -r requirements.txt --break-system-packages
+            python -m pip install -r requirements.txt
           fi
 
       - name: Configure Git Identity
         run: |
           git config --global user.name "SpatialOps Autonomous Architect"
           git config --global user.email "actions@spatialops.llc"
-
-      - name: Initialize Self-Evolving Memory Ledger
-        run: |
-          mkdir -p .ai-memory
-          if [ ! -f "$LEDGER_PATH" ]; then
-            cat << 'EOF' > "$LEDGER_PATH"
-          {
-            "schema_version": "2.0.0",
-            "total_runs": 0,
-            "wins": 0,
-            "self_healed_recoveries": 0,
-            "invariants": [
-              "Always maintain TRUST_PROXY=1 for Express rate-limiters behind Caddy/VPS reverse proxies.",
-              "Always preserve strict 16-bit uint16 (0-65535) PNG output in processor.py after float32 Gaussian/bilateral smoothing.",
-              "Always install python3-opencv and opencv-python-headless to prevent ModuleNotFoundError: No module named 'cv2' during tests.",
-              "Use gemini-3.1-pro-preview for all generative API tasks."
-            ],
-            "learned_heuristics": [],
-            "history": []
-          }
-          EOF
-          fi
 
       - name: Select Target Issue or PR
         id: target
@@ -111,13 +89,11 @@ jobs:
         run: |
           TARGET_ISSUE=""
           TARGET_PR=""
-
           if [ -n "$INPUT_PR" ]; then
             TARGET_PR="$INPUT_PR"
           elif [ "$EVENT_NAME" = "pull_request_target" ] && [ -n "$EVENT_PR" ]; then
             TARGET_PR="$EVENT_PR"
           fi
-
           if [ -n "$INPUT_ISSUE" ]; then
             TARGET_ISSUE="$INPUT_ISSUE"
           elif [ "$EVENT_NAME" = "issues" ] && [ -n "$EVENT_ISSUE" ]; then
@@ -126,12 +102,10 @@ jobs:
             TARGET_ISSUE=$(gh issue list --state open --limit 30 --json number,labels \
               --jq '[.[] | select(([.labels[].name] | inside(["needs-human-review", "wontfix", "in-progress"]) | not))] | sort_by(.number) | .[0].number // empty')
           fi
-
           echo "issue_number=$TARGET_ISSUE" >> "$GITHUB_OUTPUT"
           echo "pr_number=$TARGET_PR" >> "$GITHUB_OUTPUT"
-          echo "Selected Target -> Issue: '${TARGET_ISSUE:-none}', PR: '${TARGET_PR:-none}'"
 
-      - name: Execute Self-Evolving AI Solver & Adversarial PR Reviewer
+      - name: Execute Self-Evolving AI Solver
         if: steps.target.outputs.issue_number != '' || steps.target.outputs.pr_number != ''
         id: agent
         env:
@@ -142,10 +116,7 @@ jobs:
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
         run: |
           cat << 'PYEOF' > /tmp/autonomous_evolver.py
-          import json
-          import os
-          import subprocess
-          import sys
+          import json, os, subprocess, sys
           from datetime import datetime, timezone
           from pathlib import Path
           from google import genai
@@ -157,7 +128,6 @@ jobs:
           GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
           MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
-          LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
 
           client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -166,60 +136,42 @@ jobs:
               res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE if capture else None, stderr=subprocess.STDOUT if capture else None)
               return res.returncode, (res.stdout or "").strip()
 
-          def load_ledger():
-              if LEDGER_PATH.exists():
-                  try: return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
-                  except Exception: pass
-              return {"schema_version": "2.0.0", "total_runs": 0, "wins": 0, "self_healed_recoveries": 0, "invariants": [], "learned_heuristics": [], "history": []}
-
-          def save_ledger(ledger):
-              LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
-              ledger["history"] = ledger.get("history", [])[-40:]
-              ledger["learned_heuristics"] = list(dict.fromkeys(ledger.get("learned_heuristics", [])))[-25:]
-              LEDGER_PATH.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
-
           def get_repo_snapshot():
               _, tree = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 160")
-              key_files = ["package.json", "server.js", "processor.py", "README.md", ".env.example", "requirements.txt"]
-              snippets = {}
-              for f in key_files:
-                  p = Path(f)
-                  if p.exists() and p.is_file():
-                      snippets[f] = p.read_text(encoding="utf-8", errors="ignore")[:12000]
+              key_files = ["package.json", "server.js", "processor.py", "README.md"]
+              snippets = {f: Path(f).read_text(encoding="utf-8")[:12000] for f in key_files if Path(f).is_file()}
               return tree, snippets
 
           def run_validation_suite():
               logs = []
-              python_exe = sys.executable
-              sh(f"{python_exe} -m pip install opencv-python-headless numpy trimesh requests --break-system-packages || true")
-              
+              # Ensure python environment is perfect before running tests
+              sh("python -m pip install opencv-python-headless numpy trimesh requests || true")
               pkg = Path("package.json")
               if pkg.exists():
-                  sh("npm install --no-audit --no-fund")
+                  rc, out = sh("npm install --no-audit --no-fund")
+                  logs.append(f"=== npm install ===\n{out}")
+                  if rc != 0: return False, "\n".join(logs)
+                  
                   pkg_data = json.loads(pkg.read_text(encoding="utf-8"))
-                  scripts = pkg_data.get("scripts", {})
-                  if "test" in scripts:
-                      rc, out = sh(f"TRUST_PROXY=1 PYTHON_BIN={python_exe} npm test || true")
-                      logs.append(f"=== TRUST_PROXY=1 npm test (exit {rc}) ===\n{out}")
-              
-              # 🔥 TEMPORARY BYPASS: Always return True to unblock Phase 2
-              return True, "\n".join(logs) + "\n[TESTS BYPASSED FOR PHASE 2 MERGE]"
+                  if "test" in pkg_data.get("scripts", {}):
+                      # Run actual test suite with strict pass/fail
+                      rc, out = sh("TRUST_PROXY=1 npm test")
+                      logs.append(f"=== npm test ===\n{out}")
+                      if rc != 0: return False, "\n".join(logs)
+              return True, "\n".join(logs) if logs else "Tests passed."
 
-          def call_gemini_json(system_instruction, prompt):
-              response = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=types.GenerateContentConfig(system_instruction=system_instruction, response_mime_type="application/json", temperature=0.15))
-              return json.loads(response.text)
-
-          ledger = load_ledger()
-          ledger["total_runs"] = ledger.get("total_runs", 0) + 1
+          def call_gemini(sys_inst, prompt):
+              resp = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=types.GenerateContentConfig(system_instruction=sys_inst, response_mime_type="application/json", temperature=0.15))
+              return json.loads(resp.text)
 
           issue_data = {}
           if ISSUE_NUMBER:
-              rc, out = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body,labels,state")
-              if rc == 0 and out: issue_data = json.loads(out)
+              rc, out = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body")
+              if rc == 0: issue_data = json.loads(out)
 
           if ISSUE_NUMBER and not PR_NUMBER:
-              _, existing_pr = sh(f"gh pr list --repo '{REPO}' --state open --json number,headRefName,title --jq '[.[] | select(.headRefName == \"fix/issue-{ISSUE_NUMBER}\" or (.title | contains(\"#{ISSUE_NUMBER}\")))] | .[0].number // empty'")
-              if existing_pr: PR_NUMBER = existing_pr.strip()
+              _, e_pr = sh(f"gh pr list --repo '{REPO}' --state open --json number,headRefName --jq '[.[] | select(.headRefName == \"fix/issue-{ISSUE_NUMBER}\")] | .[0].number // empty'")
+              if e_pr: PR_NUMBER = e_pr.strip()
 
           branch_name = f"fix/issue-{ISSUE_NUMBER}" if ISSUE_NUMBER else f"audit/pr-{PR_NUMBER}"
           sh(f"git checkout -B '{branch_name}' origin/main", check=True)
@@ -228,9 +180,80 @@ jobs:
           issue_body = issue_data.get("body") or ""
           issue_title = issue_data.get("title") or ""
 
-          solver_system = f"""You are the DepthForge Code Architect. Output valid JSON only.
-          EVOLUTION LEDGER: {json.dumps(ledger.get("invariants", []))}
-          Return schema: {{"already_resolved": bool, "resolution_rationale": "str", "files_to_write": [{{"path": "str", "content": "str"}}], "files_to_delete": ["str"], "new_heuristic_learned": "str"}}"""
+          solver_sys = """You are the DepthForge Code Architect. Output JSON only. 
+          Return: {"already_resolved": bool, "resolution_rationale": "str", "files_to_write": [{"path": "str", "content": "str"}], "files_to_delete": ["str"]}"""
+
+          test_passed = False
+          last_log = ""
+          solver_out = {}
+          retries = 0
+
+          # Restored strict validation loop
+          for attempt in range(1, MAX_ATTEMPTS + 1):
+              print(f"=== Attempt {attempt} ===")
+              prompt = f"ISSUE: {issue_title}\n{issue_body}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}\nPREVIOUS LOGS:\n{last_log}"
+              solver_out = call_gemini(solver_sys, prompt)
+              
+              for f in solver_out.get("files_to_write", []):
+                  Path(f["path"]).parent.mkdir(parents=True, exist_ok=True)
+                  Path(f["path"]).write_text(f["content"], encoding="utf-8")
+                  snippets[f["path"]] = f["content"][:15000]
+
+              test_passed, last_log = run_validation_suite()
+              if test_passed:
+                  retries = attempt - 1
+                  break
+              else:
+                  print(f"Failed. Healing...\n{last_log[-1000:]}")
+
+          _, stat = sh("git status --porcelain")
+          has_changes = bool(stat.strip())
+
+          if has_changes and test_passed:
+              sh("git add -A", check=True)
+              sh(f"git commit -m \"fix: resolve #{ISSUE_NUMBER or PR_NUMBER}\"", check=True)
+              sh(f"git push -u origin '{branch_name}' --force", check=True)
+              if not PR_NUMBER:
+                  Path("/tmp/pr.md").write_text(f"Closes #{ISSUE_NUMBER}\n{solver_out.get('resolution_rationale', '')}", encoding="utf-8")
+                  sh(f"gh pr create --repo '{REPO}' --base main --head '{branch_name}' --title \"fix(#{ISSUE_NUMBER}): {issue_title[:65]}\" --body-file /tmp/pr.md")
+                  _, PR_NUMBER = sh(f"gh pr view '{branch_name}' --repo '{REPO}' --json number --jq '.number'")
+                  PR_NUMBER = PR_NUMBER.strip()
+
+          rev_sys = """You are the PR Assessor. Output strict JSON: {"verdict": "WIN_MERGE" | "ALREADY_RESOLVED_CLOSE" | "NEEDS_HUMAN", "closeout_notes_markdown": "str"}"""
+          rev_prompt = f"ISSUE: {issue_body}\nCHANGES: {has_changes}\nTEST_PASSED: {test_passed}\nLOG: {last_log[-2000:]}"
+          rev_out = call_gemini(rev_sys, rev_prompt)
+          
+          verdict = rev_out.get("verdict", "NEEDS_HUMAN") if test_passed else "NEEDS_HUMAN"
+          if not has_changes and solver_out.get("already_resolved") and test_passed: verdict = "ALREADY_RESOLVED_CLOSE"
+
+          Path("/tmp/rev.md").write_text(f"## Verdict: {verdict}\nTests: {'PASSED' if test_passed else 'FAILED'}\n{rev_out.get('closeout_notes_markdown', '')}", encoding="utf-8")
+
+          if PR_NUMBER:
+              sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/rev.md || true")
+              if verdict == "WIN_MERGE":
+                  sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch || true")
+
+          if ISSUE_NUMBER:
+              if verdict in ("WIN_MERGE", "ALREADY_RESOLVED_CLOSE"):
+                  sh(f"gh issue close {ISSUE_NUMBER} --repo '{REPO}' --reason completed || true")
+              else:
+                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'needs-human-review' || true")
+
+          sh("git checkout main && git reset --hard origin/main || true")
+          PYEOF
+          python3 /tmp/autonomous_evolver.py
+
+      - name: Advance Queue
+        if: always() && steps.agent.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          NEXT_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 30 --json number,labels --jq '[.[] | select(([.labels[].name] | inside(["needs-human-review", "wontfix", "in-progress"]) | not))] | sort_by(.number) | .[0].number // empty')
+          if [ -n "$NEXT_ISSUE" ]; then
+            gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT_ISSUE" || true
+          fi
+rite": [{{"path": "str", "content": "str"}}], "files_to_delete": ["str"], "new_heuristic_learned": "str"}}"""
 
           last_test_log = ""
           test_passed = False
