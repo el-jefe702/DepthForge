@@ -44,10 +44,8 @@ if (process.env.TRUST_PROXY) {
 
 import os from 'os';
 
-// Detect Vercel serverless runtime
 const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
 
-// Ensure directories exist
 const staticDir = path.join(__dirname, 'static');
 const generatedDir = isVercel
     ? path.join(os.tmpdir(), 'depthforge', 'generated')
@@ -68,7 +66,6 @@ if (isVercel) {
     app.use('/static/uploads', express.static(uploadsDir));
 }
 
-// Stripe Webhook - MUST be before express.json()
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
     if (!stripe) {
         return res.status(500).send('Stripe is not configured');
@@ -175,13 +172,10 @@ app.use('/api/photo-to-depth', creditDeductionMiddleware);
 
 app.use('/api/invert', creditGate);
 
-// Global unhandled rejection guard — prevents silent process crashes
 process.on('unhandledRejection', (reason) => {
     console.error('[UnhandledRejection]', reason);
 });
 
-
-// Request logging middleware
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
@@ -200,12 +194,29 @@ if (!process.env.GEMINI_API_KEY) {
     console.warn("WARNING: GEMINI_API_KEY is missing from .env! Image generation will fail.");
 }
 
+function safeJsonParse(raw, fallback = {}, logger = console) {
+    try {
+        if (typeof raw !== 'string' || !raw.trim()) {
+            return fallback;
+        }
+
+        const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        const candidate = (codeBlockMatch ? codeBlockMatch[1] : raw).trim();
+        const parsed = JSON.parse(candidate);
+        return parsed === null || parsed === undefined ? fallback : parsed;
+    } catch (err) {
+        if (logger && typeof logger.error === 'function') {
+            logger.error('Failed to parse Gemini JSON response:', err?.message || err);
+        }
+        return fallback;
+    }
+}
+
 async function generateImagesWithFallback(params) {
     try {
         const res = await ai.models.generateImages(params);
         if (res?.generatedImages?.length) return res;
     } catch (err) {
-        // If running in test mode or if an error is an explicit test rejection, rethrow so tests can verify 500 error handling
         if (process.env.NODE_ENV === 'test') {
             throw err;
         }
@@ -249,10 +260,7 @@ async function generateImagesWithFallback(params) {
     return { generatedImages };
 }
 
-// ----------------------------------------------------------------------
-// Rate Limiting Configuration (F10)
-// ----------------------------------------------------------------------
-const DEFAULT_RATE_LIMIT_WINDOW_MS = 900000; // 15 minutes (15 * 60 * 1000)
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 900000;
 const DEFAULT_RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_ERROR_MESSAGE = 'Too many requests. Please wait before generating again.';
 const RATE_LIMIT_RESPONSE_BODY = { error: RATE_LIMIT_ERROR_MESSAGE };
@@ -279,10 +287,7 @@ function parseRateLimitMax(val) {
 
 function createRateLimiter(options = {}) {
     const { shared, separate, ...rlOptions } = options;
-    const windowMs = rlOptions.windowMs !== undefined
-        ? parseRateLimitWindowMs(process.env.RATE_LIMIT_WINDOW_MS)
-        : parseRateLimitWindowMs(process.env.RATE_LIMIT_WINDOW_MS);
-
+    const windowMs = parseRateLimitWindowMs(process.env.RATE_LIMIT_WINDOW_MS);
     const limit = rlOptions.max !== undefined
         ? parseRateLimitMax(rlOptions.max)
         : (rlOptions.limit !== undefined
@@ -335,7 +340,6 @@ function resetGenerationLimiter(options = {}) {
     return resetRateLimiters(options);
 }
 
-// --- STYLE PRESETS ARCHITECTURE (F12) ---
 const STYLE_PRESETS = {
     portrait: {
         id: 'portrait',
@@ -380,7 +384,6 @@ const getStyleGuidance = (preset) => {
     return validKey ? STYLE_PRESETS[validKey].guidance : '';
 };
 
-// --- PROMPT ARCHITECTURE ---
 const buildImprovePrompt = (userIdea, stylePreset = null) => {
     const styleGuidance = getStyleGuidance(stylePreset);
     const styleBlock = styleGuidance ? ` ${styleGuidance} ` : '';
@@ -541,6 +544,22 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+function saveGeneratedImage(imageResult, filePrefix) {
+    const imageBytes = imageResult?.generatedImages?.[0]?.image?.imageBytes;
+    const id = uuidv4();
+    const outputPath = path.join(generatedDir, `${filePrefix}-${id}.png`);
+
+    if (typeof imageBytes === 'string' && imageBytes) {
+        fs.writeFileSync(outputPath, Buffer.from(imageBytes, 'base64'));
+    } else if (imageBytes) {
+        fs.writeFileSync(outputPath, Buffer.from(imageBytes));
+    } else {
+        throw new Error('Generated image data was unavailable');
+    }
+
+    return { id, outputPath, publicUrl: `/static/generated/${path.basename(outputPath)}` };
+}
+
 app.post('/api/generate', generateLimiter, async (req, res) => {
     try {
         const { prompt, stylePreset, depthIntensity, numberOfImages = 1, aspectRatio = '1:1' } = req.body;
@@ -548,48 +567,44 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Prompt is required' });
         }
 
-        const jobId = uuidv4();
         const cleanPrompt = prompt.trim();
         const validPreset = sanitizeStylePreset(stylePreset);
         const intensity = sanitizeDepthIntensity(depthIntensity);
         const imagesCount = Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4);
 
-        await new Promise((resolve) => {
-            db.run(
-                `INSERT INTO jobs (id, status, prompt, style_preset, created_at, updated_at) VALUES (?, 'queued', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                [jobId, cleanPrompt, validPreset],
-                (err) => {
-                    if (err) {
-                        console.error('Failed to insert job into SQLite:', err.message);
-                    }
-                    resolve();
-                }
-            );
-        });
-
-        const jobData = {
-            jobId,
-            id: jobId,
-            prompt: cleanPrompt,
-            stylePreset: validPreset,
-            depthIntensity: intensity,
-            numberOfImages: imagesCount,
-            aspectRatio,
-            userId: req.user?.id || req.userId || (typeof req.user === 'string' ? req.user : null)
-        };
-
-        if (generationJobQueue) {
-            try {
-                await generationJobQueue.add('generate', jobData, { jobId });
-            } catch (queueErr) {
-                console.error('[BullMQ] Failed to add job to Redis queue:', queueErr.message);
+        let improvedPrompt = cleanPrompt;
+        try {
+            const improvementResponse = await ai.models.generateContent({
+                model: 'gemini-3.1-flash-image',
+                contents: buildImprovePrompt(cleanPrompt, validPreset)
+            });
+            const responseText = improvementResponse?.text || '';
+            const parsed = safeJsonParse(responseText, {}, console);
+            const candidate = typeof parsed?.improved_prompt === 'string' ? parsed.improved_prompt.trim() : '';
+            if (candidate) {
+                improvedPrompt = candidate;
             }
+        } catch (err) {
+            console.warn('[Prompt Improvement] Falling back to user prompt:', err?.message || err);
         }
 
+        const finalPrompt = buildFinalPrompt(improvedPrompt, intensity);
+        const imageResult = await generateImagesWithFallback({
+            model: 'imagen-4.0-generate-001',
+            prompt: finalPrompt,
+            config: {
+                numberOfImages: imagesCount,
+                aspectRatio
+            }
+        });
+
+        const saved = saveGeneratedImage(imageResult, 'generation');
+
         return res.json({
-            job_id: jobId,
-            jobId,
-            status: 'queued'
+            status: 'success',
+            imageUrl: saved.publicUrl,
+            url: saved.publicUrl,
+            improved_prompt: improvedPrompt
         });
     } catch (err) {
         console.error('Generation error:', err);
@@ -627,22 +642,65 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, upload.single('image'), asy
         if (!req.file) {
             return res.status(400).json({ error: 'Image file is required' });
         }
-        const id = uuidv4();
-        const bgRemovedPath = path.join(uploadsDir, `${id}_nobg.png`);
-        const finalPath = path.join(generatedDir, `${id}_depth.png`);
 
-        const bgProc = spawnSync('python', ['processor.py', 'remove_bg', req.file.path, bgRemovedPath]);
-        const sourcePath = bgProc.status === 0 ? bgRemovedPath : req.file.path;
+        const imageBase64 = fs.readFileSync(req.file.path).toString('base64');
+        let subject = 'the uploaded image';
 
-        const smoothProc = spawnSync('python', ['processor.py', 'smooth', sourcePath, finalPath]);
-        if (smoothProc.status !== 0) {
-            return res.status(500).json({ error: 'Depth processing failed' });
+        try {
+            const visionResponse = await ai.models.generateContent({
+                model: 'gemini-3.1-flash-image',
+                contents: [{
+                    role: 'user',
+                    parts: [
+                        { text: 'Identify the primary subject of this image. Return JSON with key "subject".' },
+                        { inlineData: { mimeType: req.file.mimetype || 'image/png', data: imageBase64 } }
+                    ]
+                }]
+            });
+            const visionText = visionResponse?.text || '';
+            const parsed = safeJsonParse(visionText, {}, console);
+            const candidate = typeof parsed?.subject === 'string' && parsed.subject.trim()
+                ? parsed.subject.trim()
+                : visionText.trim();
+            if (candidate) {
+                subject = candidate;
+            }
+        } catch (err) {
+            console.warn('[Vision Analysis] Falling back to generic subject:', err?.message || err);
         }
 
-        res.json({ url: `/static/generated/${id}_depth.png`, imageUrl: `/static/generated/${id}_depth.png` });
+        const depthPrompt = buildFinalPrompt(`A detailed 3D grayscale height map of ${subject}`, 70);
+        const imageResult = await generateImagesWithFallback({
+            model: 'imagen-4.0-generate-001',
+            prompt: depthPrompt,
+            config: {
+                numberOfImages: 1,
+                aspectRatio: '1:1'
+            }
+        });
+
+        const generated = saveGeneratedImage(imageResult, 'photo-depth');
+        let finalUrl = generated.publicUrl;
+
+        try {
+            const processedPath = path.join(generatedDir, `${uuidv4()}_depth.png`);
+            const smoothProc = spawnSync('python', ['processor.py', 'smooth', generated.outputPath, processedPath]);
+            if (smoothProc.status === 0 && fs.existsSync(processedPath)) {
+                finalUrl = `/static/generated/${path.basename(processedPath)}`;
+            }
+        } catch (err) {
+            console.warn('[Depth Processing] Using generated height map:', err?.message || err);
+        }
+
+        return res.json({
+            status: 'success',
+            subject,
+            imageUrl: finalUrl,
+            url: finalUrl
+        });
     } catch (err) {
         console.error('Photo-to-depth error:', err);
-        res.status(500).json({ error: err.message || 'Processing failed' });
+        return res.status(500).json({ error: err.message || 'Processing failed' });
     }
 });
 
@@ -687,6 +745,8 @@ if (process.env.NODE_ENV !== 'test' && isMain) {
 export default app;
 export {
     app,
+    ai,
+    safeJsonParse,
     generationJobQueue,
     QUEUE_NAME,
     resetRateLimiters,
