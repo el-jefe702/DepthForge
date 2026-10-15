@@ -58,50 +58,97 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .ai
-          {
-            echo 'Repair only server.js.'
-            echo 'Implement batch generation for POST /api/generate and POST /api/photo-to-depth exactly as required by the failing tests.'
-            echo 'Return the complete updated server.js. Do not modify tests.'
-            echo
-            echo '## Failing tests'
-            cat failing-tests.log
-            echo
-            echo '## Test expectations'
-            cat "$TEST_FILE"
-            echo
-            echo '## Current server.js'
-            cat server.js
-          } > .ai/server-context.md
+          cat > .ai/server-context.md <<'EOF'
+          Repair only server.js.
 
-          jq -n \
-            --arg system 'Return only a JSON object: {"analysis":"string","files_to_write":[{"path":"string","content":"string"}]}. The only allowed path is server.js. Return its complete contents.' \
-            --rawfile context .ai/server-context.md \
-            --arg model "$OPENAI_MODEL" \
-            '{model:$model,response_format:{type:"json_object"},max_completion_tokens:16000,messages:[{role:"system",content:$system},{role:"user",content:$context}],temperature:0.1}' \
-            > request.json
+          Implement batch generation for POST /api/generate and POST /api/photo-to-depth.
 
-          http_code=$(curl -sS -o response.json -w '%{http_code}' \
-            https://api.openai.com/v1/chat/completions \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -H 'Content-Type: application/json' \
-            --data @request.json)
+          IMPORTANT: The tests use exact substring matching. Both endpoints must contain these exact code fragments:
 
-          if [ "$http_code" != "200" ]; then
-            echo "::error::OpenAI HTTP $http_code"
-            cat response.json
-            exit 1
-          fi
+          isBatch = req.body.batch === true
+          numberOfImages: numImages
+          images: imageUrls
+          batch: isBatch
 
-          jq -r '.choices[0].message.content' response.json > raw-response.json
-          python3 - <<'PY'
+          Do not rename these variables. Do not use optional chaining for the batch check. Do not reformat these exact fragments.
+
+          Return the complete updated server.js. Do not modify tests.
+
+          ## Failing tests
+          EOF
+          cat failing-tests.log >> .ai/server-context.md
+          echo '\n## Test expectations' >> .ai/server-context.md
+          cat "$TEST_FILE" >> .ai/server-context.md
+          echo '\n## Current server.js' >> .ai/server-context.md
+          cat server.js >> .ai/server-context.md
+
+          for attempt in 1 2; do
+            echo "=== Server repair attempt $attempt ==="
+
+            jq -n \
+              --arg system 'Return only a JSON object: {"analysis":"string","files_to_write":[{"path":"string","content":"string"}]}. The only allowed path is server.js. Return its complete contents. Include the four exact required code fragments verbatim in both batch-capable endpoints.' \
+              --rawfile context .ai/server-context.md \
+              --arg model "$OPENAI_MODEL" \
+              '{model:$model,response_format:{type:"json_object"},max_completion_tokens:16000,messages:[{role:"system",content:$system},{role:"user",content:$context}],temperature:0.1}' \
+              > request.json
+
+            http_code=$(curl -sS -o response.json -w '%{http_code}' \
+              https://api.openai.com/v1/chat/completions \
+              -H "Authorization: Bearer $OPENAI_API_KEY" \
+              -H 'Content-Type: application/json' \
+              --data @request.json)
+
+            echo "OpenAI HTTP $http_code"
+            jq '{finish_reason: .choices[0].finish_reason, usage: .usage}' response.json || true
+
+            if [ "$http_code" != "200" ]; then
+              cat response.json
+              exit 1
+            fi
+
+            jq -r '.choices[0].message.content' response.json > raw-response.json
+
+            if python3 - <<'PY'
           import json
           from pathlib import Path
           plan = json.loads(Path('raw-response.json').read_text(encoding='utf-8'))
           files = plan.get('files_to_write') or []
           if not files or files[0].get('path') != 'server.js':
               raise SystemExit('OpenAI did not return server.js.')
-          Path('server.js').write_text(files[0]['content'], encoding='utf-8')
+          content = files[0]['content']
+          required = [
+              'isBatch = req.body.batch === true',
+              'numberOfImages: numImages',
+              'images: imageUrls',
+              'batch: isBatch'
+          ]
+          missing = [text for text in required if text not in content]
+          if missing:
+              print('MISSING_ASSERTIONS=' + '\n'.join(missing))
+              raise SystemExit(2)
+          Path('server.js').write_text(content, encoding='utf-8')
           PY
+            then
+              echo 'Server repair validation passed.'
+              break
+            fi
+
+            if [ "$attempt" = "2" ]; then
+              echo "::error::ChatGPT failed to include the exact required batch assertions after retry."
+              exit 1
+            fi
+
+            python3 - <<'PY'
+          from pathlib import Path
+          context = Path('.ai/server-context.md').read_text(encoding='utf-8')
+          response = Path('raw-response.json').read_text(encoding='utf-8')
+          Path('.ai/server-context.md').write_text(
+              context + '\n\n## PRIOR INVALID RESPONSE EXCERPT\n' + response[:4000] +
+              '\n\nYour previous response omitted or changed required exact assertions. Return server.js again with all four exact fragments verbatim in both endpoints.',
+              encoding='utf-8'
+          )
+          PY
+          done
 
       - name: Repair web batch UI
         env:
