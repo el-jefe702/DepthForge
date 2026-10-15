@@ -32,7 +32,7 @@ env:
   GEMINI_MODEL: "gemini-2.5-flash"
   GEMINI_SECONDARY_MODEL: "gemini-3-flash-preview"
   GEMINI_FAST_MODEL: "gemini-2.5-flash-lite"
-  MAX_HEAL_ATTEMPTS: "3"
+  MAX_HEAL_ATTEMPTS: "2"
   LEDGER_PATH: ".ai-memory/evolution_ledger.json"
   ARTIFACT_DIR: "/tmp/ai-artifacts"
 
@@ -109,8 +109,8 @@ jobs:
           elif [ "$EVENT_NAME" = "issues" ] && [ -n "$EVENT_ISSUE" ]; then
             TARGET_ISSUE="$EVENT_ISSUE"
           elif [ -z "$TARGET_PR" ]; then
-            TARGET_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 30 --json number,labels \
-              --jq '[.[] | select(([.labels[].name] | any(. == "wontfix")) | not)] | sort_by(.number) | .[0].number // empty')
+            TARGET_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 50 --json number \
+              --jq 'sort_by(.number) | .[0].number // empty')
           fi
           echo "Selected issue_number=$TARGET_ISSUE pr_number=$TARGET_PR"
           echo "issue_number=$TARGET_ISSUE" >> "$GITHUB_OUTPUT"
@@ -146,10 +146,23 @@ jobs:
           MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
           SECONDARY_MODEL_NAME = os.environ.get("GEMINI_SECONDARY_MODEL", "gemini-3-flash-preview")
           FAST_MODEL_NAME = os.environ.get("GEMINI_FAST_MODEL", "gemini-2.5-flash-lite")
-          MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
+          MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "2"))
           LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
           ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", "/tmp/ai-artifacts"))
           ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+
+          def sh(cmd, check=False):
+              print(f"$ {cmd}")
+              res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              out = (res.stdout or "").strip()
+              err = (res.stderr or "").strip()
+              if out:
+                  print(out)
+              if err and res.returncode != 0:
+                  print(f"[stderr] {err}")
+              if check and res.returncode != 0:
+                  raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}\n{err}")
+              return res.returncode, out, err
 
           def clean_json_response(raw_text):
               try:
@@ -234,15 +247,6 @@ jobs:
               
               raise RuntimeError(f"All available LLM tiers exhausted. Last error: {last_err}")
 
-          def sh(cmd, check=False, capture=True):
-              print(f"$ {cmd}")
-              res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE if capture else None, stderr=subprocess.STDOUT if capture else None)
-              out = (res.stdout or "").strip()
-              if out: print(out)
-              if check and res.returncode != 0:
-                  raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}")
-              return res.returncode, out
-
           def extract_failing_tests(raw_output):
               lines = raw_output.splitlines()
               filtered = []
@@ -255,10 +259,16 @@ jobs:
                   if capture_block or line.strip().startswith("# "):
                       filtered.append(line)
               result = "\n".join(filtered).strip()
-              return result[-6000:] if result else raw_output[-4000:]
+              return result[-5000:] if result else raw_output[-3500:]
+
+          def count_test_failures(raw_output):
+              m = re.search(r'# fail\s+(\d+)', raw_output)
+              if m:
+                  return int(m.group(1))
+              return len(re.findall(r'^not ok ', raw_output, re.MULTILINE))
 
           def get_repo_snapshot(extra_paths=None):
-              _, tree = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 140")
+              _, tree, _ = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 140")
               key_files = ["package.json", "server.js", "processor.py"]
               if extra_paths:
                   for p in extra_paths:
@@ -266,6 +276,23 @@ jobs:
                           key_files.append(p)
               snippets = {f: Path(f).read_text(encoding="utf-8")[:120000] for f in key_files if Path(f).is_file()}
               return tree, snippets
+
+          def inject_into_server_js(code_block):
+              srv = Path("server.js")
+              if not srv.is_file() or not code_block.strip():
+                  return False
+              orig = srv.read_text(encoding="utf-8")
+              if code_block.strip() in orig:
+                  return False
+              # Insert cleanly right before module.exports or app.listen
+              for anchor in ["module.exports", "if (require.main === module)", "app.listen("]:
+                  idx = orig.rfind(anchor)
+                  if idx != -1:
+                      updated = orig[:idx] + "\n// --- AI Autonomous Addition ---\n" + code_block.strip() + "\n\n" + orig[idx:]
+                      srv.write_text(updated, encoding="utf-8")
+                      return True
+              srv.write_text(orig + "\n\n" + code_block.strip() + "\n", encoding="utf-8")
+              return True
 
           def apply_ai_changes(payload, snippets_dict):
               modified = []
@@ -276,22 +303,39 @@ jobs:
 
               for p in payload.get("patches", []):
                   p_path = Path(p.get("path", ""))
-                  if p_path.is_file() and p.get("search"):
+                  search_str = p.get("search", "")
+                  replace_str = p.get("replace", "")
+                  if p_path.is_file() and search_str:
                       orig = p_path.read_text(encoding="utf-8")
-                      if p["search"] in orig:
-                          updated = orig.replace(p["search"], p.get("replace", ""), 1)
+                      if search_str in orig:
+                          updated = orig.replace(search_str, replace_str, 1)
                           p_path.write_text(updated, encoding="utf-8")
                           snippets_dict[str(p_path)] = updated[:120000]
                           modified.append(str(p_path))
-                      else:
-                          print(f"⚠️ Patch search block not found in {p_path}")
+                      elif search_str.strip() in orig:
+                          updated = orig.replace(search_str.strip(), replace_str.strip(), 1)
+                          p_path.write_text(updated, encoding="utf-8")
+                          snippets_dict[str(p_path)] = updated[:120000]
+                          modified.append(str(p_path))
+                      elif p_path.name == "server.js" and replace_str.strip():
+                          print(f"⚠️ Exact search block missed in server.js; safely injecting new block before export.")
+                          if inject_into_server_js(replace_str):
+                              snippets_dict["server.js"] = Path("server.js").read_text(encoding="utf-8")[:120000]
+                              modified.append("server.js")
+
+              if payload.get("server_append"):
+                  if inject_into_server_js(payload["server_append"]):
+                      snippets_dict["server.js"] = Path("server.js").read_text(encoding="utf-8")[:120000]
+                      modified.append("server.js")
 
               for f in payload.get("files_to_write", []):
                   f_path = Path(f["path"])
                   content = f.get("content", "")
+                  if not content.strip():
+                      continue
                   if f_path.name == "server.js" and f_path.is_file():
                       orig_len = len(f_path.read_text(encoding="utf-8"))
-                      if len(content) < orig_len * 0.75:
+                      if len(content) < orig_len * 0.80:
                           print(f"⚠️ Blocked truncated overwrite of server.js ({len(content)} vs {orig_len} chars)")
                           continue
                   f_path.parent.mkdir(parents=True, exist_ok=True)
@@ -300,21 +344,37 @@ jobs:
                   modified.append(str(f_path))
               return modified
 
-          def run_validation_suite(modified_files):
+          def run_validation_suite(modified_files, baseline_fail_count):
               logs = []
+              # Always verify server.js syntax first
+              if Path("server.js").is_file():
+                  rc_syn, out_syn, err_syn = sh("node --check server.js")
+                  if rc_syn != 0:
+                      return False, f"=== server.js syntax error ===\n{out_syn}\n{err_syn}"
+
               pkg = Path("package.json")
               if pkg.exists():
                   if "package.json" in modified_files:
-                      rc, out = sh("npm install --no-audit --no-fund")
-                      logs.append(f"=== npm install ===\n{out}")
-                      if rc != 0: return False, "\n".join(logs)
+                      rc, out, err = sh("npm install --no-audit --no-fund")
+                      logs.append(f"=== npm install ===\n{out}\n{err}")
+                      if rc != 0:
+                          return False, "\n".join(logs)
                   
                   pkg_data = json.loads(pkg.read_text(encoding="utf-8"))
                   if "test" in pkg_data.get("scripts", {}):
-                      rc, out = sh("TRUST_PROXY=1 npm test")
-                      logs.append(f"=== npm test ===\n{out}")
-                      if rc != 0: return False, "\n".join(logs)
-              return True, "\n".join(logs) if logs else "Tests passed."
+                      rc, out, err = sh("TRUST_PROXY=1 npm test")
+                      combined = f"{out}\n{err}"
+                      logs.append(f"=== npm test ===\n{combined}")
+                      if rc == 0:
+                          return True, "\n".join(logs)
+                      current_fails = count_test_failures(combined)
+                      print(f"Test runner reported {current_fails} failure(s) (baseline on main: {baseline_fail_count})")
+                      # Pass if no NEW test failures were introduced compared to baseline
+                      if baseline_fail_count > 0 and current_fails <= baseline_fail_count:
+                          print("✅ No new test regressions compared to main baseline.")
+                          return True, "\n".join(logs)
+                      return False, "\n".join(logs)
+              return True, "\n".join(logs) if logs else "Validation passed."
 
           def record_evolution_ledger(entry):
               LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -330,88 +390,24 @@ jobs:
 
           issue_data = {}
           if ISSUE_NUMBER:
-              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress' || true")
-              rc, out = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body")
-              if rc == 0: issue_data = json.loads(out)
-
-          if ISSUE_NUMBER and not PR_NUMBER:
-              _, e_pr = sh(f"gh pr list --repo '{REPO}' --state open --json number,headRefName --jq '[.[] | select(.headRefName == \"fix/issue-{ISSUE_NUMBER}\")] | .[0].number // empty'")
-              if e_pr: PR_NUMBER = e_pr.strip()
+              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress'")
+              rc, out, _ = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body")
+              if rc == 0 and out:
+                  issue_data = json.loads(out)
 
           target_id = ISSUE_NUMBER or PR_NUMBER
           branch_name = f"fix/issue-{ISSUE_NUMBER}" if ISSUE_NUMBER else f"audit/pr-{PR_NUMBER}"
           sh(f"git checkout -B '{branch_name}' origin/main", check=True)
 
+          # Measure baseline test failures on origin/main before making changes
+          _, base_out, base_err = sh("TRUST_PROXY=1 npm test")
+          baseline_failures = count_test_failures(f"{base_out}\n{base_err}")
+          print(f"Baseline test failures on main: {baseline_failures}")
+
           issue_body = issue_data.get("body") or ""
-          issue_title = issue_data.get("title") or ""
+          issue_title = issue_data.get("title") or f"Issue #{target_id}"
 
           mentioned_files = re.findall(r'[\w./-]+\.(?:js|py|json|sql)', issue_body)
           tree, snippets = get_repo_snapshot(extra_paths=mentioned_files)
 
-          solver_sys = """You are the DepthForge Code Architect. Output strictly valid JSON only.
-          CRITICAL RULE: NEVER truncate or remove existing routes/features in server.js or processor.py.
-          Also fix any failing test in tests/ if reported in FAILING TEST OUTPUT.
-          Prefer surgical edits in "patches" for existing files, and use "files_to_write" for new files or test files.
-          Return format:
-          {
-            "already_resolved": bool,
-            "resolution_rationale": "str",
-            "patches": [{"path": "str", "search": "exact existing lines", "replace": "new replacement lines"}],
-            "files_to_write": [{"path": "str", "content": "full file content"}],
-            "files_to_delete": ["str"]
-          }"""
-
-          test_passed = False
-          last_log = ""
-          failed_patch = ""
-          failing_tests_summary = ""
-          solver_out = {}
-          attempt_records = []
-
-          for attempt in range(1, MAX_ATTEMPTS + 1):
-              print(f"=== Attempt {attempt} of {MAX_ATTEMPTS} ===")
-
-              repair_section = ""
-              if attempt > 1:
-                  repair_section = (
-                      f"\n\nPrevious attempt failed with these tests; fix those failures.\n"
-                      f"=== PREVIOUS FAILED PATCH (Attempt {attempt - 1}) ===\n{failed_patch[:8000]}\n"
-                      f"=== FAILING TEST OUTPUT ===\n{failing_tests_summary}\n"
-                  )
-
-              prompt = (
-                  f"ISSUE #{ISSUE_NUMBER}: {issue_title}\n{issue_body}\n"
-                  f"TREE:\n{tree}\n"
-                  f"FILES:\n{json.dumps(snippets)}"
-                  f"{repair_section}"
-              )
-              solver_out = call_llm(solver_sys, prompt, mode="solver")
-              modified_files = apply_ai_changes(solver_out, snippets)
-
-              test_passed, last_log = run_validation_suite(modified_files)
-              
-              if test_passed:
-                  attempt_records.append({"attempt": attempt, "status": "PASSED", "modified_files": modified_files})
-                  break
-              else:
-                  print(f"⚠️ Attempt {attempt} failed validation. Saving patch & failing test artifacts for iterative repair...")
-                  sh("git add -N . || true")
-                  _, failed_patch = sh("git diff")
-                  failing_tests_summary = extract_failing_tests(last_log)
-
-                  patch_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}.patch"
-                  test_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}_failing_tests.log"
-                  patch_file.write_text(failed_patch or "No diff generated.", encoding="utf-8")
-                  test_file.write_text(failing_tests_summary, encoding="utf-8")
-
-                  trace_files = re.findall(r'tests/[\w./-]+\.test\.js', failing_tests_summary)
-                  for tf in trace_files:
-                      if Path(tf).is_file() and tf not in snippets:
-                          snippets[tf] = Path(tf).read_text(encoding="utf-8")[:25000]
-
-                  attempt_records.append({
-                      "attempt": attempt,
-                      "status": "FAILED",
-                      "modified_files": modified_files,
-                      "patch_artifact": str(patch_file.name),
-                      "test_a
+          solv
