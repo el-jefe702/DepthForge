@@ -385,3 +385,124 @@ const buildFinalPrompt = (improvedPrompt, depthIntensity = 70) => {
         "STYLE: Flawless, continuous gradients. Soft, airbrushed shading to represent height. " +
         "TECHNICAL: Pure black to pure white linear Z-axis distribution. " +
      
+
+"OUTPUT: Pure black and white height map ONLY. No color, no text, no borders.\n";
+};
+
+const upload = multer({ dest: uploadsDir });
+
+const generationQueue = new PQueue({ concurrency: 2 });
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.post('/api/generate', generateLimiter, async (req, res) => {
+    try {
+        const { prompt, stylePreset, depthIntensity, numberOfImages = 1, aspectRatio = '1:1' } = req.body;
+        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+            return res.status(400).json({ error: 'Prompt is required' });
+        }
+
+        const improvedPrompt = prompt.trim();
+        const finalPrompt = buildFinalPrompt(improvedPrompt, depthIntensity);
+
+        const result = await generationQueue.add(() =>
+            generateImagesWithFallback({
+                prompt: finalPrompt,
+                config: {
+                    numberOfImages: Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4),
+                    aspectRatio
+                }
+            })
+        );
+
+        const generatedImages = [];
+        for (const item of result.generatedImages) {
+            const id = uuidv4();
+            const rawPath = path.join(uploadsDir, `${id}_raw.png`);
+            const smoothedPath = path.join(generatedDir, `${id}_depth.png`);
+
+            const imgBuffer = Buffer.from(item.image.imageBytes, 'base64');
+            fs.writeFileSync(rawPath, imgBuffer);
+
+            const proc = spawnSync('python', ['processor.py', 'smooth', rawPath, smoothedPath]);
+            if (proc.status !== 0) {
+                console.error('Processor error:', proc.stderr?.toString());
+                fs.writeFileSync(smoothedPath, imgBuffer);
+            }
+
+            generatedImages.push({
+                id,
+                url: `/static/generated/${id}_depth.png`
+            });
+        }
+
+        res.json({ generatedImages, imageUrl: generatedImages[0]?.url });
+    } catch (err) {
+        console.error('Generation error:', err);
+        res.status(500).json({ error: err.message || 'Image generation failed' });
+    }
+});
+
+app.post('/api/photo-to-depth', photoToDepthLimiter, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Image file is required' });
+        }
+        const id = uuidv4();
+        const bgRemovedPath = path.join(uploadsDir, `${id}_nobg.png`);
+        const finalPath = path.join(generatedDir, `${id}_depth.png`);
+
+        const bgProc = spawnSync('python', ['processor.py', 'remove_bg', req.file.path, bgRemovedPath]);
+        const sourcePath = bgProc.status === 0 ? bgRemovedPath : req.file.path;
+
+        const smoothProc = spawnSync('python', ['processor.py', 'smooth', sourcePath, finalPath]);
+        if (smoothProc.status !== 0) {
+            return res.status(500).json({ error: 'Depth processing failed' });
+        }
+
+        res.json({ url: `/static/generated/${id}_depth.png`, imageUrl: `/static/generated/${id}_depth.png` });
+    } catch (err) {
+        console.error('Photo-to-depth error:', err);
+        res.status(500).json({ error: err.message || 'Processing failed' });
+    }
+});
+
+app.post('/api/invert', async (req, res) => {
+    try {
+        const { imageUrl } = req.body;
+        if (!imageUrl) {
+            return res.status(400).json({ error: 'imageUrl is required' });
+        }
+
+        const filename = path.basename(imageUrl);
+        const inputPath = path.join(generatedDir, filename);
+        if (!fs.existsSync(inputPath)) {
+            return res.status(404).json({ error: 'Source image not found' });
+        }
+
+        const id = uuidv4();
+        const outputPath = path.join(generatedDir, `${id}_inverted.png`);
+
+        const proc = spawnSync('python', ['processor.py', 'invert', inputPath, outputPath]);
+        if (proc.status !== 0) {
+            return res.status(500).json({ error: 'Inversion failed' });
+        }
+
+        res.json({ url: `/static/generated/${id}_inverted.png`, imageUrl: `/static/generated/${id}_inverted.png` });
+    } catch (err) {
+        console.error('Invert error:', err);
+        res.status(500).json({ error: err.message || 'Invert failed' });
+    }
+});
+
+if (process.env.NODE_ENV !== 'test') {
+    startCleanupScheduler();
+    app.listen(port, () => {
+        console.log(`Server listening on port ${port}`);
+    });
+}
+
+export default app;
+export { app, resetRateLimiters, resetGenerationLimiter, buildImprovePrompt, buildFinalPrompt, sanitizeDepthIntensity, sanitizeStylePreset, STYLE_PRESETS };
