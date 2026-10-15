@@ -465,8 +465,80 @@ db.run(`
     )
 `);
 
+const DEFAULT_PACKAGE_VERSION = '0.0.0';
+
+function getPackageVersion(packageJsonPath = path.join(__dirname, 'package.json')) {
+    try {
+        const raw = fs.readFileSync(packageJsonPath, 'utf8').replace(/^\uFEFF/, '');
+        const parsed = JSON.parse(raw);
+        const version = parsed?.version;
+        return typeof version === 'string' && version.trim() ? version.trim() : DEFAULT_PACKAGE_VERSION;
+    } catch (err) {
+        return DEFAULT_PACKAGE_VERSION;
+    }
+}
+
+function resolvePythonExecutable(override = process.env.PYTHON_EXEC) {
+    if (typeof override === 'string' && override.trim()) {
+        return override.trim();
+    }
+    return 'python';
+}
+
+let pythonAvailabilityCache = null;
+
+function clearPythonCache() {
+    pythonAvailabilityCache = null;
+}
+
+function isPythonAvailable(options = {}) {
+    const {
+        resolveFn = resolvePythonExecutable,
+        existsFn = fs.existsSync,
+        execFn = (executable) => spawnSync(executable, ['--version'], { stdio: 'ignore' })
+    } = options;
+
+    if (pythonAvailabilityCache !== null) {
+        return pythonAvailabilityCache;
+    }
+
+    try {
+        const processorPath = path.join(__dirname, 'processor.py');
+        if (!existsFn(processorPath)) {
+            pythonAvailabilityCache = false;
+            return false;
+        }
+
+        const processorStat = fs.statSync(processorPath);
+        if (!processorStat.isFile()) {
+            pythonAvailabilityCache = false;
+            return false;
+        }
+
+        const executable = resolveFn();
+        if (!executable || !existsFn(executable)) {
+            pythonAvailabilityCache = false;
+            return false;
+        }
+
+        const result = execFn(executable);
+        const available = Boolean(result && result.status === 0);
+        pythonAvailabilityCache = available;
+        return available;
+    } catch (err) {
+        pythonAvailabilityCache = false;
+        return false;
+    }
+}
+
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+        status: 'ok',
+        version: getPackageVersion(),
+        python: isPythonAvailable(),
+        uptime: Number(process.uptime().toFixed(2)),
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.post('/api/generate', generateLimiter, async (req, res) => {
@@ -623,5 +695,9 @@ export {
     buildFinalPrompt,
     sanitizeDepthIntensity,
     sanitizeStylePreset,
-    STYLE_PRESETS
+    STYLE_PRESETS,
+    getPackageVersion,
+    isPythonAvailable,
+    resolvePythonExecutable,
+    clearPythonCache
 };
