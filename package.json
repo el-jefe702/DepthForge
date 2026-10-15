@@ -8,7 +8,7 @@
     "pretest": "node patch.js && node patch_issue32.js && node patch_issue33.js && node patch_issue39.js",
     "start": "node db/init.js && node server.js",
     "dev": "node db/init.js && node --watch server.js",
-    "test": "node --test --test-concurrency=1 tests/*.test.js > test-output.log 2>&1; status=$?; grep -E '^not ok' test-output.log || true; exit $status",
+    "test": "node --test --test-concurrency=1 tests/*.test.js > test-output.log 2>&1; status=$?; grep -E -A 15 '^not ok' test-output.log || true; exit $status",
     "worker": "node worker.js",
     "sync:android": "node sync_android.js"
   },
