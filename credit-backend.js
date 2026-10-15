@@ -1,6 +1,9 @@
 // Server-only adapter. Call authenticate() first; never trust a body-supplied user ID.
 // Route integration, provider execution claims, and reconciliation are separate stages.
+import { randomUUID } from 'node:crypto';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function createCreditBackend({ url, publicKey, serviceRoleKey, fetchImpl = globalThis.fetch }) {
   const origin = new URL(url);
   if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash || !publicKey || !serviceRoleKey || typeof fetchImpl !== 'function') {
@@ -39,48 +42,65 @@ export function createCreditBackend({ url, publicKey, serviceRoleKey, fetchImpl 
   }
   async function reserve(userId, jobId, batch = false) {
     if (typeof batch !== 'boolean') throw new Error('Batch must be a server-normalized boolean');
-    return rpc('reserve_priced_credit_job', {
-      p_user_id: validId(userId), p_job_id: validId(jobId),
+    return rpc('credit_job_action', {
+      p_action: 'reserve',
+      p_user_id: validId(userId),
+      p_job_id: validId(jobId),
+      p_credits: batch ? 4 : 1,
       p_job_type: batch ? 'generate_batch_4' : 'generate_single'
+    });
+  }
+  async function grantCredits(targetUserId, amount, reason, idempotencyKey) {
+    if (!Number.isInteger(amount) || amount <= 0) throw new Error('Credit amount must be a positive integer');
+    if (typeof reason !== 'string' || !reason.trim()) throw new Error('Credit grant reason required');
+    if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim()) throw new Error('Credit grant idempotency key required');
+    return rpc('grant_credits', {
+      p_target_user_id: validId(targetUserId),
+      p_amount: amount,
+      p_reason: reason.trim(),
+      p_idempotency_key: `admin-grant:${idempotencyKey.trim()}`
     });
   }
   async function finalize(action, userId, jobId) {
     return rpc('credit_job_action', { p_action: action, p_user_id: validId(userId), p_job_id: validId(jobId) });
   }
-  return Object.freeze({ authenticate, reserve,
+  return Object.freeze({
+    authenticate,
+    reserve,
+    grantCredits,
     commit: (userId, jobId) => finalize('commit', userId, jobId),
     refund: (userId, jobId) => finalize('refund', userId, jobId)
   });
 }
 
-export const deductCredit = (userId, prompt, imageUrl) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const sqlite3 = (await import('sqlite3')).default;
-            const path = await import('path');
-            const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || path.join(process.cwd(), 'data', 'subscriptions.db');
-            const localDb = new sqlite3.Database(dbPath);
-            
-            localDb.serialize(() => {
-                localDb.run('BEGIN TRANSACTION');
-                localDb.run('UPDATE users SET credits_balance = credits_balance - 1 WHERE id = ? AND credits_balance > 0', [userId], function(err) {
-                    if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
-                    if (this.changes === 0) { localDb.run('ROLLBACK'); localDb.close(); return reject(new Error('Insufficient credits')); }
-                    localDb.run('INSERT INTO generations (user_id, prompt, image_url) VALUES (?, ?, ?)', [userId, prompt, imageUrl], function(err) {
-                        if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
-                        localDb.get('SELECT credits_balance FROM users WHERE id = ?', [userId], (err, row) => {
-                            if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
-                            localDb.run('COMMIT', err => {
-                                localDb.close();
-                                if (err) return reject(err);
-                                resolve(row.credits_balance);
-                            });
-                        });
-                    });
-                });
-            });
-        } catch (err) {
-            reject(err);
-        }
-    });
-};
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_PUBLIC_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export const creditBackend = SUPABASE_URL && SUPABASE_PUBLIC_KEY && SUPABASE_SERVICE_ROLE_KEY
+  ? createCreditBackend({
+      url: SUPABASE_URL,
+      publicKey: SUPABASE_PUBLIC_KEY,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY
+    })
+  : null;
+
+export async function addCredits(userId, amount, options = {}) {
+  if (!creditBackend) throw new Error('Credit service is not configured');
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error('Credit amount must be a positive integer');
+  const idempotencyKey = options.idempotencyKey || randomUUID();
+  return creditBackend.grantCredits(
+    userId,
+    amount,
+    options.reason?.trim() || 'Purchase',
+    `purchase:${idempotencyKey.trim()}`
+  );
+}
+
+export async function deductCredit(userId, prompt, imageUrl) {
+  if (!creditBackend) throw new Error('Credit service is not configured');
+  const jobId = randomUUID();
+  const reserved = await creditBackend.reserve(userId, jobId);
+  await creditBackend.commit(userId, jobId);
+  return reserved?.balance ?? null;
+}
