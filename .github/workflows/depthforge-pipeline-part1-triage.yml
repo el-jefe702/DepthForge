@@ -1,0 +1,232 @@
+name: DepthForge Pipeline — Part 1: Triage
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: depthforge-pipeline-part1-${{ inputs.issue_number }}
+  cancel-in-progress: false
+
+env:
+  GEMINI_MODEL: gemini-3.8-flash
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Verify credentials
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FALLBACK_API_KEY: ${{ secrets.FALLBACK_API_KEY }}
+          FALLBACK_API_KEY1: ${{ secrets.FALLBACK_API_KEY1 }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ] && [ -z "$FALLBACK_API_KEY" ] && [ -z "$FALLBACK_API_KEY1" ]; then
+            echo "::error::No AI API key found. Set GEMINI_API_KEY, FALLBACK_API_KEY, or FALLBACK_API_KEY1."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          npm ci || npm install
+          python -m pip install --upgrade pip
+          python -m pip install google-genai requests
+
+      - name: Prepare issue context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p .pipeline
+          gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json number,title,body,labels > .pipeline/issue.json
+          jq -r .title .pipeline/issue.json > .pipeline/title.txt
+          jq -r .body .pipeline/issue.json > .pipeline/body.md
+          git ls-files | grep -vE '^(node_modules|dist|build|\.git)/' | head -n 200 > .pipeline/tree.txt
+
+          files=(package.json server.js processor.py)
+          while read -r path; do
+            case "$path" in
+              *.js|*.mjs|*.py|*.json)
+                if [ -f "$path" ]; then files+=("$path"); fi
+                ;;
+            esac
+          done < <(grep -oE '[A-Za-z0-9_./-]+\.(js|mjs|py|json)' .pipeline/body.md || true)
+
+          printf '%s\n' "${files[@]}" | sort -u > .pipeline/files.txt
+          : > .pipeline/context.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          files = [x.strip() for x in Path('.pipeline/files.txt').read_text().splitlines() if x.strip()]
+          context = {}
+          for path in files:
+              p = Path(path)
+              if p.is_file() and p.stat().st_size < 200000:
+                  context[path] = p.read_text(encoding='utf-8', errors='replace')[:30000]
+          Path('.pipeline/context.json').write_text(json.dumps(context, indent=2), encoding='utf-8')
+          PY
+
+      - name: Create triage plan
+        id: plan
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FALLBACK_API_KEY: ${{ secrets.FALLBACK_API_KEY }}
+          FALLBACK_API_KEY1: ${{ secrets.FALLBACK_API_KEY1 }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cat > .pipeline/triage.py <<'PY'
+          import json, os, re, urllib.request
+          from pathlib import Path
+          from google import genai
+          from google.genai import types
+
+          issue = json.loads(Path('.pipeline/issue.json').read_text(encoding='utf-8'))
+          title = issue.get('title', '')
+          body = issue.get('body', '')
+          tree = Path('.pipeline/tree.txt').read_text(encoding='utf-8')
+          context = json.loads(Path('.pipeline/context.json').read_text(encoding='utf-8'))
+
+          system = '''You are a careful software triage assistant.
+          Return only valid JSON with this exact shape:
+          {
+            "summary": "string",
+            "likely_root_cause": "string",
+            "files_to_inspect": ["string"],
+            "proposed_approach": "string",
+            "risks": ["string"],
+            "tests_to_run": ["string"],
+            "needs_human_decision": true,
+            "human_question": "string"
+          }
+          Do not provide code changes. Do not claim certainty you do not have.'''
+
+          prompt = f'''Issue #{issue.get("number")}: {title}\n\n{body}\n\nRepository tree:\n{tree}\n\nRelevant file contents:\n{json.dumps(context)}'''
+
+          tiers = [
+              ('Gemini', os.environ.get('GEMINI_API_KEY', '').strip(), None, os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash'), 'gemini'),
+              ('Grok', os.environ.get('FALLBACK_API_KEY', '').strip(), 'https://api.x.ai/v1', 'grok-3-mini', 'openai'),
+              ('OpenAI', os.environ.get('FALLBACK_API_KEY1', '').strip(), 'https://api.openai.com/v1', 'gpt-4o-mini', 'openai')
+          ]
+
+          def parse_json(raw):
+              try:
+                  return json.loads(raw)
+              except Exception:
+                  match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', raw, re.DOTALL) or re.search(r'\{.*\}', raw, re.DOTALL)
+                  if not match:
+                      raise
+                  return json.loads(match.group(0))
+
+          plan = None
+          errors = []
+          for name, key, url, model, kind in tiers:
+              if not key:
+                  continue
+              try:
+                  print(f'Calling {name} ({model})...')
+                  if kind == 'gemini':
+                      client = genai.Client(api_key=key)
+                      response = client.models.generate_content(
+                          model=model,
+                          contents=prompt,
+                          config=types.GenerateContentConfig(
+                              system_instruction=system,
+                              response_mime_type='application/json',
+                              temperature=0.15
+                          )
+                      )
+                      plan = parse_json(response.text)
+                  else:
+                      payload = json.dumps({
+                          'model': model,
+                          'messages': [
+                              {'role': 'system', 'content': system},
+                              {'role': 'user', 'content': prompt}
+                          ],
+                          'temperature': 0.15
+                      }).encode()
+                      request = urllib.request.Request(
+                          f'{url}/chat/completions',
+                          data=payload,
+                          headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+                          method='POST'
+                      )
+                      with urllib.request.urlopen(request) as response:
+                          result = json.loads(response.read().decode())
+                      plan = parse_json(result['choices'][0]['message']['content'])
+                  break
+              except Exception as error:
+                  errors.append(f'{name}: {error}')
+                  print(f'{name} failed: {error}')
+
+          if plan is None:
+              raise RuntimeError('All AI providers failed:\n' + '\n'.join(errors))
+
+          required = ['summary', 'likely_root_cause', 'files_to_inspect', 'proposed_approach', 'risks', 'tests_to_run', 'needs_human_decision', 'human_question']
+          missing = [key for key in required if key not in plan]
+          if missing:
+              raise RuntimeError(f'AI response missing fields: {missing}')
+
+          Path('.pipeline/plan.json').write_text(json.dumps(plan, indent=2), encoding='utf-8')
+
+          markdown = f'''## Part 1 — Triage plan for issue #{issue.get("number")}
+
+**Summary**\n{plan["summary"]}\n
+**Likely root cause**\n{plan["likely_root_cause"]}\n
+**Files to inspect**\n" + "\n".join(f"- `{path}`" for path in plan["files_to_inspect"]) + "\n
+**Proposed approach**\n{plan["proposed_approach"]}\n
+**Risks**\n" + "\n".join(f"- {risk}" for risk in plan["risks"]) + "\n
+**Tests to run**\n" + "\n".join(f"- `{test}`" for test in plan["tests_to_run"]) + "\n
+**Needs human decision:** {plan["needs_human_decision"]}\n
+**Question**\n{plan["human_question"]}\n
+_No code was changed in Part 1._'''
+          Path('.pipeline/plan.md').write_text(markdown, encoding='utf-8')
+          PY
+          python3 .pipeline/triage.py
+
+      - name: Save triage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage-issue-${{ inputs.issue_number }}
+          path: .pipeline/
+          if-no-files-found: error
+
+      - name: Post triage plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body-file .pipeline/plan.md
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label 'triaged'
+
+      - name: Stop for review
+        run: |
+          echo "Part 1 complete. No source files were changed."
+          echo "Review the triage comment, then run Part 2 only when ready."
