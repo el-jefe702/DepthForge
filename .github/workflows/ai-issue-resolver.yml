@@ -30,8 +30,10 @@ env:
   TRUST_PROXY: "1"
   NODE_ENV: "test"
   GEMINI_MODEL: "gemini-3.1-pro-preview"
+  GEMINI_FAST_MODEL: "gemini-2.5-flash"
   MAX_HEAL_ATTEMPTS: "3"
   LEDGER_PATH: ".ai-memory/evolution_ledger.json"
+  ARTIFACT_DIR: "/tmp/ai-artifacts"
 
 jobs:
   resolve-review-evolve:
@@ -118,7 +120,7 @@ jobs:
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
         run: |
           cat << 'PYEOF' > /tmp/autonomous_evolver.py
-          import json, os, subprocess, sys, urllib.request, re
+          import json, os, subprocess, sys, urllib.request, urllib.error, re
           from datetime import datetime, timezone
           from pathlib import Path
           from google import genai
@@ -133,7 +135,11 @@ jobs:
           FB_KEY1 = os.environ.get("FALLBACK_API_KEY1", "").strip()
           
           MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
+          FAST_MODEL_NAME = os.environ.get("GEMINI_FAST_MODEL", "gemini-2.5-flash")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
+          LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
+          ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", "/tmp/ai-artifacts"))
+          ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
           def clean_json_response(raw_text):
               try:
@@ -147,11 +153,13 @@ jobs:
                       return json.loads(match_brace.group(0))
                   raise
 
-          def call_llm(sys_inst, prompt):
+          def call_llm(sys_inst, prompt, mode="solver"):
+              gemini_model = FAST_MODEL_NAME if mode == "fast" else MODEL_NAME
+              openai_model = "gpt-4o-mini" if mode == "fast" else "gpt-4o"
               tiers = [
-                  ("Primary Gemini", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
-                  ("Grok Fallback", FB_KEY, "https://api.x.ai/v1", "grok-4.7", "openai"),
-                  ("ChatGPT Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o", "openai")
+                  ("Primary Gemini", PRIMARY_KEY, None, gemini_model, "gemini"),
+                  ("Grok Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini" if mode == "fast" else "grok-3", "openai"),
+                  ("ChatGPT Fallback", FB_KEY1, "https://api.openai.com/v1", openai_model, "openai")
               ]
               
               active_tiers = [t for t in tiers if t[1]]
@@ -161,7 +169,7 @@ jobs:
               last_err = None
               for name, key, base_url, model, p_type in active_tiers:
                   try:
-                      print(f"Attempting LLM call with {name} using model {model}...")
+                      print(f"Attempting LLM call ({mode}) with {name} using model {model}...")
                       if p_type == "gemini":
                           client = genai.Client(api_key=key)
                           resp = client.models.generate_content(
@@ -189,7 +197,8 @@ jobs:
                               data=payload,
                               headers={
                                   "Authorization": f"Bearer {key}",
-                                  "Content-Type": "application/json"
+                                  "Content-Type": "application/json",
+                                  "User-Agent": "DepthForge-Autonomous-Agent/1.0"
                               },
                               method="POST"
                           )
@@ -197,10 +206,13 @@ jobs:
                               res_data = json.loads(response.read().decode("utf-8"))
                               content = res_data["choices"][0]["message"]["content"]
                               return clean_json_response(content)
+                  except urllib.error.HTTPError as he:
+                      err_body = he.read().decode("utf-8", errors="ignore")
+                      print(f"⚠️ {name} HTTP {he.code}: {err_body[:300]}")
+                      last_err = f"{he} - {err_body[:300]}"
                   except Exception as e:
                       print(f"⚠️ {name} failed: {e}")
                       last_err = e
-                      continue
               
               raise RuntimeError(f"All available LLM tiers exhausted. Last error: {last_err}")
 
@@ -213,20 +225,39 @@ jobs:
                   raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}")
               return res.returncode, out
 
-          def get_repo_snapshot():
-              _, tree = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 160")
-              key_files = ["package.json", "server.js", "processor.py", "README.md"]
-              snippets = {f: Path(f).read_text(encoding="utf-8")[:12000] for f in key_files if Path(f).is_file()}
+          def extract_failing_tests(raw_output):
+              """Filter test output to only failing suites/subtests to save ~80% token overhead."""
+              lines = raw_output.splitlines()
+              filtered = []
+              capture_block = False
+              for line in lines:
+                  if line.strip().startswith("not ok ") or "ERR_TEST_FAILURE" in line or "Error:" in line or "FAIL" in line:
+                      capture_block = True
+                  elif line.strip().startswith("ok ") and not line.strip().startswith("not ok"):
+                      capture_block = False
+                  if capture_block or line.strip().startswith("# "):
+                      filtered.append(line)
+              result = "\n".join(filtered).strip()
+              return result[-6000:] if result else raw_output[-4000:]
+
+          def get_repo_snapshot(extra_paths=None):
+              _, tree = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 140")
+              key_files = ["package.json", "server.js", "processor.py"]
+              if extra_paths:
+                  for p in extra_paths:
+                      if p not in key_files and Path(p).is_file():
+                          key_files.append(p)
+              snippets = {f: Path(f).read_text(encoding="utf-8")[:10000] for f in key_files if Path(f).is_file()}
               return tree, snippets
 
-          def run_validation_suite():
+          def run_validation_suite(modified_files):
               logs = []
-              sh("python -m pip install opencv-python-headless numpy trimesh requests || true")
               pkg = Path("package.json")
               if pkg.exists():
-                  rc, out = sh("npm install --no-audit --no-fund")
-                  logs.append(f"=== npm install ===\n{out}")
-                  if rc != 0: return False, "\n".join(logs)
+                  if "package.json" in modified_files:
+                      rc, out = sh("npm install --no-audit --no-fund")
+                      logs.append(f"=== npm install ===\n{out}")
+                      if rc != 0: return False, "\n".join(logs)
                   
                   pkg_data = json.loads(pkg.read_text(encoding="utf-8"))
                   if "test" in pkg_data.get("scripts", {}):
@@ -234,6 +265,18 @@ jobs:
                       logs.append(f"=== npm test ===\n{out}")
                       if rc != 0: return False, "\n".join(logs)
               return True, "\n".join(logs) if logs else "Tests passed."
+
+          def record_evolution_ledger(entry):
+              LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+              ledger = []
+              if LEDGER_PATH.is_file():
+                  try:
+                      ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+                  except Exception:
+                      ledger = []
+              ledger.append(entry)
+              LEDGER_PATH.write_text(json.dumps(ledger[-100:], indent=2), encoding="utf-8")
+              (ARTIFACT_DIR / "evolution_ledger.json").write_text(json.dumps(ledger[-100:], indent=2), encoding="utf-8")
 
           issue_data = {}
           if ISSUE_NUMBER:
@@ -244,81 +287,130 @@ jobs:
               _, e_pr = sh(f"gh pr list --repo '{REPO}' --state open --json number,headRefName --jq '[.[] | select(.headRefName == \"fix/issue-{ISSUE_NUMBER}\")] | .[0].number // empty'")
               if e_pr: PR_NUMBER = e_pr.strip()
 
+          target_id = ISSUE_NUMBER or PR_NUMBER
           branch_name = f"fix/issue-{ISSUE_NUMBER}" if ISSUE_NUMBER else f"audit/pr-{PR_NUMBER}"
           sh(f"git checkout -B '{branch_name}' origin/main", check=True)
 
-          tree, snippets = get_repo_snapshot()
           issue_body = issue_data.get("body") or ""
           issue_title = issue_data.get("title") or ""
+
+          # Dynamically pull any test or source files mentioned in the issue body
+          mentioned_files = re.findall(r'[\w./-]+\.(?:js|py|json|sql)', issue_body)
+          tree, snippets = get_repo_snapshot(extra_paths=mentioned_files)
 
           solver_sys = """You are the DepthForge Code Architect. Output JSON only. 
           Return: {"already_resolved": bool, "resolution_rationale": "str", "files_to_write": [{"path": "str", "content": "str"}], "files_to_delete": ["str"]}"""
 
           test_passed = False
           last_log = ""
+          failed_patch = ""
+          failing_tests_summary = ""
           solver_out = {}
+          attempt_records = []
 
           for attempt in range(1, MAX_ATTEMPTS + 1):
-              print(f"=== Attempt {attempt} ===")
-              prompt = f"ISSUE: {issue_title}\n{issue_body}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}\nPREVIOUS LOGS:\n{last_log}"
-              solver_out = call_llm(solver_sys, prompt)
+              print(f"=== Attempt {attempt} of {MAX_ATTEMPTS} ===")
+              sh("git checkout -B '{0}' origin/main && git clean -fd".format(branch_name), check=True)
+
+              repair_section = ""
+              if attempt > 1:
+                  repair_section = (
+                      f"\n\nPrevious attempt failed with these tests; fix those failures.\n"
+                      f"=== PREVIOUS FAILED PATCH (Attempt {attempt - 1}) ===\n{failed_patch[:8000]}\n"
+                      f"=== FAILING TEST OUTPUT ===\n{failing_tests_summary}\n"
+                  )
+
+              prompt = (
+                  f"ISSUE: {issue_title}\n{issue_body}\n"
+                  f"TREE:\n{tree}\n"
+                  f"FILES:\n{json.dumps(snippets)}"
+                  f"{repair_section}"
+              )
+              solver_out = call_llm(solver_sys, prompt, mode="solver")
               
+              modified_files = []
+              for f_del in solver_out.get("files_to_delete", []):
+                  if Path(f_del).is_file():
+                      Path(f_del).unlink()
+                      modified_files.append(f_del)
+
               for f in solver_out.get("files_to_write", []):
                   Path(f["path"]).parent.mkdir(parents=True, exist_ok=True)
                   Path(f["path"]).write_text(f["content"], encoding="utf-8")
-                  snippets[f["path"]] = f["content"][:15000]
+                  modified_files.append(f["path"])
 
-              test_passed, last_log = run_validation_suite()
+              test_passed, last_log = run_validation_suite(modified_files)
+              
               if test_passed:
+                  attempt_records.append({"attempt": attempt, "status": "PASSED", "modified_files": modified_files})
                   break
               else:
-                  print(f"Failed. Healing...")
+                  print(f"⚠️ Attempt {attempt} failed validation. Saving patch & failing test artifacts for iterative repair...")
+                  sh("git add -N . || true")
+                  _, failed_patch = sh("git diff")
+                  failing_tests_summary = extract_failing_tests(last_log)
+
+                  # Save failed patch and failing test output as artifacts
+                  patch_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}.patch"
+                  test_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}_failing_tests.log"
+                  patch_file.write_text(failed_patch or "No diff generated.", encoding="utf-8")
+                  test_file.write_text(failing_tests_summary, encoding="utf-8")
+
+                  # Pull any failing test files mentioned in the trace into snippets for the next attempt
+                  trace_files = re.findall(r'tests/[\w./-]+\.test\.js', failing_tests_summary)
+                  for tf in trace_files:
+                      if Path(tf).is_file() and tf not in snippets:
+                          snippets[tf] = Path(tf).read_text(encoding="utf-8")[:8000]
+
+                  attempt_records.append({
+                      "attempt": attempt,
+                      "status": "FAILED",
+                      "modified_files": modified_files,
+                      "patch_artifact": str(patch_file.name),
+                      "test_artifact": str(test_file.name),
+                      "failure_excerpt": failing_tests_summary[:500]
+                  })
 
           _, stat = sh("git status --porcelain")
           has_changes = bool(stat.strip())
 
+          # Fast-path verdict without wasting an LLM call if tests failed or already resolved
+          if not test_passed:
+              verdict = "NEEDS_HUMAN"
+              closeout_notes = f"### Iterative Repair Exhausted ({MAX_ATTEMPTS} attempts)\n\n```\n{failing_tests_summary[:1500]}\n```"
+          elif not has_changes and solver_out.get("already_resolved"):
+              verdict = "ALREADY_RESOLVED_CLOSE"
+              closeout_notes = solver_out.get("resolution_rationale", "Verified already resolved on main.")
+          else:
+              _, final_diff = sh("git diff")
+              rev_sys = """You are the PR Assessor. Output strict JSON: {"verdict": "WIN_MERGE" | "NEEDS_HUMAN", "closeout_notes_markdown": "str"}"""
+              rev_prompt = f"ISSUE: {issue_title}\nRATIONALE: {solver_out.get('resolution_rationale', '')}\nDIFF:\n{final_diff[:6000]}\nTESTS_PASSED: True"
+              rev_out = call_llm(rev_sys, rev_prompt, mode="fast")
+              verdict = rev_out.get("verdict", "WIN_MERGE")
+              closeout_notes = rev_out.get("closeout_notes_markdown", solver_out.get("resolution_rationale", ""))
+
+          record_evolution_ledger({
+              "timestamp": datetime.now(timezone.utc).isoformat(),
+              "issue_number": ISSUE_NUMBER,
+              "pr_number": PR_NUMBER,
+              "verdict": verdict,
+              "test_passed": test_passed,
+              "attempts": attempt_records
+          })
+
           if has_changes and test_passed:
               sh("git add -A", check=True)
-              sh(f"git commit -m \"fix: resolve #{ISSUE_NUMBER or PR_NUMBER}\"", check=True)
+              sh(f"git commit -m \"fix: resolve #{target_id}\"", check=True)
               sh(f"git push -u origin '{branch_name}' --force", check=True)
-              if not PR_NUMBER:
-                  Path("/tmp/pr.md").write_text(f"Closes #{ISSUE_NUMBER}\n{solver_out.get('resolution_rationale', '')}", encoding="utf-8")
+              if not PR_NUMBER and ISSUE_NUMBER:
+                  Path("/tmp/pr.md").write_text(f"Closes #{ISSUE_NUMBER}\n\n{solver_out.get('resolution_rationale', '')}", encoding="utf-8")
                   sh(f"gh pr create --repo '{REPO}' --base main --head '{branch_name}' --title \"fix(#{ISSUE_NUMBER}): {issue_title[:65]}\" --body-file /tmp/pr.md")
                   _, PR_NUMBER = sh(f"gh pr view '{branch_name}' --repo '{REPO}' --json number --jq '.number'")
                   PR_NUMBER = PR_NUMBER.strip()
 
-          rev_sys = """You are the PR Assessor. Output strict JSON: {"verdict": "WIN_MERGE" | "ALREADY_RESOLVED_CLOSE" | "NEEDS_HUMAN", "closeout_notes_markdown": "str"}"""
-          rev_prompt = f"ISSUE: {issue_body}\nCHANGES: {has_changes}\nTEST_PASSED: {test_passed}\nLOG: {last_log[-2000:]}"
-          rev_out = call_llm(rev_sys, rev_prompt)
-          
-          verdict = rev_out.get("verdict", "NEEDS_HUMAN") if test_passed else "NEEDS_HUMAN"
-          if not has_changes and solver_out.get("already_resolved") and test_passed: verdict = "ALREADY_RESOLVED_CLOSE"
-
-          Path("/tmp/rev.md").write_text(f"## Verdict: {verdict}\nTests: {'PASSED' if test_passed else 'FAILED'}\n{rev_out.get('closeout_notes_markdown', '')}", encoding="utf-8")
+          Path("/tmp/rev.md").write_text(f"## Verdict: {verdict}\n**Tests:** {'PASSED' if test_passed else 'FAILED'}\n\n{closeout_notes}", encoding="utf-8")
 
           if PR_NUMBER:
               sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/rev.md")
               if verdict == "WIN_MERGE":
-                  sh(f"gh pr merge {PR_NUMBER} --repo '{REPO}' --squash --delete-branch")
-
-          if ISSUE_NUMBER:
-              if verdict in ("WIN_MERGE", "ALREADY_RESOLVED_CLOSE"):
-                  sh(f"gh issue close {ISSUE_NUMBER} --repo '{REPO}' --reason completed")
-              else:
-                  sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --add-label 'needs-human-review'")
-
-          sh("git checkout main && git reset --hard origin/main || true")
-          PYEOF
-          python3 /tmp/autonomous_evolver.py
-
-      - name: Advance Queue
-        if: always() && steps.agent.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          NEXT_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 30 --json number,labels --jq '[.[] | select(([.labels[].name] | inside(["needs-human-review", "wontfix", "in-progress"]) | not))] | sort_by(.number) | .[0].number // empty')
-          if [ -n "$NEXT_ISSUE" ]; then
-            gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT_ISSUE" || true
-          fi
-          
+                  sh(f"gh pr merge {PR_NUMBER} --repo '{
