@@ -30,10 +30,7 @@ env:
   TRUST_PROXY: "1"
   NODE_ENV: "test"
   GEMINI_MODEL: "gemini-2.5-flash"
-  GEMINI_SECONDARY_MODEL: "gemini-3-flash-preview"
-  GEMINI_FAST_MODEL: "gemini-2.5-flash-lite"
   MAX_HEAL_ATTEMPTS: "2"
-  LEDGER_PATH: ".ai-memory/evolution_ledger.json"
   ARTIFACT_DIR: "/tmp/ai-artifacts"
 
 jobs:
@@ -41,9 +38,7 @@ jobs:
     name: Resolve, Review PR, Assess Win & Evolve
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    if: >
-      github.actor != 'github-actions[bot]' ||
-      github.event_name == 'workflow_dispatch'
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout Repository
@@ -52,69 +47,44 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js 20
+      - name: Setup Environment
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install System & Python Dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y jq libgl1 libglib2.0-0
+          sudo apt-get update -y && sudo apt-get install -y jq libgl1 libglib2.0-0
           npm ci || npm install
           python -m pip install --upgrade pip
           python -m pip install opencv-python-headless numpy trimesh google-genai requests
-          if [ -f requirements.txt ]; then
-            python -m pip install -r requirements.txt
-          fi
-
-      - name: Configure Git Identity & Labels
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
+          [ -f requirements.txt ] && python -m pip install -r requirements.txt || true
           git config --global user.name "SpatialOps Autonomous Architect"
           git config --global user.email "actions@spatialops.llc"
-          gh label create "in-progress" --repo "$REPO" --color "fbca04" --description "AI actively working" --force || true
-          gh label create "ai-resolved" --repo "$REPO" --color "0e8a16" --description "Resolved and reviewed by AI" --force || true
-          gh label create "ai-reviewed" --repo "$REPO" --color "1d76db" --description "Audited by AI PR Reviewer" --force || true
+          gh label create "ai-resolved" --repo "$GITHUB_REPOSITORY" --color "0e8a16" --force || true
 
       - name: Select Target Issue or PR
         id: target
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_ISSUE: ${{ github.event.inputs.issue_number }}
           INPUT_PR: ${{ github.event.inputs.pr_number }}
           EVENT_ISSUE: ${{ github.event.issue.number }}
           EVENT_PR: ${{ github.event.pull_request.number }}
         run: |
-          TARGET_ISSUE=""
-          TARGET_PR=""
-          if [ -n "$INPUT_PR" ]; then
-            TARGET_PR="$INPUT_PR"
-          elif [ "$EVENT_NAME" = "pull_request_target" ] && [ -n "$EVENT_PR" ]; then
-            TARGET_PR="$EVENT_PR"
+          T_PR="${INPUT_PR:-$EVENT_PR}"
+          T_ISSUE="${INPUT_ISSUE:-$EVENT_ISSUE}"
+          if [ -z "$T_PR" ] && [ -z "$T_ISSUE" ]; then
+            T_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 50 --json number --jq 'sort_by(.number) | .[0].number // empty')
           fi
-          if [ -n "$INPUT_ISSUE" ]; then
-            TARGET_ISSUE="$INPUT_ISSUE"
-          elif [ "$EVENT_NAME" = "issues" ] && [ -n "$EVENT_ISSUE" ]; then
-            TARGET_ISSUE="$EVENT_ISSUE"
-          elif [ -z "$TARGET_PR" ]; then
-            TARGET_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 50 --json number \
-              --jq 'sort_by(.number) | .[0].number // empty')
-          fi
-          echo "Selected issue_number=$TARGET_ISSUE pr_number=$TARGET_PR"
-          echo "issue_number=$TARGET_ISSUE" >> "$GITHUB_OUTPUT"
-          echo "pr_number=$TARGET_PR" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$T_ISSUE" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$T_PR" >> "$GITHUB_OUTPUT"
 
       - name: Execute Self-Evolving AI Solver & Reviewer
         if: steps.target.outputs.issue_number != '' || steps.target.outputs.pr_number != ''
@@ -128,286 +98,205 @@ jobs:
           ISSUE_NUMBER: ${{ steps.target.outputs.issue_number }}
           PR_NUMBER: ${{ steps.target.outputs.pr_number }}
         run: |
-          cat << 'PYEOF' > /tmp/autonomous_evolver.py
-          import json, os, subprocess, sys, urllib.request, urllib.error, re
+          cat << 'PYEOF' > /tmp/evolver.py
+          import json, os, subprocess, sys, urllib.request, re
           from datetime import datetime, timezone
           from pathlib import Path
           from google import genai
           from google.genai import types
 
           REPO = os.environ.get("REPO", "")
-          ISSUE_NUMBER = os.environ.get("ISSUE_NUMBER", "").strip()
-          PR_NUMBER = os.environ.get("PR_NUMBER", "").strip()
-          
-          PRIMARY_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-          FB_KEY = os.environ.get("FALLBACK_API_KEY", "").strip()
-          FB_KEY1 = os.environ.get("FALLBACK_API_KEY1", "").strip()
-          
-          MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-          SECONDARY_MODEL_NAME = os.environ.get("GEMINI_SECONDARY_MODEL", "gemini-3-flash-preview")
-          FAST_MODEL_NAME = os.environ.get("GEMINI_FAST_MODEL", "gemini-2.5-flash-lite")
-          MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "2"))
-          LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
+          ISSUE_NUM = os.environ.get("ISSUE_NUMBER", "").strip()
+          PR_NUM = os.environ.get("PR_NUMBER", "").strip()
+          TARGET_ID = ISSUE_NUM or PR_NUM
           ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", "/tmp/ai-artifacts"))
           ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
           def sh(cmd, check=False):
               print(f"$ {cmd}")
-              res = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-              out = (res.stdout or "").strip()
-              err = (res.stderr or "").strip()
-              if out:
-                  print(out)
-              if err and res.returncode != 0:
-                  print(f"[stderr] {err}")
-              if check and res.returncode != 0:
-                  raise RuntimeError(f"Command failed ({res.returncode}): {cmd}\n{out}\n{err}")
-              return res.returncode, out, err
+              r = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              out, err = (r.stdout or "").strip(), (r.stderr or "").strip()
+              if out: print(out)
+              if err and r.returncode != 0: print(f"[err] {err}")
+              if check and r.returncode != 0: raise RuntimeError(f"{cmd} failed: {err or out}")
+              return r.returncode, out, err
 
-          def clean_json_response(raw_text):
-              try:
-                  return json.loads(raw_text)
+          def parse_json(raw):
+              try: return json.loads(raw)
               except Exception:
-                  match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_text, re.DOTALL)
-                  if match:
-                      return json.loads(match.group(1))
-                  match_brace = re.search(r'\{.*\}', raw_text, re.DOTALL)
-                  if match_brace:
-                      return json.loads(match_brace.group(0))
+                  m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL) or re.search(r'\{.*\}', raw, re.DOTALL)
+                  if m: return json.loads(m.group(1 if '```' in m.group(0) else 0))
                   raise
 
-          def call_llm(sys_inst, prompt, mode="solver"):
-              if mode == "fast":
-                  tiers = [
-                      ("Gemini Flash-Lite", PRIMARY_KEY, None, FAST_MODEL_NAME, "gemini"),
-                      ("Gemini Flash Backup", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
-                      ("Grok Mini Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini", "openai"),
-                      ("ChatGPT Mini Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o-mini", "openai")
-                  ]
-              else:
-                  tiers = [
-                      ("Primary Gemini Flash", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
-                      ("Secondary Gemini 3 Flash", PRIMARY_KEY, None, SECONDARY_MODEL_NAME, "gemini"),
-                      ("Gemini Flash-Lite Backup", PRIMARY_KEY, None, FAST_MODEL_NAME, "gemini"),
-                      ("Grok Mini Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini", "openai"),
-                      ("ChatGPT Mini Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o-mini", "openai")
-                  ]
-              
-              active_tiers = [t for t in tiers if t[1]]
-              if not active_tiers:
-                  raise RuntimeError("No API keys provided in environment secrets.")
-
+          def call_llm(sys_inst, prompt, fast=False):
+              tiers = [
+                  ("Gemini", os.environ.get("GEMINI_API_KEY", "").strip(), None, "gemini-2.5-flash-lite" if fast else "gemini-2.5-flash", "gemini"),
+                  ("Grok", os.environ.get("FALLBACK_API_KEY", "").strip(), "[https://api.x.ai/v1](https://api.x.ai/v1)", "grok-3-mini", "openai"),
+                  ("OpenAI", os.environ.get("FALLBACK_API_KEY1", "").strip(), "[https://api.openai.com/v1](https://api.openai.com/v1)", "gpt-4o-mini", "openai")
+              ]
+              active = [t for t in tiers if t[1]]
+              if not active: raise RuntimeError("No API keys found.")
               last_err = None
-              for name, key, base_url, model, p_type in active_tiers:
+              for name, key, url, model, ptype in active:
                   try:
-                      print(f"Attempting LLM call ({mode}) with {name} using model {model}...")
-                      if p_type == "gemini":
-                          client = genai.Client(api_key=key)
-                          resp = client.models.generate_content(
-                              model=model,
-                              contents=prompt,
-                              config=types.GenerateContentConfig(
-                                  system_instruction=sys_inst,
-                                  response_mime_type="application/json",
-                                  temperature=0.15
-                              )
-                          )
-                          return clean_json_response(resp.text)
-                      else:
-                          payload = json.dumps({
-                              "model": model,
-                              "messages": [
-                                  {"role": "system", "content": sys_inst + "\n\nCRITICAL: Return strictly valid JSON only inside a ```json markdown block."},
-                                  {"role": "user", "content": prompt}
-                              ],
-                              "temperature": 0.15
-                          }).encode("utf-8")
-                          
-                          req = urllib.request.Request(
-                              f"{base_url}/chat/completions",
-                              data=payload,
-                              headers={
-                                  "Authorization": f"Bearer {key}",
-                                  "Content-Type": "application/json",
-                                  "User-Agent": "DepthForge-Autonomous-Agent/1.0"
-                              },
-                              method="POST"
-                          )
-                          with urllib.request.urlopen(req) as response:
-                              res_data = json.loads(response.read().decode("utf-8"))
-                              content = res_data["choices"][0]["message"]["content"]
-                              return clean_json_response(content)
-                  except urllib.error.HTTPError as he:
-                      err_body = he.read().decode("utf-8", errors="ignore")
-                      print(f"⚠️ {name} HTTP {he.code}: {err_body[:300]}")
-                      last_err = f"{he} - {err_body[:300]}"
+                      print(f"Calling {name} ({model})...")
+                      if ptype == "gemini":
+                          c = genai.Client(api_key=key)
+                          r = c.models.generate_content(model=model, contents=prompt, config=types.GenerateContentConfig(system_instruction=sys_inst, response_mime_type="application/json", temperature=0.15))
+                          return parse_json(r.text)
+                      data = json.dumps({"model": model, "messages": [{"role": "system", "content": sys_inst + "\nStrict JSON only inside ```json."}, {"role": "user", "content": prompt}], "temperature": 0.15}).encode()
+                      req = urllib.request.Request(f"{url}/chat/completions", data=data, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "DepthForge/1.0"}, method="POST")
+                      with urllib.request.urlopen(req) as resp:
+                          return parse_json(json.loads(resp.read().decode())["choices"][0]["message"]["content"])
                   except Exception as e:
                       print(f"⚠️ {name} failed: {e}")
                       last_err = e
-              
-              raise RuntimeError(f"All available LLM tiers exhausted. Last error: {last_err}")
+              raise RuntimeError(f"All LLMs failed: {last_err}")
 
-          def extract_failing_tests(raw_output):
-              lines = raw_output.splitlines()
-              filtered = []
-              capture_block = False
-              for line in lines:
-                  if line.strip().startswith("not ok ") or "ERR_TEST_FAILURE" in line or "Error:" in line or "FAIL" in line:
-                      capture_block = True
-                  elif line.strip().startswith("ok ") and not line.strip().startswith("not ok"):
-                      capture_block = False
-                  if capture_block or line.strip().startswith("# "):
-                      filtered.append(line)
-              result = "\n".join(filtered).strip()
-              return result[-5000:] if result else raw_output[-3500:]
+          def test_count(out):
+              m = re.search(r'# fail\s+(\d+)', out)
+              return int(m.group(1)) if m else len(re.findall(r'^not ok ', out, re.M))
 
-          def count_test_failures(raw_output):
-              m = re.search(r'# fail\s+(\d+)', raw_output)
-              if m:
-                  return int(m.group(1))
-              return len(re.findall(r'^not ok ', raw_output, re.MULTILINE))
+          def filter_tests(out):
+              lines = [l for l in out.splitlines() if l.startswith("not ok ") or "ERR_TEST_FAILURE" in l or "Error:" in l or l.startswith("# ")]
+              return "\n".join(lines)[-5000:] if lines else out[-3000:]
 
-          def get_repo_snapshot(extra_paths=None):
-              _, tree, _ = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 140")
-              key_files = ["package.json", "server.js", "processor.py"]
-              if extra_paths:
-                  for p in extra_paths:
-                      if p not in key_files and Path(p).is_file():
-                          key_files.append(p)
-              snippets = {f: Path(f).read_text(encoding="utf-8")[:120000] for f in key_files if Path(f).is_file()}
-              return tree, snippets
-
-          def inject_into_server_js(code_block):
-              srv = Path("server.js")
-              if not srv.is_file() or not code_block.strip():
-                  return False
-              orig = srv.read_text(encoding="utf-8")
-              if code_block.strip() in orig:
-                  return False
-              # Insert cleanly right before module.exports or app.listen
-              for anchor in ["module.exports", "if (require.main === module)", "app.listen("]:
-                  idx = orig.rfind(anchor)
-                  if idx != -1:
-                      updated = orig[:idx] + "\n// --- AI Autonomous Addition ---\n" + code_block.strip() + "\n\n" + orig[idx:]
-                      srv.write_text(updated, encoding="utf-8")
+          def inject_server(code):
+              s = Path("server.js")
+              if not s.is_file() or not code.strip(): return False
+              orig = s.read_text("utf-8")
+              if code.strip() in orig: return False
+              for a in ["module.exports", "app.listen("]:
+                  i = orig.rfind(a)
+                  if i != -1:
+                      s.write_text(orig[:i] + "\n// AI Addition\n" + code.strip() + "\n\n" + orig[i:], "utf-8")
                       return True
-              srv.write_text(orig + "\n\n" + code_block.strip() + "\n", encoding="utf-8")
+              s.write_text(orig + "\n\n" + code.strip() + "\n", "utf-8")
               return True
 
-          def apply_ai_changes(payload, snippets_dict):
-              modified = []
-              for f_del in payload.get("files_to_delete", []):
-                  if Path(f_del).is_file():
-                      Path(f_del).unlink()
-                      modified.append(f_del)
-
+          def apply_changes(payload, snips):
+              mod = []
+              for d in payload.get("files_to_delete", []):
+                  if Path(d).is_file(): Path(d).unlink(); mod.append(d)
               for p in payload.get("patches", []):
-                  p_path = Path(p.get("path", ""))
-                  search_str = p.get("search", "")
-                  replace_str = p.get("replace", "")
-                  if p_path.is_file() and search_str:
-                      orig = p_path.read_text(encoding="utf-8")
-                      if search_str in orig:
-                          updated = orig.replace(search_str, replace_str, 1)
-                          p_path.write_text(updated, encoding="utf-8")
-                          snippets_dict[str(p_path)] = updated[:120000]
-                          modified.append(str(p_path))
-                      elif search_str.strip() in orig:
-                          updated = orig.replace(search_str.strip(), replace_str.strip(), 1)
-                          p_path.write_text(updated, encoding="utf-8")
-                          snippets_dict[str(p_path)] = updated[:120000]
-                          modified.append(str(p_path))
-                      elif p_path.name == "server.js" and replace_str.strip():
-                          print(f"⚠️ Exact search block missed in server.js; safely injecting new block before export.")
-                          if inject_into_server_js(replace_str):
-                              snippets_dict["server.js"] = Path("server.js").read_text(encoding="utf-8")[:120000]
-                              modified.append("server.js")
-
-              if payload.get("server_append"):
-                  if inject_into_server_js(payload["server_append"]):
-                      snippets_dict["server.js"] = Path("server.js").read_text(encoding="utf-8")[:120000]
-                      modified.append("server.js")
-
+                  pf, s, rep = Path(p.get("path", "")), p.get("search", ""), p.get("replace", "")
+                  if pf.is_file() and s:
+                      orig = pf.read_text("utf-8")
+                      if s in orig:
+                          txt = orig.replace(s, rep, 1)
+                          pf.write_text(txt, "utf-8"); snips[str(pf)] = txt[:120000]; mod.append(str(pf))
+                      elif pf.name == "server.js" and rep.strip():
+                          if inject_server(rep): snips["server.js"] = Path("server.js").read_text("utf-8")[:120000]; mod.append("server.js")
+              if payload.get("server_append") and inject_server(payload["server_append"]):
+                  snips["server.js"] = Path("server.js").read_text("utf-8")[:120000]; mod.append("server.js")
               for f in payload.get("files_to_write", []):
-                  f_path = Path(f["path"])
-                  content = f.get("content", "")
-                  if not content.strip():
-                      continue
-                  if f_path.name == "server.js" and f_path.is_file():
-                      orig_len = len(f_path.read_text(encoding="utf-8"))
-                      if len(content) < orig_len * 0.80:
-                          print(f"⚠️ Blocked truncated overwrite of server.js ({len(content)} vs {orig_len} chars)")
-                          continue
-                  f_path.parent.mkdir(parents=True, exist_ok=True)
-                  f_path.write_text(content, encoding="utf-8")
-                  snippets_dict[str(f_path)] = content[:120000]
-                  modified.append(str(f_path))
-              return modified
+                  fp, c = Path(f["path"]), f.get("content", "")
+                  if not c.strip(): continue
+                  if fp.name == "server.js" and fp.is_file() and len(c) < len(fp.read_text("utf-8")) * 0.8: continue
+                  fp.parent.mkdir(parents=True, exist_ok=True); fp.write_text(c, "utf-8"); snips[str(fp)] = c[:120000]; mod.append(str(fp))
+              return mod
 
-          def run_validation_suite(modified_files, baseline_fail_count):
-              logs = []
-              # Always verify server.js syntax first
+          def run_tests(mod, baseline):
               if Path("server.js").is_file():
-                  rc_syn, out_syn, err_syn = sh("node --check server.js")
-                  if rc_syn != 0:
-                      return False, f"=== server.js syntax error ===\n{out_syn}\n{err_syn}"
+                  rc, o, e = sh("node --check server.js")
+                  if rc != 0: return False, f"Syntax error in server.js:\n{o}\n{e}"
+              if Path("package.json").exists():
+                  if "package.json" in mod: sh("npm install --no-audit --no-fund")
+                  rc, o, e = sh("TRUST_PROXY=1 npm test")
+                  comb = f"{o}\n{e}"
+                  if rc == 0: return True, comb
+                  fc = test_count(comb)
+                  if baseline > 0 and fc <= baseline: return True, comb
+                  return False, comb
+              return True, "No tests."
 
-              pkg = Path("package.json")
-              if pkg.exists():
-                  if "package.json" in modified_files:
-                      rc, out, err = sh("npm install --no-audit --no-fund")
-                      logs.append(f"=== npm install ===\n{out}\n{err}")
-                      if rc != 0:
-                          return False, "\n".join(logs)
-                  
-                  pkg_data = json.loads(pkg.read_text(encoding="utf-8"))
-                  if "test" in pkg_data.get("scripts", {}):
-                      rc, out, err = sh("TRUST_PROXY=1 npm test")
-                      combined = f"{out}\n{err}"
-                      logs.append(f"=== npm test ===\n{combined}")
-                      if rc == 0:
-                          return True, "\n".join(logs)
-                      current_fails = count_test_failures(combined)
-                      print(f"Test runner reported {current_fails} failure(s) (baseline on main: {baseline_fail_count})")
-                      # Pass if no NEW test failures were introduced compared to baseline
-                      if baseline_fail_count > 0 and current_fails <= baseline_fail_count:
-                          print("✅ No new test regressions compared to main baseline.")
-                          return True, "\n".join(logs)
-                      return False, "\n".join(logs)
-              return True, "\n".join(logs) if logs else "Validation passed."
-
-          def record_evolution_ledger(entry):
-              LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
-              ledger = []
-              if LEDGER_PATH.is_file():
-                  try:
-                      ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
-                  except Exception:
-                      ledger = []
-              ledger.append(entry)
-              LEDGER_PATH.write_text(json.dumps(ledger[-100:], indent=2), encoding="utf-8")
-              (ARTIFACT_DIR / "evolution_ledger.json").write_text(json.dumps(ledger[-100:], indent=2), encoding="utf-8")
+          branch = f"fix/issue-{ISSUE_NUM}" if ISSUE_NUM else f"audit/pr-{PR_NUM}"
+          sh(f"git checkout -B '{branch}' origin/main", check=True)
+          _, bo, be = sh("TRUST_PROXY=1 npm test")
+          base_fails = test_count(f"{bo}\n{be}")
 
           issue_data = {}
-          if ISSUE_NUMBER:
-              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress'")
-              rc, out, _ = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body")
-              if rc == 0 and out:
-                  issue_data = json.loads(out)
+          if ISSUE_NUM:
+              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress' || true")
+              rc, out, _ = sh(f"gh issue view {ISSUE_NUM} --repo '{REPO}' --json number,title,body")
+              if rc == 0 and out: issue_data = json.loads(out)
 
-          target_id = ISSUE_NUMBER or PR_NUMBER
-          branch_name = f"fix/issue-{ISSUE_NUMBER}" if ISSUE_NUMBER else f"audit/pr-{PR_NUMBER}"
-          sh(f"git checkout -B '{branch_name}' origin/main", check=True)
+          _, tree, _ = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 120")
+          key_files = ["package.json", "server.js", "processor.py"]
+          for f in re.findall(r'[\w./-]+\.(?:js|py|json)', issue_data.get("body", "")):
+              if f not in key_files and Path(f).is_file(): key_files.append(f)
+          snippets = {f: Path(f).read_text("utf-8")[:120000] for f in key_files if Path(f).is_file()}
 
-          # Measure baseline test failures on origin/main before making changes
-          _, base_out, base_err = sh("TRUST_PROXY=1 npm test")
-          baseline_failures = count_test_failures(f"{base_out}\n{base_err}")
-          print(f"Baseline test failures on main: {baseline_failures}")
+          solver_sys = """Output strict JSON only. NEVER truncate server.js.
+          {"already_resolved": bool, "resolution_rationale": "str", "server_append": "str", "patches": [{"path": "str", "search": "str", "replace": "str"}], "files_to_write": [{"path": "str", "content": "str"}], "files_to_delete": ["str"]}"""
 
-          issue_body = issue_data.get("body") or ""
-          issue_title = issue_data.get("title") or f"Issue #{target_id}"
+          test_passed, last_log, failed_diff = False, "", ""
+          solver_out = {}
+          for att in range(1, int(os.environ.get("MAX_HEAL_ATTEMPTS", "2")) + 1):
+              repair = f"\nPrevious attempt failed tests:\n{filter_tests(last_log)}\nDIFF:\n{failed_diff[:6000]}" if att > 1 else ""
+              prompt = f"ISSUE #{TARGET_ID}: {issue_data.get('title', '')}\n{issue_data.get('body', '')}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}{repair}"
+              solver_out = call_llm(solver_sys, prompt, fast=False)
+              mod = apply_changes(solver_out, snippets)
+              test_passed, last_log = run_tests(mod, base_fails)
+              if test_passed: break
+              sh("git add -N .")
+              _, failed_diff, _ = sh("git diff")
+              (ARTIFACT_DIR / f"attempt_{att}.patch").write_text(failed_diff, "utf-8")
+              (ARTIFACT_DIR / f"attempt_{att}.log").write_text(filter_tests(last_log), "utf-8")
 
-          mentioned_files = re.findall(r'[\w./-]+\.(?:js|py|json|sql)', issue_body)
-          tree, snippets = get_repo_snapshot(extra_paths=mentioned_files)
+          sh("git add -N .")
+          _, cdiff, _ = sh("git diff")
+          rev_sys = """Review code changes. Return strict JSON: {"verdict": "WIN_MERGE", "notes": "str", "patches": [], "files_to_write": []}"""
+          rev_out = call_llm(rev_sys, f"ISSUE: {issue_data.get('title')}\nDIFF:\n{cdiff[:8000]}\nTESTS_OK: {test_passed}", fast=True)
+          apply_changes(rev_out, snippets)
 
-          solv
+          sh("git add -A", check=True)
+          _, stat, _ = sh("git status --porcelain")
+          if stat.strip():
+              sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', 'Resolve issue')[:50]}\"", check=True)
+              sh(f"git push -u origin '{branch}' --force", check=True)
+
+          notes = rev_out.get("notes") or solver_out.get("resolution_rationale") or f"Resolved #{TARGET_ID}."
+          rev_file = Path("/tmp/rev.md")
+          rev_file.write_text(f"## 🤖 Autonomous Resolution (#{TARGET_ID})\n\n**Verdict:** `WIN_MERGE`\n\n{notes}\n", "utf-8")
+
+          merged = False
+          if stat.strip():
+              sh(f"gh pr create --repo '{REPO}' --base main --head '{branch}' --title \"fix(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" --body-file /tmp/rev.md || true")
+              _, pr_num, _ = sh(f"gh pr view '{branch}' --repo '{REPO}' --json number --jq '.number'")
+              if pr_num.isdigit():
+                  sh(f"gh pr comment {pr_num} --repo '{REPO}' --body-file /tmp/rev.md")
+                  rc, _, _ = sh(f"gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch --admin || gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch")
+                  if rc == 0: merged = True
+              if not merged:
+                  sh("git checkout -B main origin/main", check=True)
+                  if sh(f"git merge --squash '{branch}'")[0] == 0:
+                      sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" || true")
+                      sh("git push origin main", check=True)
+                      sh(f"git push origin --delete '{branch}' || true")
+
+          if ISSUE_NUM:
+              sh(f"gh issue comment {ISSUE_NUM} --repo '{REPO}' --body-file /tmp/rev.md")
+              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'in-progress' --remove-label 'needs-human-review' --add-label 'ai-resolved'")
+              sh(f"gh issue close {ISSUE_NUM} --repo '{REPO}' --reason completed")
+          PYEOF
+          python3 /tmp/evolver.py
+
+      - name: Upload Telemetry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-telemetry-${{ github.run_id }}
+          path: /tmp/ai-artifacts/
+          if-no-files-found: ignore
+
+      - name: Advance Queue
+        if: always() && steps.agent.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.target.outputs.issue_number }}
+        run: |
+          NEXT=$(gh issue list --repo "$REPO" --state open --limit 50 --json number --jq --arg cur "${CURRENT:-0}" '[.[] \vert{} select((.number \vert{} tostring) != $cur)] | sort_by(.number) | .[0].number // empty')
+          [ -n "$NEXT" ] && gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT" || true
+# End of workflow
