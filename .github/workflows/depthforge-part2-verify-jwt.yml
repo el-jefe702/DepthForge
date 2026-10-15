@@ -1,0 +1,70 @@
+name: "DepthForge Pipeline - Part 2: Verify JWT"
+"on":
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: depthforge-verify-jwt
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      TRUST_PROXY: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Record base checkpoint
+        run: |
+          mkdir -p "$RUNNER_TEMP/jwt-verification"
+          git rev-parse HEAD > "$RUNNER_TEMP/jwt-verification/base-sha.txt"
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json')); console.log(JSON.stringify({scripts:p.scripts,jwt:p.dependencies?.jsonwebtoken},null,2))" > "$RUNNER_TEMP/jwt-verification/package-audit.json"
+      - name: Install without lifecycle patch hooks
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild sqlite3
+      - name: Create ephemeral test secret
+        run: |
+          secret=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+          echo "::add-mask::$secret"
+          echo "JWT_SECRET=$secret" >> "$GITHUB_ENV"
+      - name: Existing JWT tests without pretest
+        id: auth
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          timeout 180s node --test tests/auth.test.js 2>&1 | tee "$RUNNER_TEMP/jwt-verification/auth.log"
+      - name: Full Node suite without pretest
+        id: suite
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          timeout 420s node --test --test-concurrency=1 tests/*.test.js 2>&1 | tee "$RUNNER_TEMP/jwt-verification/suite.log"
+      - name: Save verification status
+        if: always()
+        env:
+          AUTH_RESULT: ${{ steps.auth.outcome }}
+          SUITE_RESULT: ${{ steps.suite.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/jwt-verification"
+          printf 'JWT tests: %s\nFull Node suite: %s\nNo implementation or next stage started.\n' "$AUTH_RESULT" "$SUITE_RESULT" | tee "$RUNNER_TEMP/jwt-verification/status.txt" >> "$GITHUB_STEP_SUMMARY"
+          git diff --stat >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jwt-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/jwt-verification
+          retention-days: 30
+      - name: Require both test gates
+        if: always()
+        env:
+          AUTH_RESULT: ${{ steps.auth.outcome }}
+          SUITE_RESULT: ${{ steps.suite.outcome }}
+        run: test "$AUTH_RESULT" = success && test "$SUITE_RESULT" = success
