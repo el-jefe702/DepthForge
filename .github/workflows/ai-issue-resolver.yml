@@ -298,6 +298,6 @@ jobs:
           REPO: ${{ github.repository }}
           CURRENT: ${{ steps.target.outputs.issue_number }}
         run: |
-          NEXT=$(gh issue list --repo "$REPO" --state open --limit 50 --json number --jq --arg cur "${CURRENT:-0}" '[.[] \vert{} select((.number \vert{} tostring) != $cur)] | sort_by(.number) | .[0].number // empty')
+          NEXT=$(gh issue list --repo "$REPO" --state open --limit 50 --json number | jq --arg cur "${CURRENT:-0}" '[.[] | select((.number | tostring) != $cur)] | sort_by(.number) | .[0].number // empty')
           [ -n "$NEXT" ] && gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT" || true
 # End of workflow
