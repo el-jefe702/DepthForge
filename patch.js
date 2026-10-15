@@ -60,6 +60,35 @@ try {
         modified = true;
     }
 
+    if (!code.includes('export { buildImprovePrompt')) {
+        const exportCandidates = [
+            'buildImprovePrompt',
+            'buildFinalPrompt',
+            'sanitizeDepthIntensity',
+            'sanitizeStylePreset',
+            'getPackageVersion',
+            'isPythonAvailable',
+            'resolvePythonExecutable',
+            'clearPythonCache',
+            'ai',
+            'safeJsonParse',
+            'generationJobQueue',
+            'QUEUE_NAME',
+            'resetRateLimiters',
+            'resetGenerationLimiter'
+        ];
+
+        const availableExports = exportCandidates.filter(function (name) {
+            const declarationPattern = new RegExp('(?:const|function|let|var)\\s+' + name + '\\b');
+            return declarationPattern.test(code);
+        });
+
+        if (availableExports.length) {
+            code += '\nexport { ' + availableExports.join(', ') + ' };\n';
+            modified = true;
+        }
+    }
+
     if (!code.includes('queuePosition')) {
         code += '\n// SSE stream exposes queuePosition and queued status.\n';
         modified = true;
