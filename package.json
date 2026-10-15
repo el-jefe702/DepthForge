@@ -1,1 +1,29 @@
-REAL_PACKAGE_JSON_WITH_FAILURE_SUMMARY
+{
+  "name": "depthforge",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "prestart": "node patch.js && node patch_issue32.js && node patch_issue33.js && node patch_issue39.js",
+    "predev": "node patch.js && node patch_issue32.js && node patch_issue33.js && node patch_issue39.js",
+    "pretest": "node patch.js && node patch_issue32.js && node patch_issue33.js && node patch_issue39.js",
+    "start": "node db/init.js && node server.js",
+    "dev": "node db/init.js && node --watch server.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js > test-output.log 2>&1; status=$?; cat test-output.log; grep -E '^not ok' test-output.log || true; exit $status",
+    "worker": "node worker.js",
+    "sync:android": "node sync_android.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.8.0",
+    "bullmq": "^5.41.0",
+    "ioredis": "^5.4.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "p-queue": "^9.3.3",
+    "sqlite3": "^5.1.7",
+    "stripe": "^14.20.0",
+    "uuid": "^14.0.0"
+  }
+}
