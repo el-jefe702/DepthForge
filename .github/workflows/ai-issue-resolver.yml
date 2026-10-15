@@ -29,7 +29,7 @@ permissions:
 env:
   TRUST_PROXY: "1"
   NODE_ENV: "test"
-  GEMINI_MODEL: "gemini-2.5-flash"
+  GEMINI_MODEL: "gemini-3.8-flash"
   MAX_HEAL_ATTEMPTS: "2"
   ARTIFACT_DIR: "/tmp/ai-artifacts"
 
@@ -129,8 +129,9 @@ jobs:
                   raise
 
           def call_llm(sys_inst, prompt, fast=False):
+              gem_model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
               tiers = [
-                  ("Gemini", os.environ.get("GEMINI_API_KEY", "").strip(), None, "gemini-2.5-flash-lite" if fast else "gemini-2.5-flash", "gemini"),
+                  ("Gemini", os.environ.get("GEMINI_API_KEY", "").strip(), None, gem_model, "gemini"),
                   ("Grok", os.environ.get("FALLBACK_API_KEY", "").strip(), "[https://api.x.ai/v1](https://api.x.ai/v1)", "grok-3-mini", "openai"),
                   ("OpenAI", os.environ.get("FALLBACK_API_KEY1", "").strip(), "[https://api.openai.com/v1](https://api.openai.com/v1)", "gpt-4o-mini", "openai")
               ]
