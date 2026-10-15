@@ -1,0 +1,278 @@
+name: DepthForge Issue Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Optional issue number; leave blank to process the next queued issue'
+        required: false
+        type: string
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: depthforge-issue-pipeline
+  cancel-in-progress: false
+
+env:
+  OPENAI_MODEL: gpt-4o
+  MAX_ATTEMPTS: '3'
+  GH_TOKEN: ${{ secrets.GH_PAT }}
+
+jobs:
+  resolve:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Verify credentials
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          OPENAI_API_KEY: ${{ secrets.FALLBACK_API_KEY1 }}
+        run: |
+          if [ -z "$GH_PAT" ]; then
+            echo "::error::Missing GH_PAT secret."
+            exit 1
+          fi
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Missing FALLBACK_API_KEY1 secret."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Select next issue
+        id: select
+        env:
+          INPUT_ISSUE: ${{ inputs.issue_number }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_ISSUE" ]; then
+            issue="$INPUT_ISSUE"
+          elif [ -n "$EVENT_ISSUE" ]; then
+            issue="$EVENT_ISSUE"
+          else
+            issue=$(gh issue list \
+              --state open \
+              --label 'ai-fix' \
+              --limit 100 \
+              --json number,labels \
+              --jq '[.[] | select((([.labels[].name] | contains("in-progress")) or ([.labels[].name] | contains("needs-human-review")) or ([.labels[].name] | contains("wontfix"))) | not)] | sort_by(.number) | .[0].number // empty')
+          fi
+
+          if [ -z "$issue" ]; then
+            echo "No eligible issue."
+            exit 0
+          fi
+
+          gh issue edit "$issue" --add-label 'in-progress'
+          echo "issue_number=$issue" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve issue
+        if: steps.select.outputs.issue_number != ''
+        id: resolve
+        env:
+          OPENAI_API_KEY: ${{ secrets.FALLBACK_API_KEY1 }}
+          ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p .ai
+          gh issue view "$ISSUE_NUMBER" --json title,body > issue.json
+          jq -r .title issue.json > issue-title.txt
+          jq -r .body issue.json > issue-body.md
+
+          cat > resolve.py <<'PY'
+          import json, os, re, subprocess, urllib.request
+          from pathlib import Path
+
+          issue_number = os.environ['ISSUE_NUMBER']
+          model = os.environ['OPENAI_MODEL']
+          api_key = os.environ['OPENAI_API_KEY']
+          max_attempts = int(os.environ.get('MAX_ATTEMPTS', '3'))
+
+          def run(command, check=False):
+              result = subprocess.run(command, shell=True, text=True, capture_output=True)
+              output = (result.stdout or '') + (result.stderr or '')
+              print(output)
+              if check and result.returncode != 0:
+                  raise RuntimeError(f'Command failed: {command}\n{output}')
+              return result.returncode, output
+
+          def failures(log):
+              lines, capture = [], False
+              for line in log.splitlines():
+                  if line.startswith('not ok ') or 'ERR_TEST_FAILURE' in line or 'AssertionError' in line:
+                      capture = True
+                  if capture or line.startswith('# '):
+                      lines.append(line)
+              text = '\n'.join(lines)
+              return text[-8000:] if text else log[-4000:]
+
+          title = Path('issue-title.txt').read_text(encoding='utf-8').strip()
+          body = Path('issue-body.md').read_text(encoding='utf-8')
+          mentioned = re.findall(r'[\w./-]+\.(?:js|mjs|py|json|sql)', body)
+          files = ['package.json', 'server.js', 'middleware/auth.js']
+          files += [path for path in mentioned if Path(path).is_file() and path not in files]
+
+          def context(patch='', test_log=''):
+              tree = run('git ls-files | grep -vE "^(node_modules|dist|build|\\.git)/" | head -n 180')[1]
+              contents = {}
+              for path in files:
+                  if Path(path).is_file():
+                      contents[path] = Path(path).read_text(encoding='utf-8')[:14000]
+              previous = ''
+              if patch or test_log:
+                  previous = f'\n## Previous failed diff\n{patch[:8000]}\n## Previous failing tests\n{test_log}'
+              return f'ISSUE #{issue_number}: {title}\n{body}\n\n## Repository files\n{tree}\n\n## File contents\n{json.dumps(contents)}{previous}'
+
+          system = ('Return only a JSON object: {"already_resolved":bool,"resolution_rationale":"string",'
+                    '"files_to_write":[{"path":"string","content":"string"}],"files_to_delete":["string"]}. '
+                    'Make the smallest safe complete-file changes. Never weaken or delete tests.')
+
+          patch, test_log, passed, plan = '', '', False, {}
+
+          for attempt in range(1, max_attempts + 1):
+              print(f'=== Attempt {attempt} of {max_attempts} ===')
+              run('git checkout -- . || true')
+              run('git clean -fd --exclude=node_modules || true')
+
+              request = json.dumps({
+                  'model': model,
+                  'response_format': {'type': 'json_object'},
+                  'max_completion_tokens': 16000,
+                  'messages': [
+                      {'role': 'system', 'content': system},
+                      {'role': 'user', 'content': context(patch, test_log)}
+                  ],
+                  'temperature': 0.1
+              })
+              Path('request.json').write_text(request, encoding='utf-8')
+
+              req = urllib.request.Request(
+                  'https://api.openai.com/v1/chat/completions',
+                  data=Path('request.json').read_bytes(),
+                  headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                  method='POST'
+              )
+              with urllib.request.urlopen(req) as response:
+                  payload = json.loads(response.read().decode('utf-8'))
+
+              print('finish_reason:', payload.get('choices', [{}])[0].get('finish_reason'))
+              print('usage:', payload.get('usage'))
+              raw = payload['choices'][0]['message']['content'].strip()
+              plan = json.loads(raw)
+
+              for path in plan.get('files_to_delete') or []:
+                  path = Path(path)
+                  if path.is_file():
+                      path.unlink()
+
+              for item in plan.get('files_to_write') or []:
+                  path = Path(item['path'])
+                  path.parent.mkdir(parents=True, exist_ok=True)
+                  path.write_text(item['content'], encoding='utf-8')
+
+              if Path('sync_android.js').is_file():
+                  run('node sync_android.js || true')
+
+              for source, targets in {
+                  'static/index.html': ['android_app/app/src/main/assets/index.html'],
+                  'static/style.css': [
+                      'android_app/app/src/main/assets/style.css',
+                      'android_app/app/src/main/assets/static/style.css'
+                  ]
+              }.items():
+                  source_path = Path(source)
+                  if source_path.is_file():
+                      for target in targets:
+                          Path(target).parent.mkdir(parents=True, exist_ok=True)
+                          Path(target).write_text(source_path.read_text(encoding='utf-8'), encoding='utf-8')
+
+              code, log = run('npm test')
+              if code == 0:
+                  passed = True
+                  break
+
+              test_log = failures(log)
+              run('git add -N . || true')
+              _, patch = run('git diff')
+              Path(f'.ai/attempt-{attempt}.patch').write_text(patch or 'No diff generated.', encoding='utf-8')
+              Path(f'.ai/attempt-{attempt}-tests.log').write_text(test_log, encoding='utf-8')
+
+          Path('resolution.json').write_text(json.dumps({
+              'issue': issue_number,
+              'passed': passed,
+              'rationale': plan.get('resolution_rationale', ''),
+              'already_resolved': plan.get('already_resolved', False)
+          }), encoding='utf-8')
+
+          if not passed:
+              Path('failing-tests.log').write_text(test_log or 'No test output captured.', encoding='utf-8')
+              raise RuntimeError('All repair attempts failed.')
+          PY
+
+          python3 resolve.py
+
+      - name: Create pull request
+        if: steps.select.outputs.issue_number != ''
+        env:
+          ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
+        run: |
+          set -euo pipefail
+          BRANCH="fix/issue-$ISSUE_NUMBER"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "::error::AI returned no changes for issue #$ISSUE_NUMBER."
+            exit 1
+          fi
+
+          git commit -m "fix: resolve issue #$ISSUE_NUMBER"
+          git push -u origin "$BRANCH" --force
+
+          jq -r .rationale resolution.json > rationale.md
+          { echo "Closes #$ISSUE_NUMBER."; echo; cat rationale.md; } > pr.md
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "fix(#$ISSUE_NUMBER): $(cat issue-title.txt)" \
+            --body-file pr.md
+
+          gh issue edit "$ISSUE_NUMBER" --remove-label 'in-progress'
+
+      - name: Mark for human review on failure
+        if: failure() && steps.select.outputs.issue_number != ''
+        env:
+          ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
+        run: |
+          {
+            echo '### Automated repair failed'
+            echo
+            echo '```text'
+            tail -n 200 failing-tests.log 2>/dev/null || echo 'No failing-test output was captured.'
+            echo '```'
+          } > failure.md
+          gh issue comment "$ISSUE_NUMBER" --body-file failure.md
+          gh issue edit "$ISSUE_NUMBER" --remove-label 'in-progress' --add-label 'needs-human-review'
