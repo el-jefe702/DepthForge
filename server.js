@@ -12,6 +12,9 @@ import rateLimit from 'express-rate-limit';
 import PQueue from 'p-queue';
 import Stripe from 'stripe';
 import { addCredits, deductCredit } from './credit-backend.js';
+import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
+import sqlite3 from 'sqlite3';
 
 dotenv.config();
 
@@ -393,6 +396,39 @@ const upload = multer({ dest: uploadsDir });
 
 const generationQueue = new PQueue({ concurrency: 2 });
 
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const redisConnection = new IORedis(REDIS_URL, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    retryStrategy(times) {
+        return Math.min(times * 200, 3000);
+    }
+});
+redisConnection.on('error', (err) => {
+    console.warn(`[Redis Queue Warning]: ${err.message}`);
+});
+
+const QUEUE_NAME = 'image-generation';
+const generationJobQueue = new Queue(QUEUE_NAME, {
+    connection: redisConnection
+});
+
+const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || path.join(__dirname, 'subscriptions.db');
+const db = new sqlite3.Database(dbPath);
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS jobs (
+        id TEXT PRIMARY KEY,
+        status TEXT NOT NULL DEFAULT 'queued',
+        prompt TEXT,
+        style_preset TEXT,
+        result_url TEXT,
+        error TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -404,45 +440,76 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Prompt is required' });
         }
 
-        const improvedPrompt = prompt.trim();
-        const finalPrompt = buildFinalPrompt(improvedPrompt, depthIntensity);
+        const jobId = uuidv4();
+        const cleanPrompt = prompt.trim();
+        const validPreset = sanitizeStylePreset(stylePreset);
+        const intensity = sanitizeDepthIntensity(depthIntensity);
+        const imagesCount = Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4);
 
-        const result = await generationQueue.add(() =>
-            generateImagesWithFallback({
-                prompt: finalPrompt,
-                config: {
-                    numberOfImages: Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4),
-                    aspectRatio
+        await new Promise((resolve) => {
+            db.run(
+                `INSERT INTO jobs (id, status, prompt, style_preset, created_at, updated_at) VALUES (?, 'queued', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+                [jobId, cleanPrompt, validPreset],
+                (err) => {
+                    if (err) {
+                        console.error('Failed to insert job into SQLite:', err.message);
+                    }
+                    resolve();
                 }
-            })
-        );
+            );
+        });
 
-        const generatedImages = [];
-        for (const item of result.generatedImages) {
-            const id = uuidv4();
-            const rawPath = path.join(uploadsDir, `${id}_raw.png`);
-            const smoothedPath = path.join(generatedDir, `${id}_depth.png`);
+        const jobData = {
+            jobId,
+            id: jobId,
+            prompt: cleanPrompt,
+            stylePreset: validPreset,
+            depthIntensity: intensity,
+            numberOfImages: imagesCount,
+            aspectRatio,
+            userId: req.user?.id || req.userId || (typeof req.user === 'string' ? req.user : null)
+        };
 
-            const imgBuffer = Buffer.from(item.image.imageBytes, 'base64');
-            fs.writeFileSync(rawPath, imgBuffer);
-
-            const proc = spawnSync('python', ['processor.py', 'smooth', rawPath, smoothedPath]);
-            if (proc.status !== 0) {
-                console.error('Processor error:', proc.stderr?.toString());
-                fs.writeFileSync(smoothedPath, imgBuffer);
-            }
-
-            generatedImages.push({
-                id,
-                url: `/static/generated/${id}_depth.png`
-            });
+        try {
+            await generationJobQueue.add('generate', jobData, { jobId });
+        } catch (queueErr) {
+            console.error('[BullMQ] Failed to add job to Redis queue:', queueErr.message);
         }
 
-        res.json({ generatedImages, imageUrl: generatedImages[0]?.url });
+        return res.json({
+            job_id: jobId,
+            jobId,
+            status: 'queued'
+        });
     } catch (err) {
         console.error('Generation error:', err);
-        res.status(500).json({ error: err.message || 'Image generation failed' });
+        return res.status(500).json({ error: err.message || 'Image generation failed' });
     }
+});
+
+app.get(['/api/jobs/:id', '/api/job/:id'], (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ error: 'Job ID is required' });
+    }
+    db.get('SELECT * FROM jobs WHERE id = ?', [id], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+        return res.json({
+            job_id: row.id,
+            jobId: row.id,
+            status: row.status,
+            imageUrl: row.result_url,
+            url: row.result_url,
+            error: row.error,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        });
+    });
 });
 
 app.post('/api/photo-to-depth', photoToDepthLimiter, upload.single('image'), async (req, res) => {
@@ -497,7 +564,11 @@ app.post('/api/invert', async (req, res) => {
     }
 });
 
-if (process.env.NODE_ENV !== 'test') {
+const isMain = process.argv[1] && (
+    process.argv[1].endsWith('server.js') ||
+    fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+);
+if (process.env.NODE_ENV !== 'test' && isMain) {
     startCleanupScheduler();
     app.listen(port, () => {
         console.log(`Server listening on port ${port}`);
@@ -505,4 +576,15 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
-export { app, resetRateLimiters, resetGenerationLimiter, buildImprovePrompt, buildFinalPrompt, sanitizeDepthIntensity, sanitizeStylePreset, STYLE_PRESETS };
+export {
+    app,
+    generationJobQueue,
+    QUEUE_NAME,
+    resetRateLimiters,
+    resetGenerationLimiter,
+    buildImprovePrompt,
+    buildFinalPrompt,
+    sanitizeDepthIntensity,
+    sanitizeStylePreset,
+    STYLE_PRESETS
+};
