@@ -163,7 +163,8 @@ describe('Depth Intensity Feature (F6) - Unit & Integration Tests', () => {
             try {
                 const response = await fetch(`http://127.0.0.1:${port}/api/generate`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+        'Authorization': 'Bearer ' + (process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RfdXNlciIsInVzZXJfaWQiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE3OTIwNTM3ODN9.Xs__w58fM1xR6Ow5kb-0CaJj7yyJ7oPDjJJkItO9GO4'), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: 'lion medallion', depth_intensity: 20 })
                 });
 

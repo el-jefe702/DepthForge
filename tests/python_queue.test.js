@@ -93,7 +93,8 @@ describe('Concurrency Queue for Python Processor (Feature F18) - Tests', () => {
         try {
             const reqA = fetch(`http://127.0.0.1:${port}/api/invert`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+        'Authorization': 'Bearer ' + (process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RfdXNlciIsInVzZXJfaWQiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE3OTIwNTM3ODN9.Xs__w58fM1xR6Ow5kb-0CaJj7yyJ7oPDjJJkItO9GO4'), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_url: '/static/generated/test_q_a.png' })
             });
 
