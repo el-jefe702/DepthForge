@@ -22,6 +22,7 @@ concurrency:
 env:
   OPENAI_MODEL: gpt-4o
   MAX_ATTEMPTS: '3'
+  GH_TOKEN: ${{ secrets.PAT_TOKEN }}
 
 jobs:
   resolve-next:
@@ -29,10 +30,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
+      - name: Verify PAT permission
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          if [ -z "$PAT_TOKEN" ]; then
+            echo "::error::Missing repository secret PAT_TOKEN. Create a fine-grained or classic PAT with Contents: Read/write, Issues: Read/write, Pull requests: Read/write, and Workflows: Read/write, then add it as PAT_TOKEN."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -45,7 +55,6 @@ jobs:
       - name: Select next queued issue
         id: select
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_ISSUE: ${{ inputs.issue_number }}
           EVENT_ISSUE: ${{ github.event.issue.number }}
         run: |
@@ -79,7 +88,6 @@ jobs:
         if: steps.select.outputs.issue_number != ''
         id: repair
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.FALLBACK_API_KEY1 }}
           ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
           REPO: ${{ github.repository }}
@@ -96,7 +104,6 @@ jobs:
           from pathlib import Path
 
           issue_number = os.environ['ISSUE_NUMBER']
-          repo = os.environ['REPO']
           model = os.environ['OPENAI_MODEL']
           api_key = os.environ['OPENAI_API_KEY']
           max_attempts = int(os.environ.get('MAX_ATTEMPTS', '3'))
@@ -168,7 +175,7 @@ jobs:
               })
               Path('request.json').write_text(request, encoding='utf-8')
 
-              import urllib.request, urllib.error
+              import urllib.request
               req = urllib.request.Request(
                   'https://api.openai.com/v1/chat/completions',
                   data=Path('request.json').read_bytes(),
@@ -236,7 +243,6 @@ jobs:
       - name: Create pull request
         if: steps.select.outputs.issue_number != ''
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
         run: |
           set -euo pipefail
@@ -268,7 +274,6 @@ jobs:
       - name: Mark for human review on failure
         if: failure() && steps.select.outputs.issue_number != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.select.outputs.issue_number }}
         run: |
           {
