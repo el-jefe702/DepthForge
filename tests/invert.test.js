@@ -389,7 +389,8 @@ print("OK")
             try {
                 const response = await fetch(`http://127.0.0.1:${port}/api/invert`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+        'Authorization': 'Bearer ' + (process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RfdXNlciIsInVzZXJfaWQiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE3OTIwNTMzMTd9.S8YcO_W-Y7sJfI-8qBipvTix6qBkFuq60TgfOZNe-2c'), 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
 
