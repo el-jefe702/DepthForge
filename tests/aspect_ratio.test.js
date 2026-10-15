@@ -81,7 +81,8 @@ describe('Aspect Ratio Feature - Unit & Integration Tests', () => {
                 for (const ratio of ['1:1', '4:3', '3:2', '16:9', '2:3']) {
                     const response = await fetch(`http://127.0.0.1:${port}/api/generate`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+        'Authorization': 'Bearer ' + (process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RfdXNlciIsInVzZXJfaWQiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE3OTIwNTM2NzV9.wWiObpWDa9vPiaaSpaT_TRytip0WXKJW38ZwHfiVYKw'), 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: 'lion head', aspectRatio: ratio })
                     });
 
