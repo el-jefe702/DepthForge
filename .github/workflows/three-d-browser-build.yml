@@ -1,0 +1,55 @@
+name: Three.js browser build and smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'static/index.html'
+      - 'static/style.css'
+      - 'tests/three_d_preview.browser.test.js'
+      - 'tests/three-d-preview.browser.spec.js'
+      - '.github/workflows/three-d-browser-build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: depthforge-three-d-browser
+  cancel-in-progress: false
+
+jobs:
+  browser-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci || npm install
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: Run isolated browser preview tests
+        run: node --test tests/three_d_preview.browser.test.js
+
+      - name: Run Playwright Chromium smoke test
+        run: npx playwright test tests/three-d-preview.browser.spec.js --reporter=line
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
+
+      - name: Upload browser test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-d-browser-results
+          path: |
+            test-results/**
+            playwright-report/**
+          if-no-files-found: ignore
