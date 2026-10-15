@@ -29,8 +29,9 @@ permissions:
 env:
   TRUST_PROXY: "1"
   NODE_ENV: "test"
-  GEMINI_MODEL: "gemini-3.1-pro-preview"
-  GEMINI_FAST_MODEL: "gemini-2.5-flash"
+  GEMINI_MODEL: "gemini-2.5-flash"
+  GEMINI_SECONDARY_MODEL: "gemini-3-flash-preview"
+  GEMINI_FAST_MODEL: "gemini-2.5-flash-lite"
   MAX_HEAL_ATTEMPTS: "3"
   LEDGER_PATH: ".ai-memory/evolution_ledger.json"
   ARTIFACT_DIR: "/tmp/ai-artifacts"
@@ -74,15 +75,22 @@ jobs:
             python -m pip install -r requirements.txt
           fi
 
-      - name: Configure Git Identity
+      - name: Configure Git Identity & Labels
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           git config --global user.name "SpatialOps Autonomous Architect"
           git config --global user.email "actions@spatialops.llc"
+          gh label create "in-progress" --repo "$REPO" --color "fbca04" --description "AI actively working" --force || true
+          gh label create "ai-resolved" --repo "$REPO" --color "0e8a16" --description "Resolved and reviewed by AI" --force || true
+          gh label create "ai-reviewed" --repo "$REPO" --color "1d76db" --description "Audited by AI PR Reviewer" --force || true
 
       - name: Select Target Issue or PR
         id: target
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           INPUT_ISSUE: ${{ github.event.inputs.issue_number }}
           INPUT_PR: ${{ github.event.inputs.pr_number }}
@@ -101,13 +109,14 @@ jobs:
           elif [ "$EVENT_NAME" = "issues" ] && [ -n "$EVENT_ISSUE" ]; then
             TARGET_ISSUE="$EVENT_ISSUE"
           elif [ -z "$TARGET_PR" ]; then
-            TARGET_ISSUE=$(gh issue list --state open --limit 30 --json number,labels \
-              --jq '[.[] | select(([.labels[].name] | inside(["needs-human-review", "wontfix", "in-progress"]) | not))] | sort_by(.number) | .[0].number // empty')
+            TARGET_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 30 --json number,labels \
+              --jq '[.[] | select(([.labels[].name] | any(. == "wontfix")) | not)] | sort_by(.number) | .[0].number // empty')
           fi
+          echo "Selected issue_number=$TARGET_ISSUE pr_number=$TARGET_PR"
           echo "issue_number=$TARGET_ISSUE" >> "$GITHUB_OUTPUT"
           echo "pr_number=$TARGET_PR" >> "$GITHUB_OUTPUT"
 
-      - name: Execute Self-Evolving AI Solver
+      - name: Execute Self-Evolving AI Solver & Reviewer
         if: steps.target.outputs.issue_number != '' || steps.target.outputs.pr_number != ''
         id: agent
         env:
@@ -134,8 +143,9 @@ jobs:
           FB_KEY = os.environ.get("FALLBACK_API_KEY", "").strip()
           FB_KEY1 = os.environ.get("FALLBACK_API_KEY1", "").strip()
           
-          MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
-          FAST_MODEL_NAME = os.environ.get("GEMINI_FAST_MODEL", "gemini-2.5-flash")
+          MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+          SECONDARY_MODEL_NAME = os.environ.get("GEMINI_SECONDARY_MODEL", "gemini-3-flash-preview")
+          FAST_MODEL_NAME = os.environ.get("GEMINI_FAST_MODEL", "gemini-2.5-flash-lite")
           MAX_ATTEMPTS = int(os.environ.get("MAX_HEAL_ATTEMPTS", "3"))
           LEDGER_PATH = Path(os.environ.get("LEDGER_PATH", ".ai-memory/evolution_ledger.json"))
           ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", "/tmp/ai-artifacts"))
@@ -154,13 +164,21 @@ jobs:
                   raise
 
           def call_llm(sys_inst, prompt, mode="solver"):
-              gemini_model = FAST_MODEL_NAME if mode == "fast" else MODEL_NAME
-              openai_model = "gpt-4o-mini" if mode == "fast" else "gpt-4o"
-              tiers = [
-                  ("Primary Gemini", PRIMARY_KEY, None, gemini_model, "gemini"),
-                  ("Grok Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini" if mode == "fast" else "grok-3", "openai"),
-                  ("ChatGPT Fallback", FB_KEY1, "https://api.openai.com/v1", openai_model, "openai")
-              ]
+              if mode == "fast":
+                  tiers = [
+                      ("Gemini Flash-Lite", PRIMARY_KEY, None, FAST_MODEL_NAME, "gemini"),
+                      ("Gemini Flash Backup", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
+                      ("Grok Mini Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini", "openai"),
+                      ("ChatGPT Mini Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o-mini", "openai")
+                  ]
+              else:
+                  tiers = [
+                      ("Primary Gemini Flash", PRIMARY_KEY, None, MODEL_NAME, "gemini"),
+                      ("Secondary Gemini 3 Flash", PRIMARY_KEY, None, SECONDARY_MODEL_NAME, "gemini"),
+                      ("Gemini Flash-Lite Backup", PRIMARY_KEY, None, FAST_MODEL_NAME, "gemini"),
+                      ("Grok Mini Fallback", FB_KEY, "https://api.x.ai/v1", "grok-3-mini", "openai"),
+                      ("ChatGPT Mini Fallback", FB_KEY1, "https://api.openai.com/v1", "gpt-4o-mini", "openai")
+                  ]
               
               active_tiers = [t for t in tiers if t[1]]
               if not active_tiers:
@@ -226,7 +244,6 @@ jobs:
               return res.returncode, out
 
           def extract_failing_tests(raw_output):
-              """Filter test output to only failing suites/subtests to save ~80% token overhead."""
               lines = raw_output.splitlines()
               filtered = []
               capture_block = False
@@ -247,8 +264,41 @@ jobs:
                   for p in extra_paths:
                       if p not in key_files and Path(p).is_file():
                           key_files.append(p)
-              snippets = {f: Path(f).read_text(encoding="utf-8")[:10000] for f in key_files if Path(f).is_file()}
+              snippets = {f: Path(f).read_text(encoding="utf-8")[:120000] for f in key_files if Path(f).is_file()}
               return tree, snippets
+
+          def apply_ai_changes(payload, snippets_dict):
+              modified = []
+              for f_del in payload.get("files_to_delete", []):
+                  if Path(f_del).is_file():
+                      Path(f_del).unlink()
+                      modified.append(f_del)
+
+              for p in payload.get("patches", []):
+                  p_path = Path(p.get("path", ""))
+                  if p_path.is_file() and p.get("search"):
+                      orig = p_path.read_text(encoding="utf-8")
+                      if p["search"] in orig:
+                          updated = orig.replace(p["search"], p.get("replace", ""), 1)
+                          p_path.write_text(updated, encoding="utf-8")
+                          snippets_dict[str(p_path)] = updated[:120000]
+                          modified.append(str(p_path))
+                      else:
+                          print(f"⚠️ Patch search block not found in {p_path}")
+
+              for f in payload.get("files_to_write", []):
+                  f_path = Path(f["path"])
+                  content = f.get("content", "")
+                  if f_path.name == "server.js" and f_path.is_file():
+                      orig_len = len(f_path.read_text(encoding="utf-8"))
+                      if len(content) < orig_len * 0.75:
+                          print(f"⚠️ Blocked truncated overwrite of server.js ({len(content)} vs {orig_len} chars)")
+                          continue
+                  f_path.parent.mkdir(parents=True, exist_ok=True)
+                  f_path.write_text(content, encoding="utf-8")
+                  snippets_dict[str(f_path)] = content[:120000]
+                  modified.append(str(f_path))
+              return modified
 
           def run_validation_suite(modified_files):
               logs = []
@@ -280,6 +330,7 @@ jobs:
 
           issue_data = {}
           if ISSUE_NUMBER:
+              sh(f"gh issue edit {ISSUE_NUMBER} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress' || true")
               rc, out = sh(f"gh issue view {ISSUE_NUMBER} --repo '{REPO}' --json number,title,body")
               if rc == 0: issue_data = json.loads(out)
 
@@ -294,12 +345,21 @@ jobs:
           issue_body = issue_data.get("body") or ""
           issue_title = issue_data.get("title") or ""
 
-          # Dynamically pull any test or source files mentioned in the issue body
           mentioned_files = re.findall(r'[\w./-]+\.(?:js|py|json|sql)', issue_body)
           tree, snippets = get_repo_snapshot(extra_paths=mentioned_files)
 
-          solver_sys = """You are the DepthForge Code Architect. Output JSON only. 
-          Return: {"already_resolved": bool, "resolution_rationale": "str", "files_to_write": [{"path": "str", "content": "str"}], "files_to_delete": ["str"]}"""
+          solver_sys = """You are the DepthForge Code Architect. Output strictly valid JSON only.
+          CRITICAL RULE: NEVER truncate or remove existing routes/features in server.js or processor.py.
+          Also fix any failing test in tests/ if reported in FAILING TEST OUTPUT.
+          Prefer surgical edits in "patches" for existing files, and use "files_to_write" for new files or test files.
+          Return format:
+          {
+            "already_resolved": bool,
+            "resolution_rationale": "str",
+            "patches": [{"path": "str", "search": "exact existing lines", "replace": "new replacement lines"}],
+            "files_to_write": [{"path": "str", "content": "full file content"}],
+            "files_to_delete": ["str"]
+          }"""
 
           test_passed = False
           last_log = ""
@@ -310,7 +370,6 @@ jobs:
 
           for attempt in range(1, MAX_ATTEMPTS + 1):
               print(f"=== Attempt {attempt} of {MAX_ATTEMPTS} ===")
-              sh("git checkout -B '{0}' origin/main && git clean -fd".format(branch_name), check=True)
 
               repair_section = ""
               if attempt > 1:
@@ -321,23 +380,13 @@ jobs:
                   )
 
               prompt = (
-                  f"ISSUE: {issue_title}\n{issue_body}\n"
+                  f"ISSUE #{ISSUE_NUMBER}: {issue_title}\n{issue_body}\n"
                   f"TREE:\n{tree}\n"
                   f"FILES:\n{json.dumps(snippets)}"
                   f"{repair_section}"
               )
               solver_out = call_llm(solver_sys, prompt, mode="solver")
-              
-              modified_files = []
-              for f_del in solver_out.get("files_to_delete", []):
-                  if Path(f_del).is_file():
-                      Path(f_del).unlink()
-                      modified_files.append(f_del)
-
-              for f in solver_out.get("files_to_write", []):
-                  Path(f["path"]).parent.mkdir(parents=True, exist_ok=True)
-                  Path(f["path"]).write_text(f["content"], encoding="utf-8")
-                  modified_files.append(f["path"])
+              modified_files = apply_ai_changes(solver_out, snippets)
 
               test_passed, last_log = run_validation_suite(modified_files)
               
@@ -350,67 +399,19 @@ jobs:
                   _, failed_patch = sh("git diff")
                   failing_tests_summary = extract_failing_tests(last_log)
 
-                  # Save failed patch and failing test output as artifacts
                   patch_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}.patch"
                   test_file = ARTIFACT_DIR / f"issue_{target_id}_attempt_{attempt}_failing_tests.log"
                   patch_file.write_text(failed_patch or "No diff generated.", encoding="utf-8")
                   test_file.write_text(failing_tests_summary, encoding="utf-8")
 
-                  # Pull any failing test files mentioned in the trace into snippets for the next attempt
                   trace_files = re.findall(r'tests/[\w./-]+\.test\.js', failing_tests_summary)
                   for tf in trace_files:
                       if Path(tf).is_file() and tf not in snippets:
-                          snippets[tf] = Path(tf).read_text(encoding="utf-8")[:8000]
+                          snippets[tf] = Path(tf).read_text(encoding="utf-8")[:25000]
 
                   attempt_records.append({
                       "attempt": attempt,
                       "status": "FAILED",
                       "modified_files": modified_files,
                       "patch_artifact": str(patch_file.name),
-                      "test_artifact": str(test_file.name),
-                      "failure_excerpt": failing_tests_summary[:500]
-                  })
-
-          _, stat = sh("git status --porcelain")
-          has_changes = bool(stat.strip())
-
-          # Fast-path verdict without wasting an LLM call if tests failed or already resolved
-          if not test_passed:
-              verdict = "NEEDS_HUMAN"
-              closeout_notes = f"### Iterative Repair Exhausted ({MAX_ATTEMPTS} attempts)\n\n```\n{failing_tests_summary[:1500]}\n```"
-          elif not has_changes and solver_out.get("already_resolved"):
-              verdict = "ALREADY_RESOLVED_CLOSE"
-              closeout_notes = solver_out.get("resolution_rationale", "Verified already resolved on main.")
-          else:
-              _, final_diff = sh("git diff")
-              rev_sys = """You are the PR Assessor. Output strict JSON: {"verdict": "WIN_MERGE" | "NEEDS_HUMAN", "closeout_notes_markdown": "str"}"""
-              rev_prompt = f"ISSUE: {issue_title}\nRATIONALE: {solver_out.get('resolution_rationale', '')}\nDIFF:\n{final_diff[:6000]}\nTESTS_PASSED: True"
-              rev_out = call_llm(rev_sys, rev_prompt, mode="fast")
-              verdict = rev_out.get("verdict", "WIN_MERGE")
-              closeout_notes = rev_out.get("closeout_notes_markdown", solver_out.get("resolution_rationale", ""))
-
-          record_evolution_ledger({
-              "timestamp": datetime.now(timezone.utc).isoformat(),
-              "issue_number": ISSUE_NUMBER,
-              "pr_number": PR_NUMBER,
-              "verdict": verdict,
-              "test_passed": test_passed,
-              "attempts": attempt_records
-          })
-
-          if has_changes and test_passed:
-              sh("git add -A", check=True)
-              sh(f"git commit -m \"fix: resolve #{target_id}\"", check=True)
-              sh(f"git push -u origin '{branch_name}' --force", check=True)
-              if not PR_NUMBER and ISSUE_NUMBER:
-                  Path("/tmp/pr.md").write_text(f"Closes #{ISSUE_NUMBER}\n\n{solver_out.get('resolution_rationale', '')}", encoding="utf-8")
-                  sh(f"gh pr create --repo '{REPO}' --base main --head '{branch_name}' --title \"fix(#{ISSUE_NUMBER}): {issue_title[:65]}\" --body-file /tmp/pr.md")
-                  _, PR_NUMBER = sh(f"gh pr view '{branch_name}' --repo '{REPO}' --json number --jq '.number'")
-                  PR_NUMBER = PR_NUMBER.strip()
-
-          Path("/tmp/rev.md").write_text(f"## Verdict: {verdict}\n**Tests:** {'PASSED' if test_passed else 'FAILED'}\n\n{closeout_notes}", encoding="utf-8")
-
-          if PR_NUMBER:
-              sh(f"gh pr review {PR_NUMBER} --repo '{REPO}' --comment --body-file /tmp/rev.md")
-              if verdict == "WIN_MERGE":
-                  sh(f"gh pr merge {PR_NUMBER} --repo '{
+                      "test_a
