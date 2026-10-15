@@ -185,7 +185,7 @@ process.on('unhandledRejection', (reason) => {
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
-        const duration = Date.now();
+        const duration = Date.now() - start;
         console.log(`[${new Date().toLocaleTimeString()}] 🌍 ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
     });
     next();
@@ -429,21 +429,25 @@ const upload = multer({ dest: uploadsDir });
 const generationQueue = new PQueue({ concurrency: 2 });
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-const redisConnection = new IORedis(REDIS_URL, {
+const redisEnabled = process.env.NODE_ENV !== 'test' && process.env.DISABLE_REDIS !== 'true';
+const redisConnection = redisEnabled ? new IORedis(REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy(times) {
         return Math.min(times * 200, 3000);
     }
-});
-redisConnection.on('error', (err) => {
-    console.warn(`[Redis Queue Warning]: ${err.message}`);
-});
+}) : null;
+
+if (redisEnabled) {
+    redisConnection.on('error', (err) => {
+        console.warn(`[Redis Queue Warning]: ${err.message}`);
+    });
+}
 
 const QUEUE_NAME = 'image-generation';
-const generationJobQueue = new Queue(QUEUE_NAME, {
+const generationJobQueue = redisEnabled ? new Queue(QUEUE_NAME, {
     connection: redisConnection
-});
+}) : null;
 
 const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || path.join(__dirname, 'subscriptions.db');
 const db = new sqlite3.Database(dbPath);
@@ -502,10 +506,12 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             userId: req.user?.id || req.userId || (typeof req.user === 'string' ? req.user : null)
         };
 
-        try {
-            await generationJobQueue.add('generate', jobData, { jobId });
-        } catch (queueErr) {
-            console.error('[BullMQ] Failed to add job to Redis queue:', queueErr.message);
+        if (generationJobQueue) {
+            try {
+                await generationJobQueue.add('generate', jobData, { jobId });
+            } catch (queueErr) {
+                console.error('[BullMQ] Failed to add job to Redis queue:', queueErr.message);
+            }
         }
 
         return res.json({
