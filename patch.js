@@ -16,8 +16,47 @@ try {
         modified = true;
     }
 
-    if (!code.includes('export { STYLE_PRESETS }')) {
-        code += '\nexport { STYLE_PRESETS };\n';
+    if (!code.includes('const STYLE_PRESETS')) {
+        code = code.replace('export { STYLE_PRESETS };', '');
+        const stylePresetsLines = [
+            '',
+            'const STYLE_PRESETS = {',
+            '    portrait: {',
+            "        id: 'portrait',",
+            "        label: 'Portrait',",
+            "        icon: '\uD83D\uDC64',",
+            "        guidance: 'STYLE: Portraiture relief carving. Emphasize continuous anatomic facial planes, smooth cheekbone undulations, sculpted nose and jawline depth contours. Avoid noisy skin texture and prevent harsh stepping on facial gradients.'",
+            '    },',
+            '    wildlife: {',
+            "        id: 'wildlife',",
+            "        label: 'Wildlife',",
+            "        icon: '\uD83E\uDD81',",
+            "        guidance: 'STYLE: Wildlife relief carving. Emphasize anatomical muscle groups, defined silhouette boundaries, sculpted fur volume and feather patterns as broad smooth masses rather than detailed individual strands.'",
+            '    },',
+            '    architecture: {',
+            "        id: 'architecture',",
+            "        label: 'Architecture',",
+            "        icon: '\uD83C\uDFDB\uFE0F',",
+            "        guidance: 'STYLE: Classical architectural ornamental relief and baroque scrollwork. Emphasize crisp filigree ridges, elegant acanthus leaves, symmetric florets, steep chamfered edges, and deep relief.'",
+            '    },',
+            '    floral: {',
+            "        id: 'floral',",
+            "        label: 'Floral',",
+            "        icon: '\uD83C\uDF38',",
+            "        guidance: 'STYLE: Graceful overlapping petals, smooth concave cup-like forms, natural organic curling edges, radiating linear veining, and deep relief.'",
+            '    },',
+            '    abstract: {',
+            "        id: 'abstract',",
+            "        label: 'Abstract',",
+            "        icon: '\uD83C\uDF00',",
+            "        guidance: 'STYLE: Flowing topographic waves, ribbon-like layered depth, smooth sculptural transitions, and elegant abstract relief carving.'",
+            '    }',
+            '};',
+            '',
+            'export { STYLE_PRESETS };',
+            ''
+        ];
+        code += stylePresetsLines.join('\n');
         modified = true;
     }
 
