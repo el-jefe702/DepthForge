@@ -1,0 +1,205 @@
+name: Fix Three.js preview tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: depthforge-three-d-preview-repair
+  cancel-in-progress: false
+
+env:
+  OPENAI_MODEL: gpt-4o
+  TEST_FILE: tests/three_d_preview.test.js
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Reproduce Three.js preview failure
+        id: reproduce
+        continue-on-error: true
+        run: |
+          set +e
+          node --test "$TEST_FILE" > failing-tests.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat failing-tests.log
+          exit 0
+
+      - name: Build repair context
+        run: |
+          mkdir -p .ai
+          {
+            echo '## Objective'
+            echo 'Fix tests/three_d_preview.test.js without weakening its assertions.'
+            echo 'The failure is likely caused by Node.js lacking a browser DOM and WebGL context for Three.js.'
+            echo 'Add minimal, deterministic mocks for window, document, HTMLCanvasElement, canvas.getContext, WebGLRenderingContext/WebGL2RenderingContext, requestAnimationFrame, and related browser APIs only where needed.'
+            echo 'Do not disable or delete existing tests. Do not modify production Three.js behavior unless objectively required.'
+            echo
+            echo '## Failing test output'
+            cat failing-tests.log
+            echo
+            echo '## Current test file'
+            cat "$TEST_FILE"
+            echo
+            echo '## static/index.html'
+            cat static/index.html
+            echo
+            echo '## static/style.css'
+            cat static/style.css
+          } > .ai/context.md
+
+      - name: Generate browser mocks with ChatGPT
+        env:
+          OPENAI_API_KEY: ${{ secrets.FALLBACK_API_KEY1 }}
+        run: |
+          set -euo pipefail
+          SYSTEM='You are a senior JavaScript test engineer. Return only valid JSON with this exact shape: {"analysis":"string","files_to_write":[{"path":"string","content":"string"}],"files_to_delete":["string"]}. Provide complete file contents for every file you change. Prefer adding a test-only setup/mock file and importing it in the test file. Preserve all existing assertions and coverage.'
+
+          jq -n \
+            --arg system "$SYSTEM" \
+            --rawfile context .ai/context.md \
+            --arg model "$OPENAI_MODEL" \
+            '{model:$model,messages:[{role:"system",content:$system},{role:"user",content:$context}],temperature:0.1}' \
+            > request.json
+
+          http_code=$(curl -sS -o response.json -w '%{http_code}' \
+            https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data @request.json)
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::ChatGPT request failed with HTTP $http_code"
+            cat response.json
+            exit 1
+          fi
+
+          jq -r '.choices[0].message.content // empty' response.json > raw-response.txt
+
+          if [ ! -s raw-response.txt ]; then
+            echo "::error::ChatGPT returned no content"
+            cat response.json
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          raw = Path('raw-response.txt').read_text(encoding='utf-8').strip()
+          if raw.startswith('```'):
+              raw = raw.removeprefix('```json').removeprefix('```').removesuffix('```').strip()
+          parsed = json.loads(raw)
+          if not isinstance(parsed, dict) or not isinstance(parsed.get('files_to_write'), list):
+              raise SystemExit('ChatGPT returned an invalid repair plan.')
+          if not parsed['files_to_write']:
+              raise SystemExit('ChatGPT returned no files to write.')
+          Path('repair-plan.json').write_text(json.dumps(parsed), encoding='utf-8')
+          Path('repair-analysis.md').write_text(parsed.get('analysis', ''), encoding='utf-8')
+          PY
+
+      - name: Apply repair
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          plan = json.loads(Path('repair-plan.json').read_text(encoding='utf-8'))
+          for path in plan.get('files_to_delete') or []:
+              path = Path(path)
+              if path.is_file():
+                  path.unlink()
+          for item in plan['files_to_write']:
+              path = Path(item['path'])
+              if not str(path).startswith(('tests/', 'test/', 'scripts/')):
+                  raise SystemExit(f'Refusing to modify non-test path: {path}')
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(item['content'], encoding='utf-8')
+          PY
+
+      - name: Run targeted preview test
+        run: node --test "$TEST_FILE"
+
+      - name: Synchronize Android shared assets
+        run: |
+          if [ -f sync_android.js ]; then
+            node sync_android.js || true
+          fi
+
+          mkdir -p android_app/app/src/main/assets/static
+          cp static/index.html android_app/app/src/main/assets/index.html
+          cp static/style.css android_app/app/src/main/assets/style.css
+          cp static/style.css android_app/app/src/main/assets/static/style.css
+
+      - name: Run full test suite
+        run: npm test --if-present
+
+      - name: Create repair PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH='fix/three-d-preview-tests'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "::error::No repair changes were produced."
+            exit 1
+          fi
+
+          git commit -m 'test: add browser DOM and WebGL mocks for Three.js preview'
+          git push -u origin "$BRANCH" --force
+
+          {
+            echo '## Three.js preview test repair'
+            echo
+            cat repair-analysis.md
+            echo
+            echo 'This PR adds test-only browser DOM/WebGL mocks so `tests/three_d_preview.test.js` can run in Node without a real browser or WebGL context.'
+          } > pr.md
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title 'test: fix Three.js preview browser mocks' \
+            --body-file pr.md
+
+      - name: Report unresolved failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo '### Three.js preview test repair failed'
+            echo
+            echo '```text'
+            tail -n 200 failing-tests.log 2>/dev/null || true
+            echo '```'
+          } > failure.md
+          gh issue list --state open --search 'Three.js Displacement in:title' --json number --jq '.[0].number' > issue-number.txt || true
+          if [ -s issue-number.txt ]; then
+            issue=$(cat issue-number.txt)
+            gh issue comment "$issue" --body-file failure.md
+            gh issue edit "$issue" --add-label 'needs-human-review'
+          fi
