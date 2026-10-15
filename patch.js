@@ -23,3 +23,24 @@ try {
 } catch (e) {
     console.error('Failed to patch server.js', e);
 }
+
+try {
+    const androidAssetsDir = path.resolve('android_app', 'app', 'src', 'main', 'assets');
+    const webIndex = path.resolve('static', 'index.html');
+    const webCss = path.resolve('static', 'style.css');
+
+    const assetTargets = [
+        [webIndex, path.join(androidAssetsDir, 'index.html')],
+        [webCss, path.join(androidAssetsDir, 'style.css')],
+        [webCss, path.join(androidAssetsDir, 'static', 'style.css')]
+    ];
+
+    for (const [source, destination] of assetTargets) {
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.copyFileSync(source, destination);
+        console.log(`Synced ${path.relative(process.cwd(), source)} to ${path.relative(process.cwd(), destination)}`);
+    }
+} catch (e) {
+    console.error('Failed to sync web assets to Android', e);
+    process.exitCode = 1;
+}
