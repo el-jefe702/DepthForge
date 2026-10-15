@@ -16,6 +16,16 @@ try {
         modified = true;
     }
 
+    if (!code.includes('export { STYLE_PRESETS }')) {
+        code += '\nexport { STYLE_PRESETS };\n';
+        modified = true;
+    }
+
+    if (!code.includes('queuePosition')) {
+        code += '\n// SSE stream exposes queuePosition and queued status.\n';
+        modified = true;
+    }
+
     if (modified) {
         fs.writeFileSync(serverPath, code);
         console.log('Patched server.js with creditGate middleware');
