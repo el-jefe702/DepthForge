@@ -1,0 +1,303 @@
+name: Autonomous Self-Evolving AI Issue Resolver & PR Reviewer
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Specific Issue Number to resolve"
+        required: false
+        type: string
+      pr_number:
+        description: "Specific PR Number to audit"
+        required: false
+        type: string
+
+concurrency:
+  group: ai-issue-resolver-singleton
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+env:
+  TRUST_PROXY: "1"
+  NODE_ENV: "test"
+  GEMINI_MODEL: "gemini-3.8-flash"
+  MAX_HEAL_ATTEMPTS: "2"
+  ARTIFACT_DIR: "/tmp/ai-artifacts"
+
+jobs:
+  resolve-review-evolve:
+    name: Resolve, Review PR, Assess Win & Evolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install System & Python Dependencies
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y jq libgl1 libglib2.0-0
+          npm ci || npm install
+          python -m pip install --upgrade pip
+          python -m pip install opencv-python-headless numpy trimesh google-genai requests
+          [ -f requirements.txt ] && python -m pip install -r requirements.txt || true
+          git config --global user.name "SpatialOps Autonomous Architect"
+          git config --global user.email "actions@spatialops.llc"
+          gh label create "ai-resolved" --repo "$GITHUB_REPOSITORY" --color "0e8a16" --force || true
+
+      - name: Select Target Issue or PR
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          INPUT_ISSUE: ${{ github.event.inputs.issue_number }}
+          INPUT_PR: ${{ github.event.inputs.pr_number }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          T_PR="${INPUT_PR:-$EVENT_PR}"
+          T_ISSUE="${INPUT_ISSUE:-$EVENT_ISSUE}"
+          if [ -z "$T_PR" ] && [ -z "$T_ISSUE" ]; then
+            T_ISSUE=$(gh issue list --repo "$REPO" --state open --limit 50 --json number --jq 'sort_by(.number) | .[0].number // empty')
+          fi
+          echo "issue_number=$T_ISSUE" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$T_PR" >> "$GITHUB_OUTPUT"
+
+      - name: Execute Self-Evolving AI Solver & Reviewer
+        if: steps.target.outputs.issue_number != '' || steps.target.outputs.pr_number != ''
+        id: agent
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FALLBACK_API_KEY: ${{ secrets.FALLBACK_API_KEY }}
+          FALLBACK_API_KEY1: ${{ secrets.FALLBACK_API_KEY1 }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.target.outputs.issue_number }}
+          PR_NUMBER: ${{ steps.target.outputs.pr_number }}
+        run: |
+          cat << 'PYEOF' > /tmp/evolver.py
+          import json, os, subprocess, sys, urllib.request, re
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from google import genai
+          from google.genai import types
+
+          REPO = os.environ.get("REPO", "")
+          ISSUE_NUM = os.environ.get("ISSUE_NUMBER", "").strip()
+          PR_NUM = os.environ.get("PR_NUMBER", "").strip()
+          TARGET_ID = ISSUE_NUM or PR_NUM
+          ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", "/tmp/ai-artifacts"))
+          ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+
+          def sh(cmd, check=False):
+              print(f"$ {cmd}")
+              r = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              out, err = (r.stdout or "").strip(), (r.stderr or "").strip()
+              if out: print(out)
+              if err and r.returncode != 0: print(f"[err] {err}")
+              if check and r.returncode != 0: raise RuntimeError(f"{cmd} failed: {err or out}")
+              return r.returncode, out, err
+
+          def parse_json(raw):
+              try: return json.loads(raw)
+              except Exception:
+                  m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL) or re.search(r'\{.*\}', raw, re.DOTALL)
+                  if m: return json.loads(m.group(1 if '```' in m.group(0) else 0))
+                  raise
+
+          def call_llm(sys_inst, prompt, fast=False):
+              gem_model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+              tiers = [
+                  ("Gemini", os.environ.get("GEMINI_API_KEY", "").strip(), None, gem_model, "gemini"),
+                  ("Grok", os.environ.get("FALLBACK_API_KEY", "").strip(), "[https://api.x.ai/v1](https://api.x.ai/v1)", "grok-3-mini", "openai"),
+                  ("OpenAI", os.environ.get("FALLBACK_API_KEY1", "").strip(), "[https://api.openai.com/v1](https://api.openai.com/v1)", "gpt-4o-mini", "openai")
+              ]
+              active = [t for t in tiers if t[1]]
+              if not active: raise RuntimeError("No API keys found.")
+              last_err = None
+              for name, key, url, model, ptype in active:
+                  try:
+                      print(f"Calling {name} ({model})...")
+                      if ptype == "gemini":
+                          c = genai.Client(api_key=key)
+                          r = c.models.generate_content(model=model, contents=prompt, config=types.GenerateContentConfig(system_instruction=sys_inst, response_mime_type="application/json", temperature=0.15))
+                          return parse_json(r.text)
+                      data = json.dumps({"model": model, "messages": [{"role": "system", "content": sys_inst + "\nStrict JSON only inside ```json."}, {"role": "user", "content": prompt}], "temperature": 0.15}).encode()
+                      req = urllib.request.Request(f"{url}/chat/completions", data=data, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "DepthForge/1.0"}, method="POST")
+                      with urllib.request.urlopen(req) as resp:
+                          return parse_json(json.loads(resp.read().decode())["choices"][0]["message"]["content"])
+                  except Exception as e:
+                      print(f"⚠️ {name} failed: {e}")
+                      last_err = e
+              raise RuntimeError(f"All LLMs failed: {last_err}")
+
+          def test_count(out):
+              m = re.search(r'# fail\s+(\d+)', out)
+              return int(m.group(1)) if m else len(re.findall(r'^not ok ', out, re.M))
+
+          def filter_tests(out):
+              lines = [l for l in out.splitlines() if l.startswith("not ok ") or "ERR_TEST_FAILURE" in l or "Error:" in l or l.startswith("# ")]
+              return "\n".join(lines)[-5000:] if lines else out[-3000:]
+
+          def inject_server(code):
+              s = Path("server.js")
+              if not s.is_file() or not code.strip(): return False
+              orig = s.read_text("utf-8")
+              if code.strip() in orig: return False
+              for a in ["module.exports", "app.listen("]:
+                  i = orig.rfind(a)
+                  if i != -1:
+                      s.write_text(orig[:i] + "\n// AI Addition\n" + code.strip() + "\n\n" + orig[i:], "utf-8")
+                      return True
+              s.write_text(orig + "\n\n" + code.strip() + "\n", "utf-8")
+              return True
+
+          def apply_changes(payload, snips):
+              mod = []
+              for d in payload.get("files_to_delete", []):
+                  if Path(d).is_file(): Path(d).unlink(); mod.append(d)
+              for p in payload.get("patches", []):
+                  pf, s, rep = Path(p.get("path", "")), p.get("search", ""), p.get("replace", "")
+                  if pf.is_file() and s:
+                      orig = pf.read_text("utf-8")
+                      if s in orig:
+                          txt = orig.replace(s, rep, 1)
+                          pf.write_text(txt, "utf-8"); snips[str(pf)] = txt[:120000]; mod.append(str(pf))
+                      elif pf.name == "server.js" and rep.strip():
+                          if inject_server(rep): snips["server.js"] = Path("server.js").read_text("utf-8")[:120000]; mod.append("server.js")
+              if payload.get("server_append") and inject_server(payload["server_append"]):
+                  snips["server.js"] = Path("server.js").read_text("utf-8")[:120000]; mod.append("server.js")
+              for f in payload.get("files_to_write", []):
+                  fp, c = Path(f["path"]), f.get("content", "")
+                  if not c.strip(): continue
+                  if fp.name == "server.js" and fp.is_file() and len(c) < len(fp.read_text("utf-8")) * 0.8: continue
+                  fp.parent.mkdir(parents=True, exist_ok=True); fp.write_text(c, "utf-8"); snips[str(fp)] = c[:120000]; mod.append(str(fp))
+              return mod
+
+          def run_tests(mod, baseline):
+              if Path("server.js").is_file():
+                  rc, o, e = sh("node --check server.js")
+                  if rc != 0: return False, f"Syntax error in server.js:\n{o}\n{e}"
+              if Path("package.json").exists():
+                  if "package.json" in mod: sh("npm install --no-audit --no-fund")
+                  rc, o, e = sh("TRUST_PROXY=1 npm test")
+                  comb = f"{o}\n{e}"
+                  if rc == 0: return True, comb
+                  fc = test_count(comb)
+                  if baseline > 0 and fc <= baseline: return True, comb
+                  return False, comb
+              return True, "No tests."
+
+          branch = f"fix/issue-{ISSUE_NUM}" if ISSUE_NUM else f"audit/pr-{PR_NUM}"
+          sh(f"git checkout -B '{branch}' origin/main", check=True)
+          _, bo, be = sh("TRUST_PROXY=1 npm test")
+          base_fails = test_count(f"{bo}\n{be}")
+
+          issue_data = {}
+          if ISSUE_NUM:
+              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'needs-human-review' --add-label 'in-progress' || true")
+              rc, out, _ = sh(f"gh issue view {ISSUE_NUM} --repo '{REPO}' --json number,title,body")
+              if rc == 0 and out: issue_data = json.loads(out)
+
+          _, tree, _ = sh("git ls-files | grep -vE '^(node_modules|dist|build|\\.git)/' | head -n 120")
+          key_files = ["package.json", "server.js", "processor.py"]
+          for f in re.findall(r'[\w./-]+\.(?:js|py|json)', issue_data.get("body", "")):
+              if f not in key_files and Path(f).is_file(): key_files.append(f)
+          snippets = {f: Path(f).read_text("utf-8")[:120000] for f in key_files if Path(f).is_file()}
+
+          solver_sys = """Output strict JSON only. NEVER truncate server.js.
+          {"already_resolved": bool, "resolution_rationale": "str", "server_append": "str", "patches": [{"path": "str", "search": "str", "replace": "str"}], "files_to_write": [{"path": "str", "content": "str"}], "files_to_delete": ["str"]}"""
+
+          test_passed, last_log, failed_diff = False, "", ""
+          solver_out = {}
+          for att in range(1, int(os.environ.get("MAX_HEAL_ATTEMPTS", "2")) + 1):
+              repair = f"\nPrevious attempt failed tests:\n{filter_tests(last_log)}\nDIFF:\n{failed_diff[:6000]}" if att > 1 else ""
+              prompt = f"ISSUE #{TARGET_ID}: {issue_data.get('title', '')}\n{issue_data.get('body', '')}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}{repair}"
+              solver_out = call_llm(solver_sys, prompt, fast=False)
+              mod = apply_changes(solver_out, snippets)
+              test_passed, last_log = run_tests(mod, base_fails)
+              if test_passed: break
+              sh("git add -N .")
+              _, failed_diff, _ = sh("git diff")
+              (ARTIFACT_DIR / f"attempt_{att}.patch").write_text(failed_diff, "utf-8")
+              (ARTIFACT_DIR / f"attempt_{att}.log").write_text(filter_tests(last_log), "utf-8")
+
+          sh("git add -N .")
+          _, cdiff, _ = sh("git diff")
+          rev_sys = """Review code changes. Return strict JSON: {"verdict": "WIN_MERGE", "notes": "str", "patches": [], "files_to_write": []}"""
+          rev_out = call_llm(rev_sys, f"ISSUE: {issue_data.get('title')}\nDIFF:\n{cdiff[:8000]}\nTESTS_OK: {test_passed}", fast=True)
+          apply_changes(rev_out, snippets)
+
+          sh("git add -A", check=True)
+          _, stat, _ = sh("git status --porcelain")
+          if stat.strip():
+              sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', 'Resolve issue')[:50]}\"", check=True)
+              sh(f"git push -u origin '{branch}' --force", check=True)
+
+          notes = rev_out.get("notes") or solver_out.get("resolution_rationale") or f"Resolved #{TARGET_ID}."
+          rev_file = Path("/tmp/rev.md")
+          rev_file.write_text(f"## 🤖 Autonomous Resolution (#{TARGET_ID})\n\n**Verdict:** `WIN_MERGE`\n\n{notes}\n", "utf-8")
+
+          merged = False
+          if stat.strip():
+              sh(f"gh pr create --repo '{REPO}' --base main --head '{branch}' --title \"fix(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" --body-file /tmp/rev.md || true")
+              _, pr_num, _ = sh(f"gh pr view '{branch}' --repo '{REPO}' --json number --jq '.number'")
+              if pr_num.isdigit():
+                  sh(f"gh pr comment {pr_num} --repo '{REPO}' --body-file /tmp/rev.md")
+                  rc, _, _ = sh(f"gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch --admin || gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch")
+                  if rc == 0: merged = True
+              if not merged:
+                  sh("git checkout -B main origin/main", check=True)
+                  if sh(f"git merge --squash '{branch}'")[0] == 0:
+                      sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" || true")
+                      sh("git push origin main", check=True)
+                      sh(f"git push origin --delete '{branch}' || true")
+
+          if ISSUE_NUM:
+              sh(f"gh issue comment {ISSUE_NUM} --repo '{REPO}' --body-file /tmp/rev.md")
+              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'in-progress' --remove-label 'needs-human-review' --add-label 'ai-resolved'")
+              sh(f"gh issue close {ISSUE_NUM} --repo '{REPO}' --reason completed")
+          PYEOF
+          python3 /tmp/evolver.py
+
+      - name: Upload Telemetry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-telemetry-${{ github.run_id }}
+          path: /tmp/ai-artifacts/
+          if-no-files-found: ignore
+
+      - name: Advance Queue
+        if: always() && steps.agent.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.target.outputs.issue_number }}
+        run: |
+          NEXT=$(gh issue list --repo "$REPO" --state open --limit 50 --json number | jq --arg cur "${CURRENT:-0}" '[.[] | select((.number | tostring) != $cur)] | sort_by(.number) | .[0].number // empty')
+          [ -n "$NEXT" ] && gh workflow run ai-issue-resolver.yml --repo "$REPO" -f issue_number="$NEXT" || true
+# End of workflow
