@@ -22,7 +22,7 @@ concurrency:
 env:
   OPENAI_MODEL: gpt-4o
   MAX_ATTEMPTS: '3'
-  GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+  GH_TOKEN: ${{ secrets.GH_PAT }}
 
 jobs:
   resolve-next:
@@ -30,19 +30,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Verify PAT permission
+      - name: Verify GH_PAT permission
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          if [ -z "$PAT_TOKEN" ]; then
-            echo "::error::Missing repository secret PAT_TOKEN. Create a fine-grained or classic PAT with Contents: Read/write, Issues: Read/write, Pull requests: Read/write, and Workflows: Read/write, then add it as PAT_TOKEN."
+          if [ -z "$GH_PAT" ]; then
+            echo "::error::Missing repository secret GH_PAT. Add a PAT with Contents: Read/write, Issues: Read/write, Pull requests: Read/write, and Workflows: Read/write."
             exit 1
           fi
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - uses: actions/setup-node@v4
         with:
