@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import PQueue from 'p-queue';
 import Stripe from 'stripe';
-import { addCredits, deductCredit } from './credit-backend.js';
+import { addCredits, deductCredit, creditBackend } from './credit-backend.js';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import sqlite3 from 'sqlite3';
@@ -91,7 +91,10 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
         if (userId && creditsToAdd > 0) {
             try {
-                await addCredits(userId, creditsToAdd);
+                await addCredits(userId, creditsToAdd, {
+                    reason: 'Stripe purchase',
+                    idempotencyKey: session.id
+                });
                 console.log(`[Stripe Webhook] Added ${creditsToAdd} credits to user ${userId}`);
             } catch (err) {
                 console.error(`[Stripe Webhook] Failed to add credits: ${err.message}`);
@@ -104,6 +107,46 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 });
 
 app.use(express.json({ limit: '50kb' }));
+
+app.post('/api/admin/credits', creditGate, async (req, res) => {
+    try {
+        const adminId = req.user?.id || req.userId;
+        const { userId, amount, reason, idempotencyKey } = req.body;
+
+        if (!adminId) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        if (!userId || !Number.isInteger(amount) || amount <= 0) {
+            return res.status(400).json({ error: 'Valid userId and positive integer amount are required' });
+        }
+        if (typeof reason !== 'string' || !reason.trim()) {
+            return res.status(400).json({ error: 'Reason is required' });
+        }
+        if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim()) {
+            return res.status(400).json({ error: 'Idempotency key is required' });
+        }
+
+        if (!creditBackend) {
+            return res.status(503).json({ error: 'Credit service is not configured' });
+        }
+
+        const result = await creditBackend.grantCredits(
+            userId,
+            amount,
+            reason.trim(),
+            `${adminId}:${idempotencyKey.trim()}`
+        );
+
+        return res.json(result);
+    } catch (err) {
+        if (err?.status === 403) {
+            return res.status(403).json({ error: 'Admin authorization required' });
+        }
+        console.error('[Admin Credit Grant] Failed:', err.message);
+        return res.status(502).json({ error: 'Credit grant failed; outcome may be unknown' });
+    }
+});
+
 app.use('/api/generate', creditGate);
 
 const creditDeductionMiddleware = (req, res, next) => {
@@ -142,7 +185,7 @@ process.on('unhandledRejection', (reason) => {
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
-        const duration = Date.now() - start;
+        const duration = Date.now();
         console.log(`[${new Date().toLocaleTimeString()}] 🌍 ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
     });
     next();
@@ -162,7 +205,7 @@ async function generateImagesWithFallback(params) {
         const res = await ai.models.generateImages(params);
         if (res?.generatedImages?.length) return res;
     } catch (err) {
-        // If running in test mode or if error was an explicit test rejection, rethrow so tests can verify 500 error handling
+        // If running in test mode or if an error is an explicit test rejection, rethrow so tests can verify 500 error handling
         if (process.env.NODE_ENV === 'test') {
             throw err;
         }
@@ -179,7 +222,8 @@ async function generateImagesWithFallback(params) {
             contents: prompt,
             config: {
                 imageConfig: {
-                    aspectRatio: aspectRatio
+                    aspectRatio,
+                    numberOfImages: 1
                 }
             }
         })
@@ -187,9 +231,9 @@ async function generateImagesWithFallback(params) {
 
     const responses = await Promise.all(tasks);
     const generatedImages = [];
-    for (const r of responses) {
-        const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        if (part?.inlineData?.data) {
+    for (const res of responses) {
+        const part = res?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (part?.inlineData) {
             generatedImages.push({
                 image: {
                     imageBytes: part.inlineData.data
@@ -236,13 +280,13 @@ function parseRateLimitMax(val) {
 function createRateLimiter(options = {}) {
     const { shared, separate, ...rlOptions } = options;
     const windowMs = rlOptions.windowMs !== undefined
-        ? parseRateLimitWindowMs(rlOptions.windowMs)
+        ? parseRateLimitWindowMs(process.env.RATE_LIMIT_WINDOW_MS)
         : parseRateLimitWindowMs(process.env.RATE_LIMIT_WINDOW_MS);
 
     const limit = rlOptions.max !== undefined
         ? parseRateLimitMax(rlOptions.max)
         : (rlOptions.limit !== undefined
-            ? (typeof rlOptions.limit === 'function' ? rlOptions.limit : parseRateLimitMax(rlOptions.limit))
+            ? (typeof rlOptions.limit === 'function' ? rlOptions.limit : parseRateLimitMax(process.env.RATE_LIMIT_MAX))
             : () => parseRateLimitMax(process.env.RATE_LIMIT_MAX));
 
     return rateLimit({
@@ -272,10 +316,10 @@ const photoToDepthLimiter = (req, res, next) => activePhotoToDepthLimiter(req, r
 const generationLimiter = generateLimiter;
 
 function resetRateLimiters(options = {}) {
-    if (options.shared) {
-        const sharedLimiter = createRateLimiter(options);
-        activeGenerateLimiter = sharedLimiter;
-        activePhotoToDepthLimiter = sharedLimiter;
+    const { shared } = options;
+    if (shared) {
+        activeGenerateLimiter = createRateLimiter(options);
+        activePhotoToDepthLimiter = activeGenerateLimiter;
     } else {
         activeGenerateLimiter = createRateLimiter(options);
         activePhotoToDepthLimiter = createRateLimiter(options);
@@ -297,37 +341,31 @@ const STYLE_PRESETS = {
         id: 'portrait',
         label: 'Portrait',
         icon: '👤',
-        guidance: 'STYLE: Portraiture relief carving. Emphasize continuous anatomic facial planes, smooth cheekbone undulations, sculpted nose and jawline depth contours, and subtle lip volume. Avoid noisy skin texture and prevent harsh stepping on facial gradients.'
+        guidance: 'STYLE: Portraiture relief carving. Emphasize continuous anatomic facial planes, smooth cheekbone undulations, sculpted nose and jawline depth contours. Avoid noisy skin texture and prevent harsh stepping on facial gradients.'
     },
     wildlife: {
         id: 'wildlife',
         label: 'Wildlife',
         icon: '🦁',
-        guidance: 'STYLE: Wildlife and animal relief carving. Emphasize anatomical muscle groups, defined silhouette boundaries, sculpted fur volume and feather layering as broad smooth masses rather than noisy individual strands.'
-    },
-    ornamental: {
-        id: 'ornamental',
-        label: 'Ornamental',
-        icon: '⚜️',
-        guidance: 'STYLE: Classical architectural ornamental relief and baroque scrollwork. Emphasize crisp filigree ridges, elegant acanthus leaf curls, symmetric florets, steep chamfered bevels, and clean flat background clearance.'
-    },
-    floral: {
-        id: 'floral',
-        label: 'Floral',
-        icon: '🌸',
-        guidance: 'STYLE: Botanical floral relief carving. Emphasize graceful overlapping petals, smooth concave cup shapes, natural organic curling edges, radiating leaf veining, and delicate blossom center elevation.'
+        guidance: 'STYLE: Wildlife relief carving. Emphasize anatomical muscle groups, defined silhouette boundaries, sculpted fur volume and feather patterns as broad smooth masses rather than detailed individual strands.'
     },
     architecture: {
         id: 'architecture',
         label: 'Architecture',
         icon: '🏛️',
-        guidance: 'STYLE: Architectural monument relief. Emphasize distinct geometric planar facades, clean perspective depth recession, crisp column fluting, delineated masonry blocks, and sharp receding spatial planes.'
+        guidance: 'STYLE: Classical architectural ornamental relief and baroque scrollwork. Emphasize crisp filigree ridges, elegant acanthus leaves, symmetric florets, steep chamfered edges, and deep relief.'
+    },
+    floral: {
+        id: 'floral',
+        label: 'Floral',
+        icon: '🌸',
+        guidance: 'STYLE: Graceful overlapping petals, smooth concave cup-like forms, natural organic curling edges, radiating linear veining, and deep relief.'
     },
     abstract: {
         id: 'abstract',
         label: 'Abstract',
         icon: '🌀',
-        guidance: 'STYLE: Dynamic modern abstract relief sculpture. Emphasize flowing topographic waves, ribbon curves, mathematical surface transitions, dramatic geometric intersections, and clean curvilinear elevation variations.'
+        guidance: 'STYLE: Flowing topographic waves, ribbon-like layered depth, smooth sculptural transitions, and elegant abstract relief carving.'
     }
 };
 
@@ -345,7 +383,7 @@ const getStyleGuidance = (preset) => {
 // --- PROMPT ARCHITECTURE ---
 const buildImprovePrompt = (userIdea, stylePreset = null) => {
     const styleGuidance = getStyleGuidance(stylePreset);
-    const styleBlock = styleGuidance ? ` ${styleGuidance}` : '';
+    const styleBlock = styleGuidance ? ` ${styleGuidance} ` : '';
     return `Act as a master CNC relief artist. User Idea: ${userIdea} ` +
         "TASK: Rewrite this into a highly detailed prompt for a 3D grayscale height map. " +
         "REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. " +
@@ -370,13 +408,9 @@ const sanitizeDepthIntensity = (intensity) => {
 
 const getDepthModifier = (intensity) => {
     const val = sanitizeDepthIntensity(intensity);
-    if (val <= 30) {
-        return "gentle, shallow relief with subtle height transitions";
-    }
-    if (val >= 70) {
-        return "dramatic, maximum-depth carving with extreme black-to-white contrast and deep relief";
-    }
-    return "";
+    const depthModifierClause = val <= 30 ? 'gentle, shallow relief with subtle height transitions' :
+        val >= 70 ? 'dramatic, maximum-depth carving with extreme black-to-white contrast and deep relief' : '';
+    return depthModifierClause;
 };
 
 const buildFinalPrompt = (improvedPrompt, depthIntensity = 70) => {
@@ -385,11 +419,9 @@ const buildFinalPrompt = (improvedPrompt, depthIntensity = 70) => {
     return `A perfect, ultra-smooth 3D grayscale height map of ${improvedPrompt}. ` +
         depthModifierClause +
         "CRITICAL: The subject must be ISOLATED on a PURE BLACK BACKGROUND (#000000). " +
-        "STYLE: Flawless, continuous gradients. Soft, airbrushed shading to represent height. " +
-        "TECHNICAL: Pure black to pure white linear Z-axis distribution. " +
-     
-
-"OUTPUT: Pure black and white height map ONLY. No color, no text, no borders.\n";
+        "STYLE: Flawless, continuous gradients. Soft, airbrushed shading to represent height and depth. " +
+        "TECHNICAL: Pure black to white linear Z-axis distribution.\n" +
+        "OUTPUT: Pure black and white height map ONLY. No color, no text, no borders.\n";
 };
 
 const upload = multer({ dest: uploadsDir });
@@ -551,7 +583,6 @@ app.post('/api/invert', async (req, res) => {
 
         const id = uuidv4();
         const outputPath = path.join(generatedDir, `${id}_inverted.png`);
-
         const proc = spawnSync('python', ['processor.py', 'invert', inputPath, outputPath]);
         if (proc.status !== 0) {
             return res.status(500).json({ error: 'Inversion failed' });
@@ -560,7 +591,7 @@ app.post('/api/invert', async (req, res) => {
         res.json({ url: `/static/generated/${id}_inverted.png`, imageUrl: `/static/generated/${id}_inverted.png` });
     } catch (err) {
         console.error('Invert error:', err);
-        res.status(500).json({ error: err.message || 'Invert failed' });
+        res.status(500).json({ error: err.message || 'Inversion failed' });
     }
 });
 
