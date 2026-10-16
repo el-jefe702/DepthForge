@@ -84,3 +84,30 @@ export const deductCredit = (userId, prompt, imageUrl) => {
         }
     });
 };
+
+export const addCredits = (userId, amount, prompt = '', imageUrl = '') => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const sqlite3 = (await import('sqlite3')).default;
+            const path = await import('path');
+            const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || path.join(process.cwd(), 'data', 'subscriptions.db');
+            const localDb = new sqlite3.Database(dbPath);
+            localDb.serialize(() => {
+                localDb.run('BEGIN TRANSACTION');
+                localDb.run('UPDATE users SET credits_balance = credits_balance + ? WHERE id = ?', [amount, userId], function(err) {
+                    if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
+                    localDb.get('SELECT credits_balance FROM users WHERE id = ?', [userId], (err, row) => {
+                        if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
+                        localDb.run('COMMIT', err => {
+                            localDb.close();
+                            if (err) return reject(err);
+                            resolve(row.credits_balance);
+                        });
+                    });
+                });
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
