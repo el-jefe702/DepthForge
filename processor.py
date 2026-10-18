@@ -190,13 +190,15 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
+    mode = command
     input_path = sys.argv[2]
     output_path = sys.argv[3]
 
     if command == "smooth":
         smooth_image(input_path, output_path)
     elif command == "remove_bg":
-        remove_bg(input_path, output_path)
+        if mode == "remove_bg":
+            remove_bg(input_path, output_path)
     elif command == "invert":
         invert_image(input_path, output_path)
     elif command == "mesh":

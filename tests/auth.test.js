@@ -27,6 +27,7 @@ describe('JWT Authentication Middleware (Issue #39)', () => {
     });
 
     after(() => {
+        delete process.env.SUBSCRIPTIONS_DB_PATH;
         if (fs.existsSync(TEST_DB)) {
             try { fs.unlinkSync(TEST_DB); } catch (e) {}
         }

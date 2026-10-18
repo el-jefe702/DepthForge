@@ -14,22 +14,18 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
 const staticDir = path.join(__dirname, 'static');
-const generatedDir = isVercel
-    ? path.join(os.tmpdir(), 'depthforge', 'generated')
-    : path.join(staticDir, 'generated');
-const uploadsDir = isVercel
-    ? path.join(os.tmpdir(), 'depthforge', 'uploads')
-    : path.join(staticDir, 'uploads');
+const generatedDir = path.join(staticDir, 'generated');
+const uploadsDir = path.join(staticDir, 'uploads');
+const dataDir = path.join(__dirname, 'data');
 
-[staticDir, generatedDir, uploadsDir].forEach(dir => {
+[staticDir, generatedDir, uploadsDir, dataDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
 });
 
-const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || path.join(__dirname, 'subscriptions.db');
+const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || process.env.SUBSCRIPTIONS_DB_PATH || path.join(dataDir, 'depthforge.sqlite');
 export const db = new sqlite3.Database(dbPath);
 
 export function initJobsDb(database = db) {

@@ -22,9 +22,10 @@ jobs:
 
       - name: Copy shared assets
         run: |
-          mkdir -p android_app/app/src/main/assets
+          mkdir -p android_app/app/src/main/assets/static
           cp static/index.html android_app/app/src/main/assets/index.html
           cp static/style.css android_app/app/src/main/assets/style.css
+          cp static/style.css android_app/app/src/main/assets/static/style.css
 
       - name: Commit synchronized assets
         run: |
@@ -34,6 +35,6 @@ jobs:
             echo "Android assets are already synchronized."
             exit 0
           fi
-          git add android_app/app/src/main/assets/index.html android_app/app/src/main/assets/style.css
+          git add android_app/app/src/main/assets/index.html android_app/app/src/main/assets/style.css android_app/app/src/main/assets/static/style.css
           git commit -m "chore: synchronize Android shared assets"
           git push

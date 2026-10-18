@@ -2,7 +2,7 @@ name: Autonomous Self-Evolving AI Issue Resolver & PR Reviewer
 
 on:
   issues:
-    types: [opened, labeled, reopened]
+    types: [opened, reopened]
   pull_request_target:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
@@ -38,7 +38,9 @@ jobs:
     name: Resolve, Review PR, Assess Win & Evolve
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    if: >-
+      (github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch') &&
+      !(github.event_name == 'pull_request_target' && (startsWith(github.head_ref, 'fix/issue-') || startsWith(github.head_ref, 'audit/pr-')))
 
     steps:
       - name: Checkout Repository
@@ -132,8 +134,8 @@ jobs:
               gem_model = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
               tiers = [
                   ("Gemini", os.environ.get("GEMINI_API_KEY", "").strip(), None, gem_model, "gemini"),
-                  ("Grok", os.environ.get("FALLBACK_API_KEY", "").strip(), "[https://api.x.ai/v1](https://api.x.ai/v1)", "grok-3-mini", "openai"),
-                  ("OpenAI", os.environ.get("FALLBACK_API_KEY1", "").strip(), "[https://api.openai.com/v1](https://api.openai.com/v1)", "gpt-4o-mini", "openai")
+                  ("Grok", os.environ.get("FALLBACK_API_KEY", "").strip(), "https://api.x.ai/v1", "grok-3-mini", "openai"),
+                  ("OpenAI", os.environ.get("FALLBACK_API_KEY1", "").strip(), "https://api.openai.com/v1", "gpt-4o-mini", "openai")
               ]
               active = [t for t in tiers if t[1]]
               if not active: raise RuntimeError("No API keys found.")
@@ -215,6 +217,7 @@ jobs:
           sh(f"git checkout -B '{branch}' origin/main", check=True)
           _, bo, be = sh("TRUST_PROXY=1 npm test")
           base_fails = test_count(f"{bo}\n{be}")
+          sh("git checkout -- subscriptions.db 2>/dev/null || true")
 
           issue_data = {}
           if ISSUE_NUM:
@@ -237,49 +240,70 @@ jobs:
               repair = f"\nPrevious attempt failed tests:\n{filter_tests(last_log)}\nDIFF:\n{failed_diff[:6000]}" if att > 1 else ""
               prompt = f"ISSUE #{TARGET_ID}: {issue_data.get('title', '')}\n{issue_data.get('body', '')}\nTREE:\n{tree}\nFILES:\n{json.dumps(snippets)}{repair}"
               solver_out = call_llm(solver_sys, prompt, fast=False)
+              if solver_out.get("already_resolved") and base_fails == 0:
+                  test_passed = True
+                  break
               mod = apply_changes(solver_out, snippets)
               test_passed, last_log = run_tests(mod, base_fails)
+              sh("git checkout -- subscriptions.db 2>/dev/null || true")
               if test_passed: break
               sh("git add -N .")
               _, failed_diff, _ = sh("git diff")
               (ARTIFACT_DIR / f"attempt_{att}.patch").write_text(failed_diff, "utf-8")
               (ARTIFACT_DIR / f"attempt_{att}.log").write_text(filter_tests(last_log), "utf-8")
 
+          sh("git checkout -- subscriptions.db 2>/dev/null || true")
           sh("git add -N .")
           _, cdiff, _ = sh("git diff")
-          rev_sys = """Review code changes. Return strict JSON: {"verdict": "WIN_MERGE", "notes": "str", "patches": [], "files_to_write": []}"""
+          rev_sys = """Review code changes. Return strict JSON with verdict "WIN_MERGE" (if resolved and tests pass) or "NEEDS_WORK": {"verdict": "WIN_MERGE", "notes": "str", "patches": [], "files_to_write": []}"""
           rev_out = call_llm(rev_sys, f"ISSUE: {issue_data.get('title')}\nDIFF:\n{cdiff[:8000]}\nTESTS_OK: {test_passed}", fast=True)
           apply_changes(rev_out, snippets)
+          sh("git checkout -- subscriptions.db 2>/dev/null || true")
 
           sh("git add -A", check=True)
           _, stat, _ = sh("git status --porcelain")
-          if stat.strip():
-              sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', 'Resolve issue')[:50]}\"", check=True)
-              sh(f"git push -u origin '{branch}' --force", check=True)
+          verdict = rev_out.get("verdict", "WIN_MERGE") if test_passed else "NEEDS_WORK"
+          already_resolved = bool(solver_out.get("already_resolved")) and test_passed
 
           notes = rev_out.get("notes") or solver_out.get("resolution_rationale") or f"Resolved #{TARGET_ID}."
+          closes_line = f"Closes #{ISSUE_NUM}\n\n" if ISSUE_NUM else ""
           rev_file = Path("/tmp/rev.md")
-          rev_file.write_text(f"## 🤖 Autonomous Resolution (#{TARGET_ID})\n\n**Verdict:** `WIN_MERGE`\n\n{notes}\n", "utf-8")
+          rev_file.write_text(f"## 🤖 Autonomous Resolution (#{TARGET_ID})\n\n{closes_line}**Verdict:** `{verdict}`\n\n{notes}\n", "utf-8")
+
+          if not test_passed or verdict != "WIN_MERGE":
+              if ISSUE_NUM:
+                  sh(f"gh issue comment {ISSUE_NUM} --repo '{REPO}' --body-file /tmp/rev.md || true")
+                  sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'in-progress' --add-label 'needs-human-review' || true")
+              sys.exit(1)
 
           merged = False
           if stat.strip():
+              sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', 'Resolve issue')[:50]}\"", check=True)
+              sh(f"git push -u origin '{branch}' --force", check=True)
               sh(f"gh pr create --repo '{REPO}' --base main --head '{branch}' --title \"fix(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" --body-file /tmp/rev.md || true")
               _, pr_num, _ = sh(f"gh pr view '{branch}' --repo '{REPO}' --json number --jq '.number'")
               if pr_num.isdigit():
-                  sh(f"gh pr comment {pr_num} --repo '{REPO}' --body-file /tmp/rev.md")
-                  rc, _, _ = sh(f"gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch --admin || gh pr merge {pr_num} --repo '{REPO}' --squash --delete-branch")
-                  if rc == 0: merged = True
+                  sh(f"gh pr comment {pr_num} --repo '{REPO}' --body-file /tmp/rev.md || true")
+                  sh(f"gh pr merge {pr_num} --repo '{REPO}' --squash --admin || gh pr merge {pr_num} --repo '{REPO}' --squash || true")
+                  _, pr_state, _ = sh(f"gh pr view {pr_num} --repo '{REPO}' --json state --jq '.state'")
+                  if pr_state.strip() == "MERGED":
+                      merged = True
+                      sh(f"git push origin --delete '{branch}' || true")
               if not merged:
+                  sh("git fetch origin main", check=False)
                   sh("git checkout -B main origin/main", check=True)
                   if sh(f"git merge --squash '{branch}'")[0] == 0:
                       sh(f"git commit -m \"feat(#{TARGET_ID}): {issue_data.get('title', '')[:50]}\" || true")
-                      sh("git push origin main", check=True)
+                      if sh("git push origin main")[0] == 0:
+                          merged = True
                       sh(f"git push origin --delete '{branch}' || true")
+          elif already_resolved:
+              merged = True
 
-          if ISSUE_NUM:
-              sh(f"gh issue comment {ISSUE_NUM} --repo '{REPO}' --body-file /tmp/rev.md")
-              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'in-progress' --remove-label 'needs-human-review' --add-label 'ai-resolved'")
-              sh(f"gh issue close {ISSUE_NUM} --repo '{REPO}' --reason completed")
+          if ISSUE_NUM and merged:
+              sh(f"gh issue comment {ISSUE_NUM} --repo '{REPO}' --body-file /tmp/rev.md || true")
+              sh(f"gh issue edit {ISSUE_NUM} --repo '{REPO}' --remove-label 'in-progress' --remove-label 'needs-human-review' --add-label 'ai-resolved' || true")
+              sh(f"gh issue close {ISSUE_NUM} --repo '{REPO}' --reason completed || true")
           PYEOF
           python3 /tmp/evolver.py
 

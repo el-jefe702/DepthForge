@@ -42,29 +42,6 @@ DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC 
 - **Background Removal**: Isolate subjects onto pure black backgrounds with `rembg`
 - **Lossless Export**: Export production-ready 16-bit PNG depth maps
 - **Modern Luxury Forge Aesthetic**: Custom 3D volcanic obsidian & molten laser gold branding, frosted glassmorphism interface (`backdrop-filter: blur(16px)`), specular border highlights, responsive blueprint grid preview canvas, glowing range sliders, animated status badges, and enhanced interactive states across Web and Android WebView mirroring.
-- **Stripe Webhook Integration**: Listens for `checkout.session.completed` events to automatically update user credit balances in the SQLite ledger.
-
-### Testing Stripe Webhooks Locally
-
-You can test the Stripe webhook integration locally using the Stripe CLI:
-
-1. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli).
-2. Log in to your Stripe account:
-   ```bash
-   stripe login
-   ```
-3. Forward webhook events to your local server:
-   ```bash
-   stripe listen --forward-to localhost:8000/api/webhooks/stripe
-   ```
-4. Note the webhook signing secret printed in the console and add it to your `.env` file:
-   ```env
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   ```
-5. Trigger a mock `checkout.session.completed` event:
-   ```bash
-   stripe trigger checkout.session.completed --add checkout_session:metadata.user_id=test_user_123 --add checkout_session:metadata.credits=50
-   ```
 
 ### Platforms
 
@@ -76,21 +53,247 @@ You can test the Stripe webhook integration locally using the Stripe CLI:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐       ┌─────────────────────────────────────────┐
-│  Web Browser                            │       │  Android App (Kotlin & Jetpack Compose) │
-│  static/index.html & static/style.css   │       │  ForgeScreen & ApiClient                │
-└────────────────────┬────────────────────┘       └────────────────────┬────────────────────┘
-                     │ HTTP / REST / SSE                               │ HTTP / REST / SSE
-                     ▼                                                 ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│  Express Server (server.js)  — Port 8000                                                  │
-│                                                                                           │
-│  GET  /api/health              → Health status, package.json version & Python engine check│
-│  POST /api/generate            → Gemini prompt expansion + Imagen 4 (rate limited)        │
-│  POST /api/photo-to-depth      → Gemini Vision spatial analysis + Imagen 4 (rate limited) │
-│  POST /api/postprocess         → Serialized Python processor smooth (PQueue concurrency:1)│
-│  GET  /api/postprocess-stream  → Serialized Python processor smooth with live SSE events  │
-│  POST /api/invert              → Serialized Python processor invert (PQueue concurrency:1)│
-│  POST /api/remove_bg           → Serialized Python processor remove_bg (rembg ML)         │
-│  Scheduled Task (cleanup.js)   → Automated hourly TTL cleanup of static/generated/        │
-└─────────────────────────────────────────────┬────────────────────────────────────────
+┌─────────────────────────────────────────────┐       ┌─────────────────────────────────────────────┐
+│  Web Browser                                │       │  Android App (Kotlin & Jetpack Compose)     │
+│  static/index.html & static/style.css       │       │  ForgeScreen & ApiClient                    │
+└──────────────────────┬──────────────────────┘       └──────────────────────┬──────────────────────┘
+                       │ HTTP / REST / SSE                                   │ HTTP / REST / SSE
+                       ▼                                                     ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  Express Server (server.js)  — Port 8000                                                          │
+│                                                                                                   │
+│  GET  /api/health              → Health status, package.json version & Python engine check        │
+│  POST /api/generate            → Gemini prompt expansion + Imagen 4 (rate limited + credit gate)  │
+│  POST /api/photo-to-depth      → Gemini Vision spatial analysis + Imagen 4 (rate limited)         │
+│  GET  /api/jobs/:id            → Background job status polling for queued BullMQ jobs             │
+│  POST /api/postprocess         → Serialized Python processor smooth (PQueue concurrency:1)        │
+│  GET  /api/postprocess-stream  → Serialized Python processor smooth with live SSE events          │
+│  POST /api/invert              → Serialized Python processor invert (PQueue concurrency:1)        │
+│  POST /api/remove_bg           → Serialized Python processor remove_bg (rembg ML)                 │
+│  POST /api/webhooks/stripe     → Stripe webhook credit fulfillment & ledger updates               │
+│  Scheduled Task (cleanup.js)   → Automated hourly TTL cleanup of static/generated/                │
+└─────────────────────────────────────────────┬─────────────────────────────────────────────────────┘
+                                              │ child_process.spawn via PQueue (concurrency: 1)
+                                              ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  Python Processor (processor.py)                                                                  │
+│                                                                                                   │
+│  invert:     pixel inversion (65535 - pixel for 16-bit / 255 - pixel for 8-bit)                   │
+│  smooth:     STEP 1 (float32 grayscale) → STEP 2 (inpaint) → STEP 3 (bilateral) →                 │
+│              STEP 4 (normalize) → STEP 5 (lossless 16-bit PNG export)                             │
+│  remove_bg:  rembg U2Net foreground segmentation → pure black background                          │
+└───────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+
+- **Python** 3.10+ with `opencv-python`, `numpy`, and `rembg`
+- **Google Gemini API Key** (configured as `GEMINI_API_KEY` in `.env`)
+
+### Setup
+
+```bash
+# Clone
+git clone https://github.com/el-jefe702/DepthForge.git
+cd DepthForge
+
+# Install Node dependencies
+npm install
+
+# Install Python dependencies
+pip install opencv-python numpy rembg
+
+# Configure environment (.env)
+cp .env.example .env
+```
+
+### Environment Variables
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `GEMINI_API_KEY` | String | *Required* | API key for Google Gemini and Google Imagen 4 access via `@google/genai`. Validated at startup (F14). |
+| `JWT_SECRET` | String | *Optional in test* | Secret key used by `middleware/auth.js` (`creditGate`) to verify bearer JWT tokens. |
+| `REDIS_URL` | String | `redis://127.0.0.1:6379` | Redis connection URL for BullMQ background job queue (`worker.js`). |
+| `SUBSCRIPTIONS_DB_PATH` | String | `./subscriptions.db` | SQLite database file path for credit wallets and transaction ledger (`db/init.js`). |
+| `GENERATED_TTL_HOURS` | Number / String | `24` | Time-to-live in hours for generated files in `static/generated/`. Purged by background cleanup scheduler (F8). |
+| `RATE_LIMIT_WINDOW_MS` | Number / String | `900000` | Window size in milliseconds for IP rate limiting on AI generation endpoints (default: 15 minutes = `900000` ms) (F10). |
+| `RATE_LIMIT_MAX` | Number / String | `10` | Maximum number of AI generation requests permitted per IP within the rate limit window (F10). |
+| `TRUST_PROXY` | Boolean / String / Number | `false` | Express trust proxy setting (`true`, `false`, hop count, or subnet) for accurate client IP resolution behind reverse proxies (F10). |
+| `PORT` | Number / String | `8000` | Port number for Express HTTP and SSE server binding. |
+
+### Key Dependencies
+
+#### Node.js (`package.json`)
+- `@google/genai` (`^2.8.0`): Official Google Gen AI SDK for Gemini prompt enhancement and Imagen 4 generation.
+- `express` (`^4.21.0`): Core HTTP web server and REST/SSE routing framework.
+- `express-rate-limit` (`^8.7.0`): IP-based rate limiting protecting AI generation routes (`/api/generate`, `/api/photo-to-depth`).
+- `multer` (`^1.4.5-lts.1`): Multipart form-data handling for photo uploads with UUID and extension preservation.
+- `p-queue` (`^9.3.3`): Promise-based concurrency queue serializing Python subprocess execution (`concurrency: 1`).
+- `bullmq` (`^5.7.0`) & `ioredis` (`^5.3.2`): Redis-backed background job queue for asynchronous image generation.
+- `jsonwebtoken` (`^9.0.2`) & `sqlite3` (`^5.1.7`): JWT authentication and SQLite credit ledger management.
+- `uuid` (`^14.0.0`): Cryptographically secure UUIDv4 generation for file naming.
+- `dotenv` (`^16.4.5`): Environment variable loader from `.env`.
+
+#### Python (`processor.py`)
+- `opencv-python`: High-performance computer vision library for bilateral filtering, inpainting, and 16-bit PNG I/O.
+- `numpy`: Fast multidimensional array math for 16-bit depth scaling, channel indexing, and normalization.
+- `rembg`: Machine learning background removal model (U2Net) isolating foreground subjects onto black backgrounds.
+
+### Starting the Server
+
+```bash
+# Start the server (runs initial cleanup and schedules hourly maintenance)
+npm start
+
+# Development mode with hot-reload
+npm run dev
+
+# Run automated test suites
+npm test
+
+# Run generated file cleanup manually via CLI
+node cleanup.js [dir] [ttlHours]
+```
+
+Open **http://localhost:8000** in your browser.
+
+### VPS Deployment (Docker Compose & Systemd)
+
+DepthForge is deployed on a Linux VPS using Docker Compose (`docker-compose.yaml`) or native `systemd` service units (`systemd/`) alongside deployment helper scripts (`scripts/`) and database migrations (`supabase/migrations`).
+
+```bash
+# Start via Docker Compose
+docker compose up --build -d
+curl --fail http://localhost:8000/api/health
+```
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Body / Query Params | Response | Description |
+|---|---|---|---|---|
+| `/api/health` | GET, HEAD, OPTIONS | None | `{"status": "ok", "version": "2.0.0", "python": true, "uptime": 12.34, "timestamp": "..."}` | Returns service health status, dynamic package.json version, Python engine availability, uptime, and timestamp. Disallowed methods (POST, PUT, DELETE, PATCH) return 405 Method Not Allowed with Allow header. |
+| `/api/generate` | POST | `{"prompt": "...", "aspectRatio": "1:1", "depth_intensity": 70, "style_preset": "Wildlife", "batch": false}` | `{"status": "success", "image_url": "/static/generated/xxx.png", "images": [...], "batch": false, "job_id": "..."}` | Generates depth map from text prompt. `aspectRatio` defaults to `1:1` (`1:1`, `4:3`, `3:2`, `16:9`, `2:3`). `depth_intensity` (0–100) defaults to `70`. Protected by JWT `creditGate` and rate limiter. |
+| `/api/photo-to-depth` | POST | Multipart `photo` file, optional `aspectRatio`, optional `depth_intensity`, optional `style_preset`, optional `batch` | `{"status": "success", "image_url": "...", "images": [...], "batch": false, "subject": "..."}` | Analyzes photo and generates depth map with requested aspect ratio and depth intensity (default 70). Protected by JWT `creditGate` and rate limiter. |
+| `/api/jobs/:id` | GET | `:id` URL param | `{"job_id": "...", "status": "completed", "result_url": "..."}` | Polls status and result URL of a background generation job in BullMQ (`queued`, `processing`, `completed`, `failed`). |
+| `/api/postprocess` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/forge_xxx.png"}` | Synchronously smooths depth map via 5-step Python processor pipeline. Serialized through PQueue. |
+| `/api/postprocess-stream` | GET / POST | `?image_url=...` | `text/event-stream` | Streams 5-step smoothing progress in real-time over Server-Sent Events (SSE). |
+| `/api/invert` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/inv_xxx.png"}` | Inverts depth map pixel values (16-bit or 8-bit) via serialized Python processor. |
+| `/api/remove_bg` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/iso_xxx.png"}` | Isolates subject onto pure black background using rembg U2Net model. |
+| `/api/webhooks/stripe` | POST | Raw Stripe event payload | `{"received": true}` | Verifies Stripe webhook signatures and credits user wallets on `checkout.session.completed`. |
+
+---
+
+## Post-Processing Pipeline
+
+The Python processor (`processor.py`) applies a 5-stage pipeline:
+
+1. **STEP 1 — Load & Convert to Float32 Grayscale**: Loads 8-bit or 16-bit image into normalized `[0, 1]` float32 grayscale
+2. **STEP 2 — Fill Holes (Inpainting)**: Detects and fills zero-value holes inside the foreground mask using morphological dilation + Telea inpainting
+3. **STEP 3 — Spatial Filtering (Smooth Gradients)**: `cv2.bilateralFilter(d=9, sigmaColor=5000, sigmaSpace=5)` + minor Gaussian blur — removes banding while preserving crisp edges
+4. **STEP 4 — Normalize the Depth Range**: Linear stretch to full `[0, 1]` range for maximum Z-axis depth utilization
+5. **STEP 5 — Export as Lossless 16-Bit PNG**: Quantizes to `uint16` (`0–65535`) and writes 16-bit PNG with compression level 9
+
+---
+
+## Android App
+
+The Android app (`android_app/`) is a native Jetpack Compose application providing the same forge experience on mobile:
+
+- **Share Sheet**: Native Android system share sheet integration (`Intent.ACTION_SEND`, `type = "image/png"`) sharing depth maps with external apps via secure Android FileProvider (`cacheDir/share/`).
+- **Session Gallery**: Horizontal scrollable thumbnail strip (`LazyRow`) displaying all session variations with one-tap restore and Hide/Show/Clear controls.
+- **3D Preview WebView**: Fullscreen dialog hosting an embedded WebGL Three.js displacement engine in a native WebView, featuring orbit drag controls, pinch zoom, and lighting.
+- **Aspect Ratio Selector**: Selectable chip controls (`1:1`, `4:3`, `3:2`, `16:9`, `2:3`) for custom dimensions in text prompt and photo modes.
+- **Depth Intensity Slider**: Native Material 2 `Slider` (0–100%, default 70%) adjusting relief contrast and carving depth dynamically.
+- **Style Presets**: Interactive chip selector for domain preambles (`Portrait`, `Wildlife`, `Ornamental`, `Floral`, `Architecture`, `Abstract`).
+- **Batch Candidate Grid**: 2-column candidate grid (`BatchCandidateGrid`) displaying 4 generated variations simultaneously with candidate badges (`#1`–`#4`), selection borders, and one-tap preview assignment.
+- **Side-by-Side Comparison View**: Split-screen comparison view (`BeforeAfterComparisonView`) with a draggable vertical divider slider and high-contrast badges.
+- **Real-Time SSE Pipeline Animation**: Real-time progress bar and step indicators driven by live Server-Sent Events from `/api/postprocess-stream`.
+- **Health Check & Service Status**: Automated backend health checks via `ApiClient.checkHealth()` and `ApiClient.isHealthy()`.
+- **Configurable Server URL**: Settings dialog allowing dynamic updates to the backend URL for local or LAN-based development.
+
+---
+
+## Project Directory Tree Structure
+
+```
+DepthForge/
+├── server.js                          # Express API server, routes, rate limiting, and PQueue runner
+├── worker.js                          # BullMQ background worker for async Gemini/Imagen generation
+├── cleanup.js                         # Automated TTL cleanup routine & background scheduler
+├── credit-backend.js                  # Supabase RPC credit reservation, commit, and refund client
+├── processor.py                       # OpenCV 16-bit post-processing pipeline & rembg integration
+├── package.json                       # Node.js project manifest & script declarations
+├── package-lock.json                  # Deterministic Node dependency lockfile
+├── Dockerfile                         # Container definition with Node, Python, and OpenCV
+├── docker-compose.yaml                # Multi-container VPS deployment definition
+├── db/                                # SQLite credit wallet & transaction ledger initialization
+│   └── init.js                        # Wallet schema, deductCredits, addCredits, and middleware
+├── middleware/                        # Express authentication and request guards
+│   └── auth.js                        # JWT token extraction, verification, and creditGate
+├── blender_plugin/                    # Blender add-on for direct 3D displacement mesh import
+├── scripts/                           # VPS deployment, provisioning, and maintenance scripts
+├── supabase/migrations/               # Supabase PostgreSQL schema and credit RPC migrations
+├── systemd/                           # Linux systemd unit files for DepthForge service management
+├── static/                            # Web frontend assets (served at /static)
+│   ├── index.html                     # Single-page web UI (Three.js, 3D preview, compare slider)
+│   └── style.css                      # Modern dark-theme responsive design system
+├── tests/                             # Node.js native test runner test suites
+│   ├── aspect_ratio.test.js           # F1: Aspect ratio selector tests
+│   ├── invert.test.js                 # F2: Pixel inversion tests
+│   ├── prompt_history.test.js         # F3: Prompt history persistence tests
+│   ├── sse_pipeline.test.js           # F4: Server-Sent Events streaming tests
+│   ├── session_gallery.test.js        # F5: Session gallery thumbnail tests
+│   ├── depth_intensity.test.js        # F6: Depth intensity slider tests
+│   ├── comparison_view.test.js        # F7: Side-by-side comparison slider tests
+│   ├── cleanup.test.js                # F8: File TTL cleanup scheduler tests
+│   ├── health.test.js                 # F9: Health check endpoint tests
+│   ├── rate_limit.test.js             # F10: Rate limiting & HTTP 429 tests
+│   ├── three_d_preview.test.js        # F11: Three.js 3D live preview tests
+│   ├── style_presets.test.js          # F12: Style presets prompt injection tests
+│   ├── batch_generation.test.js       # F13: Batch generation ×4 tests
+│   ├── env_validation.test.js         # F14: Startup environment validation tests
+│   ├── gemini_response_robustness.test.js # F15: Gemini JSON response robustness tests
+│   ├── multer_uuid.test.js            # F16: Multer UUID filename preservation tests
+│   ├── processor_steps.test.js        # F17: processor.py step comment alignment tests
+│   ├── python_queue.test.js           # F18: Python processor concurrency queue tests
+│   ├── android_share.test.js          # F19: Android Share Intent & FileProvider tests
+│   └── readme_verification.test.js    # F20: README documentation verification tests
+└── android_app/                       # Native Android application
+    ├── README.md                      # Android app architecture & setup guide
+    └── app/
+        └── src/
+            ├── main/
+            │   ├── AndroidManifest.xml# Manifest with FileProvider and network permissions
+            │   ├── assets/            # Mirrored web assets for 3D WebView integration
+            │   │   ├── index.html
+            │   │   └── style.css
+            │   ├── res/xml/
+            │   │   └── file_paths.xml # FileProvider cache sharing paths
+            │   └── kotlin/com/depthforge/app/
+            │       ├── MainActivity.kt# Jetpack Compose UI, ForgeScreen & ShareSheet
+            │       └── ApiClient.kt   # OkHttp3 HTTP/SSE client & Health API
+            └── test/kotlin/com/depthforge/app/
+                ├── AspectRatioTest.kt
+                ├── BatchGenerationTest.kt
+                ├── ComparisonViewTest.kt
+                ├── HealthCheckTest.kt
+                ├── InvertTest.kt
+                ├── PromptHistoryTest.kt
+                ├── RateLimitingTest.kt
+                ├── SessionGalleryTest.kt
+                ├── StylePresetsTest.kt
+                └── ThreeDPreviewTest.kt
+```
+
+---
+
+## License
+
+SLCreations, LLC © 2026

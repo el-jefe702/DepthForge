@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { authenticatedFetch as fetch } from './authenticated-fetch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,8 +94,7 @@ describe('Concurrency Queue for Python Processor (Feature F18) - Tests', () => {
         try {
             const reqA = fetch(`http://127.0.0.1:${port}/api/invert`, {
                 method: 'POST',
-                headers: {
-        'Authorization': 'Bearer ' + (process.env.TEST_JWT_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RfdXNlciIsInVzZXJfaWQiOiJ0ZXN0X3VzZXIiLCJpYXQiOjE3OTIwNTM2NzV9.wWiObpWDa9vPiaaSpaT_TRytip0WXKJW38ZwHfiVYKw'), 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_url: '/static/generated/test_q_a.png' })
             });
 

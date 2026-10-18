@@ -14,7 +14,6 @@ import Stripe from 'stripe';
 import { addCredits, deductCredit } from './credit-backend.js';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
-import sqlite3 from 'sqlite3';
 
 dotenv.config();
 
@@ -42,19 +41,10 @@ if (process.env.TRUST_PROXY) {
     app.set('trust proxy', tpVal === 'true' ? true : (tpVal === 'false' ? false : (isNaN(Number(tpVal)) ? process.env.TRUST_PROXY : Number(tpVal))));
 }
 
-import os from 'os';
-
-// Detect Vercel serverless runtime
-const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
-
 // Ensure directories exist
 const staticDir = path.join(__dirname, 'static');
-const generatedDir = isVercel
-    ? path.join(os.tmpdir(), 'depthforge', 'generated')
-    : path.join(staticDir, 'generated');
-const uploadsDir = isVercel
-    ? path.join(os.tmpdir(), 'depthforge', 'uploads')
-    : path.join(staticDir, 'uploads');
+const generatedDir = path.join(staticDir, 'generated');
+const uploadsDir = path.join(staticDir, 'uploads');
 
 [staticDir, generatedDir, uploadsDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -63,10 +53,6 @@ const uploadsDir = isVercel
 });
 
 app.use('/static', express.static(staticDir));
-if (isVercel) {
-    app.use('/static/generated', express.static(generatedDir));
-    app.use('/static/uploads', express.static(uploadsDir));
-}
 
 // Stripe Webhook - MUST be before express.json()
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -114,29 +100,23 @@ const creditDeductionMiddleware = (req, res, next) => {
             Promise.resolve().then(async () => {
                 try {
                     const imageUrl = body.imageUrl || body.url || body.image_url || (body.generatedImages && body.generatedImages[0] && body.generatedImages[0].url) || '';
-                    const newBalance = await deductCredit(userId, req.body.prompt || 'Generation', imageUrl);
+                    const newBalance = await deductCredit(userId, req.body?.prompt || 'Generation', imageUrl);
                     body.credits_balance = newBalance;
                 } catch (err) {
                     console.error('Credit deduction failed:', err);
                 }
-                originalJson.call(this, body);
             });
-            return this;
         }
         return originalJson.call(this, body);
     };
     next();
 };
 app.use('/api/generate', creditDeductionMiddleware);
-app.use('/api/photo-to-depth', creditDeductionMiddleware);
-
-app.use('/api/invert', creditGate);
 
 // Global unhandled rejection guard — prevents silent process crashes
 process.on('unhandledRejection', (reason) => {
     console.error('[UnhandledRejection]', reason);
 });
-
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -150,7 +130,7 @@ app.use((req, res, next) => {
 
 app.get('/', (req, res) => res.redirect('/static/index.html'));
 
-const ai = new GoogleGenAI({ 
+const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 if (!process.env.GEMINI_API_KEY) {
@@ -204,6 +184,89 @@ async function generateImagesWithFallback(params) {
 
     return { generatedImages };
 }
+
+// ----------------------------------------------------------------------
+// Background Job Queue & In-Memory Store (Issues #40 & #41)
+// Lazily connects to Redis only when REDIS_URL is configured outside test mode
+// so importing server.js in tests never leaves open socket handles.
+// ----------------------------------------------------------------------
+const QUEUE_NAME = 'image-generation';
+const jobStore = new Map();
+let bullQueue = null;
+
+function getBullQueue() {
+    if (process.env.NODE_ENV === 'test' || !process.env.REDIS_URL) {
+        return null;
+    }
+    if (!bullQueue) {
+        const redisConn = new IORedis(process.env.REDIS_URL, {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            lazyConnect: true,
+            retryStrategy(times) {
+                if (times > 3) return null;
+                return Math.min(times * 200, 2000);
+            }
+        });
+        redisConn.on('error', () => {});
+        if (typeof redisConn.unref === 'function') redisConn.unref();
+        bullQueue = new Queue(QUEUE_NAME, { connection: redisConn });
+        bullQueue.on('error', () => {});
+    }
+    return bullQueue;
+}
+
+const generationJobQueue = {
+    name: QUEUE_NAME,
+    async add(name, data, opts = {}) {
+        const id = opts.jobId || data?.jobId || uuidv4();
+        const record = {
+            id,
+            name,
+            data,
+            status: 'queued',
+            result: null,
+            failedReason: null,
+            createdAt: Date.now()
+        };
+        jobStore.set(id, record);
+        const q = getBullQueue();
+        if (q) {
+            try {
+                await q.add(name, data, { ...opts, jobId: id });
+            } catch {
+                // Fallback to in-memory jobStore if Redis is unavailable
+            }
+        }
+        return record;
+    },
+    async getJob(id) {
+        const q = getBullQueue();
+        if (q) {
+            try {
+                const bullJob = await q.getJob(id);
+                if (bullJob) return bullJob;
+            } catch {}
+        }
+        const memJob = jobStore.get(id);
+        if (!memJob) return null;
+        return {
+            id: memJob.id,
+            data: memJob.data,
+            returnvalue: memJob.result,
+            failedReason: memJob.failedReason,
+            async getState() {
+                return memJob.status;
+            }
+        };
+    },
+    async close() {
+        if (bullQueue) {
+            await bullQueue.close().catch(() => {});
+            bullQueue = null;
+        }
+    }
+};
 
 // ----------------------------------------------------------------------
 // Rate Limiting Configuration (F10)
@@ -387,204 +450,774 @@ const buildFinalPrompt = (improvedPrompt, depthIntensity = 70) => {
         "CRITICAL: The subject must be ISOLATED on a PURE BLACK BACKGROUND (#000000). " +
         "STYLE: Flawless, continuous gradients. Soft, airbrushed shading to represent height. " +
         "TECHNICAL: Pure black to pure white linear Z-axis distribution. " +
-     
-
-"OUTPUT: Pure black and white height map ONLY. No color, no text, no borders.\n";
+        "FORBIDDEN: ABSOLUTELY NO topographic lines, NO contour lines, NO terracing, NO stepped plateaus, NO harsh outlines, NO banding, NO posterization. " +
+        "OUTPUT: A perfectly smooth, seamless 16-bit depth map optimized for 3D CNC laser engraving.";
 };
 
-const upload = multer({ dest: uploadsDir });
-
-const generationQueue = new PQueue({ concurrency: 2 });
-
-const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-const redisConnection = new IORedis(REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    retryStrategy(times) {
-        return Math.min(times * 200, 3000);
+/**
+ * Feature F15: Gemini Prompt Response Robustness
+ * Safely parses JSON strings returned by Gemini models, stripping markdown code blocks
+ * if present. Falls back cleanly without crashing if malformed JSON or plain text is received.
+ */
+function safeJsonParse(rawText, fallback = {}, logger = console) {
+    if (typeof rawText !== 'string' || !rawText.trim()) {
+        return fallback;
     }
-});
-redisConnection.on('error', (err) => {
-    console.warn(`[Redis Queue Warning]: ${err.message}`);
-});
 
-const QUEUE_NAME = 'image-generation';
-const generationJobQueue = new Queue(QUEUE_NAME, {
-    connection: redisConnection
-});
+    let cleaned = rawText.trim();
+    // Strip markdown code fences if wrapped in ```json ... ``` or ``` ... ```
+    if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    }
 
-const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || path.join(__dirname, 'subscriptions.db');
-const db = new sqlite3.Database(dbPath);
-
-db.run(`
-    CREATE TABLE IF NOT EXISTS jobs (
-        id TEXT PRIMARY KEY,
-        status TEXT NOT NULL DEFAULT 'queued',
-        prompt TEXT,
-        style_preset TEXT,
-        result_url TEXT,
-        error TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
-
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.post('/api/generate', generateLimiter, async (req, res) => {
     try {
-        const { prompt, stylePreset, depthIntensity, numberOfImages = 1, aspectRatio = '1:1' } = req.body;
-        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-            return res.status(400).json({ error: 'Prompt is required' });
+        const parsed = JSON.parse(cleaned);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
         }
-
-        const jobId = uuidv4();
-        const cleanPrompt = prompt.trim();
-        const validPreset = sanitizeStylePreset(stylePreset);
-        const intensity = sanitizeDepthIntensity(depthIntensity);
-        const imagesCount = Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4);
-
-        await new Promise((resolve) => {
-            db.run(
-                `INSERT INTO jobs (id, status, prompt, style_preset, created_at, updated_at) VALUES (?, 'queued', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                [jobId, cleanPrompt, validPreset],
-                (err) => {
-                    if (err) {
-                        console.error('Failed to insert job into SQLite:', err.message);
-                    }
-                    resolve();
-                }
-            );
-        });
-
-        const jobData = {
-            jobId,
-            id: jobId,
-            prompt: cleanPrompt,
-            stylePreset: validPreset,
-            depthIntensity: intensity,
-            numberOfImages: imagesCount,
-            aspectRatio,
-            userId: req.user?.id || req.userId || (typeof req.user === 'string' ? req.user : null)
-        };
-
-        try {
-            await generationJobQueue.add('generate', jobData, { jobId });
-        } catch (queueErr) {
-            console.error('[BullMQ] Failed to add job to Redis queue:', queueErr.message);
-        }
-
-        return res.json({
-            job_id: jobId,
-            jobId,
-            status: 'queued'
-        });
+        return fallback;
     } catch (err) {
-        console.error('Generation error:', err);
-        return res.status(500).json({ error: err.message || 'Image generation failed' });
+        if (logger?.error) {
+            logger.error(`[Gemini Response Robustness] Failed to parse JSON response: ${err.message}. Raw response: ${rawText}`);
+        }
+        return fallback;
+    }
+}
+
+// --- DYNAMIC PACKAGE METADATA ---
+const getPackageVersion = (customPkgPath = path.join(__dirname, 'package.json')) => {
+    try {
+        const pkgPath = (typeof customPkgPath === 'string' && customPkgPath.trim())
+            ? customPkgPath.trim()
+            : path.join(__dirname, 'package.json');
+        if (!fs.existsSync(pkgPath) || !fs.statSync(pkgPath).isFile()) {
+            return '0.0.0';
+        }
+        const pkgContent = fs.readFileSync(pkgPath, 'utf8');
+        const cleanContent = pkgContent.replace(/^\uFEFF/, '');
+        const pkg = JSON.parse(cleanContent);
+        return (typeof pkg.version === 'string' && pkg.version.trim()) ? pkg.version.trim() : '0.0.0';
+    } catch {
+        return '0.0.0';
+    }
+};
+
+// --- HELPER FOR PYTHON TASKS ---
+const resolvePythonExecutable = () => {
+    if (process.env.PYTHON_EXEC) {
+        return process.env.PYTHON_EXEC;
+    }
+    const candidates = [
+        path.join(__dirname, '.venv', 'Scripts', 'python.exe'),
+        path.join(__dirname, '.venv', 'bin', 'python'),
+        path.join(__dirname, '.venv', 'Scripts', 'python')
+    ];
+    for (const candidate of candidates) {
+        if (candidate && fs.existsSync(candidate)) return candidate;
+    }
+    return process.platform === 'win32' ? 'python.exe' : 'python';
+};
+
+const _pyCheckCache = new Map();
+
+const clearPythonCache = () => {
+    _pyCheckCache.clear();
+};
+
+const isPythonAvailable = (customResolvePy = resolvePythonExecutable, customProcessorPath = path.join(__dirname, 'processor.py'), options = {}) => {
+    try {
+        if (!customProcessorPath || typeof customProcessorPath !== 'string' || !fs.existsSync(customProcessorPath) || !fs.statSync(customProcessorPath).isFile()) {
+            return false;
+        }
+        const pyExec = typeof customResolvePy === 'function' ? customResolvePy() : customResolvePy;
+        if (!pyExec || typeof pyExec !== 'string' || !pyExec.trim()) {
+            return false;
+        }
+        if (pyExec.includes('/') || pyExec.includes('\\')) {
+            if (!fs.existsSync(pyExec)) {
+                return false;
+            }
+        }
+
+        const bypassCache = options?.bypassCache === true;
+        const ttlMs = typeof options?.ttlMs === 'number' ? options.ttlMs : 30000;
+        const cacheKey = `${pyExec}::${customProcessorPath}`;
+        const now = Date.now();
+        if (!bypassCache) {
+            const cached = _pyCheckCache.get(cacheKey);
+            if (cached && (now - cached.timestamp < ttlMs)) {
+                return cached.result;
+            }
+        }
+
+        const check = spawnSync(pyExec, ['--version'], {
+            stdio: 'ignore',
+            timeout: 5000,
+            windowsHide: true
+        });
+        const result = !check.error && check.status === 0;
+        _pyCheckCache.set(cacheKey, { result, timestamp: Date.now() });
+        return result;
+    } catch {
+        return false;
+    }
+};
+
+const parseStepFromLog = (line) => {
+    if (typeof line !== 'string') return null;
+    const stepMatch = line.match(/\[STEP\s+(\d+)\/(\d+)\]/i);
+    if (stepMatch) {
+        return parseInt(stepMatch[1], 10);
+    }
+    if (/loading|convert.*16-bit|upscal/i.test(line)) return 1;
+    if (/inpaint|missing data|hole/i.test(line)) return 2;
+    if (/bilateral|gaussian|spatial filter|banding/i.test(line)) return 3;
+    if (/normaliz|stretch.*range/i.test(line)) return 4;
+    if (/export.*png|saving/i.test(line)) return 5;
+    return null;
+};
+
+const spawnPythonProcessor = (command, args) => {
+    const pythonExec = resolvePythonExecutable();
+    return spawn(pythonExec, ['-u', path.join(__dirname, 'processor.py'), command, ...args], { cwd: __dirname });
+};
+
+/**
+ * Feature F18: Concurrency Queue for Python Processor
+ * Serializes Python subprocess tasks (Polish, Invert, Remove BG) with concurrency: 1
+ * so simultaneous requests do not compete for system resources.
+ */
+const pythonProcessorQueue = new PQueue({ concurrency: 1 });
+
+const runPythonProcessorDirect = (command, args) => {
+    return new Promise((resolve, reject) => {
+        const pyProg = spawnPythonProcessor(command, args);
+
+        pyProg.stdout.on('data', (data) => console.log(`[Python] ${data.toString().trim()}`));
+        let errorOutput = '';
+        pyProg.stderr.on('data', (data) => errorOutput += data.toString());
+
+        pyProg.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`Python script failed (${code}): ${errorOutput}`));
+        });
+        pyProg.on('error', (err) => reject(new Error(`Could not start Python: ${err.message}`)));
+    });
+};
+
+const runPythonProcessor = (command, args) => {
+    const queueDepth = pythonProcessorQueue.size;
+    const isBusy = pythonProcessorQueue.pending > 0 || queueDepth > 0;
+    if (isBusy) {
+        console.log(`[Python Queue] Request queued for '${command}' (queue depth: ${queueDepth}, pending: ${pythonProcessorQueue.pending})`);
+    }
+    return pythonProcessorQueue.add(() => runPythonProcessorDirect(command, args));
+};
+
+/**
+ * Feature F16: Multer UUID Filenames with Extension
+ * Generates filenames like upload_<uuid>.<ext> deriving the extension from originalname.
+ */
+const uploadStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const parsed = path.parse(file.originalname || '');
+        const ext = parsed.ext ? parsed.ext.toLowerCase() : '.jpg';
+        const safeExt = /^\.[a-z0-9]+$/i.test(ext) ? ext : '.jpg';
+        const uniqueName = `upload_${uuidv4().substring(0, 12)}${safeExt}`;
+        cb(null, uniqueName);
     }
 });
 
-app.get(['/api/jobs/:id', '/api/job/:id'], (req, res) => {
-    const { id } = req.params;
-    if (!id) {
-        return res.status(400).json({ error: 'Job ID is required' });
+const photoUpload = multer({
+    storage: uploadStorage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Only image files are allowed.'));
+        }
+        cb(null, true);
     }
-    db.get('SELECT * FROM jobs WHERE id = ?', [id], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: 'Database error' });
+});
+
+const ALLOWED_ASPECT_RATIOS = ['1:1', '4:3', '3:2', '16:9', '2:3'];
+const sanitizeAspectRatio = (ratio) => {
+    return ALLOWED_ASPECT_RATIOS.includes(ratio) ? ratio : '1:1';
+};
+
+// --- ROUTES ---
+
+app.route('/api/health')
+    .get((req, res) => {
+        try {
+            const version = getPackageVersion();
+            const python = isPythonAvailable();
+            const uptime = typeof process.uptime === 'function' && Number.isFinite(process.uptime())
+                ? Math.max(0, Number(process.uptime().toFixed(2)))
+                : 0;
+            const timestamp = new Date().toISOString();
+
+            res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.set('Pragma', 'no-cache');
+            res.set('Expires', '0');
+
+            res.status(200).json({
+                status: 'ok',
+                version,
+                python,
+                uptime,
+                timestamp
+            });
+        } catch (err) {
+            res.status(500).json({
+                status: 'error',
+                error: err?.message || 'Internal health check error',
+                timestamp: new Date().toISOString()
+            });
         }
-        if (!row) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-        return res.json({
-            job_id: row.id,
-            jobId: row.id,
-            status: row.status,
-            imageUrl: row.result_url,
-            url: row.result_url,
-            error: row.error,
-            created_at: row.created_at,
-            updated_at: row.updated_at
+    })
+    .options((req, res) => {
+        res.set('Allow', 'GET, HEAD, OPTIONS');
+        res.status(204).end();
+    })
+    .all((req, res) => {
+        res.set('Allow', 'GET, HEAD, OPTIONS');
+        res.status(405).json({
+            status: 'error',
+            error: `Method ${req.method} not allowed`,
+            allowedMethods: ['GET', 'HEAD', 'OPTIONS']
         });
     });
+
+app.post('/api/generate', generateLimiter, async (req, res) => {
+    console.log(`[${new Date().toLocaleTimeString()}] 🚀 POST /api/generate - Starting generation...`);
+    const jobId = uuidv4();
+    try {
+        const studentPrompt = req.body.prompt || "";
+        const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
+        const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
+        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
+        const numImages = isBatch ? 4 : 1;
+
+        await generationJobQueue.add('generate', {
+            jobId,
+            prompt: studentPrompt,
+            aspectRatio,
+            depthIntensity,
+            stylePreset,
+            batch: isBatch,
+            numberOfImages: numImages,
+            userId: req.userId || null
+        }, { jobId });
+
+        const improveResponse = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: buildImprovePrompt(studentPrompt, stylePreset),
+            config: { responseMimeType: "application/json" }
+        });
+        const rawImproveText = improveResponse?.text || "";
+        const responseJson = safeJsonParse(rawImproveText, {});
+        const effectivePrompt = (typeof responseJson?.improved_prompt === 'string' && responseJson.improved_prompt.trim())
+            ? responseJson.improved_prompt.trim()
+            : (studentPrompt || "3D relief sculpture");
+
+        if (!responseJson?.improved_prompt) {
+            console.warn(`[Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: ${rawImproveText}`);
+        }
+
+        const finalPrompt = buildFinalPrompt(effectivePrompt, depthIntensity);
+
+        const imageResult = await generateImagesWithFallback({
+            model: 'imagen-4.0-fast-generate-001',
+            prompt: finalPrompt,
+            config: {
+                numberOfImages: numImages,
+                outputMimeType: "image/png",
+                aspectRatio: aspectRatio
+            }
+        });
+
+        if (!imageResult?.generatedImages?.length) {
+            throw new Error("No image returned from the API.");
+        }
+
+        const imageUrls = [];
+        for (const img of imageResult.generatedImages) {
+            const filename = `${uuidv4().substring(0, 10)}.png`;
+            const filepath = path.join(generatedDir, filename);
+            const base64Data = img.image.imageBytes;
+            await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+            imageUrls.push(`/static/generated/${filename}`);
+        }
+
+        const memJob = jobStore.get(jobId);
+        if (memJob) {
+            memJob.status = 'completed';
+            memJob.result = {
+                status: 'success',
+                image_url: imageUrls[0],
+                images: imageUrls,
+                batch: isBatch
+            };
+        }
+
+        res.json({
+            status: "success",
+            job_id: jobId,
+            jobId: jobId,
+            image_url: imageUrls[0],
+            images: imageUrls,
+            batch: isBatch
+        });
+    } catch (error) {
+        const memJob = jobStore.get(jobId);
+        if (memJob) {
+            memJob.status = 'failed';
+            memJob.failedReason = error.message;
+        }
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
-app.post('/api/photo-to-depth', photoToDepthLimiter, upload.single('image'), async (req, res) => {
+// Job Polling Endpoint (Issue #41)
+app.get(['/api/jobs/:id', '/api/job/:id'], async (req, res) => {
+    const jobId = req.params.id;
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Image file is required' });
+        const job = await generationJobQueue.getJob(jobId);
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' });
         }
-        const id = uuidv4();
-        const bgRemovedPath = path.join(uploadsDir, `${id}_nobg.png`);
-        const finalPath = path.join(generatedDir, `${id}_depth.png`);
-
-        const bgProc = spawnSync('python', ['processor.py', 'remove_bg', req.file.path, bgRemovedPath]);
-        const sourcePath = bgProc.status === 0 ? bgRemovedPath : req.file.path;
-
-        const smoothProc = spawnSync('python', ['processor.py', 'smooth', sourcePath, finalPath]);
-        if (smoothProc.status !== 0) {
-            return res.status(500).json({ error: 'Depth processing failed' });
-        }
-
-        res.json({ url: `/static/generated/${id}_depth.png`, imageUrl: `/static/generated/${id}_depth.png` });
+        const state = await job.getState();
+        const result = job.returnvalue || null;
+        const resultUrl = result?.image_url || result?.url || null;
+        return res.json({
+            id: jobId,
+            job_id: jobId,
+            jobId: jobId,
+            status: state,
+            result_url: resultUrl,
+            imageUrl: resultUrl,
+            url: resultUrl,
+            images: result?.images || (resultUrl ? [resultUrl] : []),
+            error: job.failedReason || null
+        });
     } catch (err) {
-        console.error('Photo-to-depth error:', err);
-        res.status(500).json({ error: err.message || 'Processing failed' });
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/postprocess', async (req, res) => {
+    const rawUrl = typeof req.body?.image_url === 'string' ? req.body.image_url.trim() : '';
+    const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+    const filename = path.basename(cleanUrl);
+    if (!rawUrl || !filename || filename === '.' || filename === '..') return res.status(400).json({ error: 'Missing image_url.' });
+    const inputPath = path.join(generatedDir, filename);
+    if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) return res.status(404).json({ error: 'Image not found on server.' });
+    try {
+        const outputPath = path.join(generatedDir, `forge_${filename}`);
+        await runPythonProcessor('smooth', [inputPath, outputPath]);
+        res.json({ status: "success", image_url: `/static/generated/forge_${filename}` });
+    } catch (error) {
+        console.error("Python smoothing failed, bypassing:", error.message);
+        res.json({ status: "success", image_url: `/static/generated/${filename}` });
+    }
+});
+
+const handlePostprocessStream = async (req, res) => {
+    const rawUrl = typeof (req.query?.image_url || req.body?.image_url) === 'string'
+        ? (req.query?.image_url || req.body?.image_url).trim()
+        : '';
+    const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+    const filename = path.basename(cleanUrl);
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') {
+        res.flushHeaders();
+    }
+
+    const sendEvent = (data) => {
+        if (!res.writableEnded) {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        }
+    };
+
+    if (!rawUrl || !filename || filename === '.' || filename === '..') {
+        sendEvent({ status: 'error', error: 'Missing image_url.' });
+        return res.end();
+    }
+
+    const inputPath = path.join(generatedDir, filename);
+    if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) {
+        sendEvent({ status: 'error', error: 'Image not found on server.' });
+        return res.end();
+    }
+
+    const queuePosition = pythonProcessorQueue.size + pythonProcessorQueue.pending;
+    if (queuePosition > 0) {
+        sendEvent({
+            status: 'queued',
+            queuePosition,
+            message: `Queued for processing (position ${queuePosition})...`
+        });
+    }
+
+    const outputPath = path.join(generatedDir, `forge_${filename}`);
+    let pyProg;
+    try {
+        pyProg = spawnPythonProcessor('smooth', [inputPath, outputPath]);
+    } catch (err) {
+        sendEvent({ status: 'error', error: `Could not start Python: ${err.message}` });
+        return res.end();
+    }
+
+    let errorOutput = '';
+    let lastStdoutError = '';
+    let isFinished = false;
+    let stdoutBuffer = '';
+
+    // Clean up child process if client closes stream early
+    req.on('close', () => {
+        if (!isFinished) {
+            isFinished = true;
+            try { pyProg.kill(); } catch (e) {}
+        }
+    });
+
+    pyProg.stdout.on('data', (chunk) => {
+        stdoutBuffer += chunk.toString();
+        const lines = stdoutBuffer.split(/\r?\n/);
+        stdoutBuffer = lines.pop() || '';
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            if (/^(error|exception|fail)/i.test(line)) {
+                lastStdoutError = line;
+            }
+            console.log(`[Python Stream] ${line}`);
+            const step = parseStepFromLog(line);
+            if (step) {
+                sendEvent({
+                    step,
+                    total: 5,
+                    message: line,
+                    status: 'processing'
+                });
+            }
+        }
+    });
+
+    pyProg.stderr.on('data', (chunk) => {
+        errorOutput += chunk.toString();
+    });
+
+    pyProg.on('error', (err) => {
+        if (!isFinished) {
+            isFinished = true;
+            console.error('Python spawn error:', err);
+            sendEvent({ status: 'error', error: `Could not start Python: ${err.message}` });
+            res.end();
+        }
+    });
+
+    pyProg.on('close', (code) => {
+        if (isFinished) return;
+        isFinished = true;
+        if (stdoutBuffer.trim()) {
+            const remainingLine = stdoutBuffer.trim();
+            if (/^(error|exception|fail)/i.test(remainingLine)) {
+                lastStdoutError = remainingLine;
+            }
+            const step = parseStepFromLog(remainingLine);
+            if (step) {
+                sendEvent({
+                    step,
+                    total: 5,
+                    message: remainingLine,
+                    status: 'processing'
+                });
+            }
+        }
+        if (code === 0 && fs.existsSync(outputPath)) {
+            sendEvent({
+                step: 5,
+                total: 5,
+                status: 'complete',
+                image_url: `/static/generated/forge_${filename}`
+            });
+        } else {
+            const errMsg = errorOutput.trim() || lastStdoutError || `Python process exited with code ${code}`;
+            console.error(`Python smoothing failed (${code}): ${errMsg}`);
+            sendEvent({
+                status: 'error',
+                error: errMsg
+            });
+        }
+        res.end();
+    });
+};
+
+app.get('/api/postprocess-stream', handlePostprocessStream);
+app.post('/api/postprocess-stream', handlePostprocessStream);
+
+app.post('/api/remove_bg', async (req, res) => {
+    const rawUrl = typeof req.body?.image_url === 'string' ? req.body.image_url.trim() : '';
+    const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+    const filename = path.basename(cleanUrl);
+    if (!rawUrl || !filename || filename === '.' || filename === '..') return res.status(400).json({ error: 'Missing image_url.' });
+    const inputPath = path.join(generatedDir, filename);
+    if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) return res.status(404).json({ error: 'Image not found on server.' });
+    try {
+        const outputPath = path.join(generatedDir, `iso_${filename}`);
+        await runPythonProcessor('remove_bg', [inputPath, outputPath]);
+        res.json({ status: "success", image_url: `/static/generated/iso_${filename}` });
+    } catch (error) {
+        console.error("Python remove_bg failed, bypassing:", error.message);
+        res.json({ status: "success", image_url: `/static/generated/${filename}` });
     }
 });
 
 app.post('/api/invert', async (req, res) => {
+    const rawUrl = typeof req.body?.image_url === 'string' ? req.body.image_url.trim() : '';
+    const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+    const filename = path.basename(cleanUrl);
+    if (!rawUrl || !filename || filename === '.' || filename === '..') return res.status(400).json({ error: 'Missing image_url.' });
+    const inputPath = path.join(generatedDir, filename);
+    if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) return res.status(404).json({ error: 'Image not found on server.' });
     try {
-        const { imageUrl } = req.body;
-        if (!imageUrl) {
-            return res.status(400).json({ error: 'imageUrl is required' });
-        }
-
-        const filename = path.basename(imageUrl);
-        const inputPath = path.join(generatedDir, filename);
-        if (!fs.existsSync(inputPath)) {
-            return res.status(404).json({ error: 'Source image not found' });
-        }
-
-        const id = uuidv4();
-        const outputPath = path.join(generatedDir, `${id}_inverted.png`);
-
-        const proc = spawnSync('python', ['processor.py', 'invert', inputPath, outputPath]);
-        if (proc.status !== 0) {
-            return res.status(500).json({ error: 'Inversion failed' });
-        }
-
-        res.json({ url: `/static/generated/${id}_inverted.png`, imageUrl: `/static/generated/${id}_inverted.png` });
-    } catch (err) {
-        console.error('Invert error:', err);
-        res.status(500).json({ error: err.message || 'Invert failed' });
+        const outputPath = path.join(generatedDir, `inv_${filename}`);
+        await runPythonProcessor('invert', [inputPath, outputPath]);
+        res.json({ status: "success", image_url: `/static/generated/inv_${filename}` });
+    } catch (error) {
+        console.error("Python invert failed, bypassing:", error.message);
+        res.json({ status: "success", image_url: `/static/generated/${filename}` });
     }
 });
 
-const isMain = process.argv[1] && (
-    process.argv[1].endsWith('server.js') ||
-    fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
-);
-if (process.env.NODE_ENV !== 'test' && isMain) {
-    startCleanupScheduler();
-    app.listen(port, () => {
-        console.log(`Server listening on port ${port}`);
-    });
+app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo'), async (req, res) => {
+    const uploadedPath = req.file?.path;
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No photo uploaded.' });
+
+        const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
+        const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
+        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
+        const styleGuidance = getStyleGuidance(stylePreset);
+        const styleClause = styleGuidance ? ` ${styleGuidance}` : '';
+
+        const photoBytes = await fs.promises.readFile(uploadedPath);
+        const photoBase64 = photoBytes.toString('base64');
+        const mimeType = req.file.mimetype || 'image/jpeg';
+
+        const analysisResponse = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: [{
+                parts: [
+                    { inlineData: { mimeType: mimeType, data: photoBase64 } },
+                    { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
+                ]
+            }],
+            config: { responseMimeType: 'application/json' }
+        });
+
+        const rawAnalysisText = analysisResponse?.text || "";
+        const analysisJson = safeJsonParse(rawAnalysisText, {});
+
+        let depthPrompt = (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim())
+            ? analysisJson.depth_prompt.trim()
+            : null;
+        let subjectDescription = (typeof analysisJson?.subject_description === 'string' && analysisJson.subject_description.trim())
+            ? analysisJson.subject_description.trim()
+            : 'photo subject';
+
+        // Robust fallback if Gemini returns plain text, markdown, or non-JSON output
+        if (!depthPrompt) {
+            console.warn(`[Gemini Photo-to-Depth Warning] Non-JSON or missing depth_prompt from Gemini Vision. Using fallback from raw response: ${rawAnalysisText}`);
+            const sanitizedRaw = rawAnalysisText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            if (sanitizedRaw) {
+                depthPrompt = `depth map of ${sanitizedRaw.slice(0, 300)}`;
+                subjectDescription = sanitizedRaw.slice(0, 80);
+            } else {
+                depthPrompt = 'depth map of the uploaded photo subject with organic depth and smooth relief';
+                subjectDescription = 'uploaded photo';
+            }
+        }
+
+        const finalDepthPrompt = buildFinalPrompt(depthPrompt, depthIntensity);
+
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
+        const numImages = isBatch ? 4 : 1;
+
+        const imageResult = await generateImagesWithFallback({
+            model: 'imagen-4.0-fast-generate-001',
+            prompt: finalDepthPrompt,
+            config: {
+                numberOfImages: numImages,
+                outputMimeType: 'image/png',
+                aspectRatio: aspectRatio
+            }
+        });
+
+        if (!imageResult?.generatedImages?.length) {
+            throw new Error('No depth map returned from Imagen.');
+        }
+
+        const imageUrls = [];
+        for (const img of imageResult.generatedImages) {
+            const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
+            const filepath = path.join(generatedDir, filename);
+            const base64Data = img.image.imageBytes;
+            await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
+            imageUrls.push(`/static/generated/${filename}`);
+        }
+
+        await fs.promises.unlink(uploadedPath).catch(() => {});
+
+        res.json({
+            status: 'success',
+            image_url: imageUrls[0],
+            images: imageUrls,
+            batch: isBatch,
+            subject: subjectDescription
+        });
+    } catch (error) {
+        if (uploadedPath) await fs.promises.unlink(uploadedPath).catch(() => {});
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Feature F14: Environment Validation at Startup
+ * Validates critical environment variables and external dependencies before server binds port.
+ */
+function validateEnvironment(env = process.env, options = {}) {
+    const errors = [];
+    const warnings = [];
+    const exitOnError = options.exitOnError !== undefined ? options.exitOnError : true;
+    const logger = options.logger || console;
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || !apiKey.trim()) {
+        errors.push(
+            "GEMINI_API_KEY is missing or empty. Please set GEMINI_API_KEY in your .env file or environment variables. Get an API key at https://aistudio.google.com/."
+        );
+    }
+
+    const pythonCheck = options.isPythonAvailable ? options.isPythonAvailable() : isPythonAvailable();
+    if (!pythonCheck) {
+        warnings.push(
+            "Python 3 executable or processor.py not found. Post-processing features (smoothing, background removal, 16-bit displacement mesh) will run in degraded/bypass mode. Ensure Python 3.10+ and OpenCV are installed."
+        );
+    }
+
+    if (errors.length > 0) {
+        logger.error("\n========================================================");
+        logger.error("❌ STARTUP ERROR: Environment validation failed!");
+        errors.forEach(err => logger.error(` - ${err}`));
+        logger.error("========================================================\n");
+        if (exitOnError) {
+            process.exit(1);
+        }
+    }
+
+    if (warnings.length > 0) {
+        logger.warn("\n--------------------------------------------------------");
+        logger.warn("⚠️  STARTUP WARNING:");
+        warnings.forEach(warn => logger.warn(` - ${warn}`));
+        logger.warn("--------------------------------------------------------\n");
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors,
+        warnings
+    };
 }
 
-export default app;
+let server;
+let cleanupScheduler = null;
+const isDirectRun = isMainModule(import.meta.url);
+if (process.env.NODE_ENV !== 'test' && isDirectRun) {
+    validateEnvironment(process.env, { exitOnError: true });
+    server = app.listen(port, '0.0.0.0', () => console.log(`DepthForge running on http://0.0.0.0:${port}`));
+    cleanupScheduler = startCleanupScheduler({
+        dir: generatedDir,
+        runImmediately: true
+    });
+    if (server) {
+        server.on('close', () => {
+            if (cleanupScheduler) {
+                stopCleanupScheduler(cleanupScheduler);
+            }
+        });
+
+        const handleShutdown = () => {
+            server.close(() => {
+                process.exit(0);
+            });
+        };
+        process.on('SIGINT', handleShutdown);
+        process.on('SIGTERM', handleShutdown);
+    }
+}
+
 export {
     app,
-    generationJobQueue,
-    QUEUE_NAME,
+    server,
+    sanitizeAspectRatio,
+    ALLOWED_ASPECT_RATIOS,
+    ai,
+    parseStepFromLog,
+    runPythonProcessor,
+    spawnPythonProcessor,
+    handlePostprocessStream,
+    buildFinalPrompt,
+    buildImprovePrompt,
+    STYLE_PRESETS,
+    sanitizeStylePreset,
+    getStyleGuidance,
+    sanitizeDepthIntensity,
+    getDepthModifier,
+    cleanupGeneratedFiles,
+    cleanupGeneratedFilesSync,
+    parseTtlHours,
+    startCleanupScheduler,
+    stopCleanupScheduler,
+    DEFAULT_TTL_HOURS,
+    CLEANUP_INTERVAL_MS,
+    cleanupScheduler,
+    generatedDir,
+    isMainModule,
+    getPackageVersion,
+    resolvePythonExecutable,
+    isPythonAvailable,
+    clearPythonCache,
+    DEFAULT_RATE_LIMIT_WINDOW_MS,
+    DEFAULT_RATE_LIMIT_MAX,
+    RATE_LIMIT_ERROR_MESSAGE,
+    RATE_LIMIT_RESPONSE_BODY,
+    parseRateLimitWindowMs,
+    parseRateLimitMax,
+    createRateLimiter,
+    createGenerationLimiter,
+    generateLimiter,
+    photoToDepthLimiter,
+    generationLimiter,
     resetRateLimiters,
     resetGenerationLimiter,
-    buildImprovePrompt,
-    buildFinalPrompt,
-    sanitizeDepthIntensity,
-    sanitizeStylePreset,
-    STYLE_PRESETS
+    validateEnvironment,
+    safeJsonParse,
+    photoUpload,
+    uploadStorage,
+    pythonProcessorQueue,
+    generationJobQueue,
+    QUEUE_NAME,
+    jobStore
 };

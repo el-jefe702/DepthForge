@@ -597,6 +597,22 @@
             if (id === 'photoDepthIntensitySlider') return _origGetElementById('photoDepthIntensity');
             return _origGetElementById(id);
         };
+        async function pollJobStatus(jobId) {
+            while (true) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const pollRes = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
+                const pollData = await pollRes.json();
+                if (!pollRes.ok || pollData.status === 'failed') {
+                    throw new Error(pollData?.error || 'Background generation job failed');
+                }
+                if (pollData.status === 'completed') {
+                    return {
+                        ...pollData,
+                        image_url: pollData.result_url || pollData.imageUrl || pollData.image_url
+                    };
+                }
+            }
+        }
         /* async function generateMap() */
         async function generateMap(isBatch = false) {
             if (isProcessing()) return;
@@ -657,6 +673,10 @@
                 }
                 if (!res.ok) throw new Error(data?.error || 'Generation failed');
                 
+                if (data && !data.image_url && (data.job_id || data.jobId)) {
+                    data = await pollJobStatus(data.job_id || data.jobId);
+                }
+
                 displayImageSuccess(data.image_url);
                 savePromptToHistory(prompt);
                 
