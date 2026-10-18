@@ -1654,16 +1654,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const closePaywallBtn = document.getElementById('close-paywall-btn');
     const creditDisplay = document.getElementById('credit-display');
 
+    const getAuthToken = () => localStorage.getItem('depthforge_token') || localStorage.getItem('supabase_token');
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'photo' && typeof switchMode === 'function') {
+            switchMode('photo');
+        }
+    } catch (e) {}
+
+    try {
+        const headerMeta = document.querySelector('.header-meta');
+        if (headerMeta && !document.getElementById('studioNavLinks')) {
+            const navWrap = document.createElement('div');
+            navWrap.id = 'studioNavLinks';
+            navWrap.style.cssText = 'display:flex;align-items:center;gap:12px;margin-left:8px;font-size:13px;font-weight:600;';
+            const token = getAuthToken();
+            let userRole = 'user';
+            try {
+                const rawUser = localStorage.getItem('depthforge_user');
+                if (rawUser) userRole = JSON.parse(rawUser)?.role || 'user';
+            } catch (e) {}
+            navWrap.innerHTML =
+                '<a href="/" style="color:var(--text-muted);text-decoration:none;">Home</a>' +
+                '<a href="/pricing" style="color:var(--text-muted);text-decoration:none;">Pricing</a>' +
+                (token
+                    ? '<a href="/dashboard" style="color:#38bdf8;text-decoration:none;">Dashboard</a>' +
+                      (userRole === 'admin' ? '<a href="/admin" style="color:#a5b4fc;text-decoration:none;">Admin</a>' : '')
+                    : '<a href="/login" style="color:#38bdf8;text-decoration:none;">Sign In</a>');
+            headerMeta.appendChild(navWrap);
+        }
+    } catch (e) {}
+
     async function fetchCredits() {
         try {
-            const token = localStorage.getItem('supabase_token');
+            const token = getAuthToken();
             const headers = {};
             if (token) headers['Authorization'] = 'Bearer ' + token;
             
             const res = await fetch('/api/wallet/balance', { headers });
             if (res.ok) {
                 const data = await res.json();
-                updateCreditDisplay(data.balance);
+                updateCreditDisplay(data.balance ?? data.credits_balance);
             }
         } catch (err) {
             console.error('Failed to fetch credits:', err);
@@ -1671,7 +1703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCreditDisplay(balance) {
-        if (creditBalanceEl) {
+        if (creditBalanceEl && balance !== undefined) {
             creditBalanceEl.textContent = balance;
         }
         if (balance === 0 && creditDisplay) {
@@ -1698,7 +1730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (buyCreditsBtn) {
         buyCreditsBtn.addEventListener('click', async () => {
             try {
-                const token = localStorage.getItem('supabase_token');
+                const token = getAuthToken();
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) headers['Authorization'] = 'Bearer ' + token;
                 
@@ -1724,8 +1756,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const originalFetch = window.fetch;
-    window.fetch = async function() {
-        const response = await originalFetch.apply(this, arguments);
+    window.fetch = async function(input, init) {
+        const token = getAuthToken();
+        const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        let callArgs = arguments;
+        if (token && urlStr.startsWith('/api/')) {
+            const nextInit = Object.assign({}, init);
+            const existingHeaders = Object.assign({}, nextInit.headers || {});
+            if (!existingHeaders['Authorization'] && !existingHeaders['authorization']) {
+                existingHeaders['Authorization'] = 'Bearer ' + token;
+            }
+            nextInit.headers = existingHeaders;
+            callArgs = [input, nextInit];
+        }
+
+        const response = await originalFetch.apply(this, callArgs);
         
         if (response.status === 402) {
             showPaywall();

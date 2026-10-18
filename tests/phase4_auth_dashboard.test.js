@@ -44,6 +44,12 @@ describe('Phase 4: Integrated Web Site, User Auth, User Dashboard & Admin Consol
     });
 
     it('serves integrated SpatialOps web site pages (/, /app, /solutions, /pricing, /about, /terms, /privacy, /login, /signup, /dashboard, /admin)', async () => {
+        const rootManual = await fetch(`${baseUrl}/`, { redirect: 'manual' });
+        assert.equal(rootManual.status, 200, 'Expected GET / to return 200 directly (not 302 redirect)');
+        const rootHtml = await rootManual.text();
+        assert.match(rootHtml, /SpatialOps, LLC/i);
+        assert.match(rootHtml, /\/app\?mode=photo/);
+
         for (const route of ['/', '/app', '/solutions', '/pricing', '/about', '/terms', '/privacy', '/login', '/signup', '/dashboard', '/admin']) {
             const res = await fetch(`${baseUrl}${route}`);
             assert.equal(res.status, 200, `Expected 200 for ${route}`);
@@ -140,7 +146,7 @@ describe('Phase 4: Integrated Web Site, User Auth, User Dashboard & Admin Consol
         assert.equal(meData.user.email, 'maker@depthforge.io');
     });
 
-    it('returns user dashboard data and credit wallet balance', async () => {
+    it('returns user dashboard data, credit wallet balance, and checkout URL', async () => {
         const dashRes = await fetch(`${baseUrl}/api/user/dashboard`, {
             headers: { Authorization: `Bearer ${regularToken}` }
         });
@@ -155,7 +161,20 @@ describe('Phase 4: Integrated Web Site, User Auth, User Dashboard & Admin Consol
         });
         assert.equal(walletRes.status, 200);
         const walletData = await walletRes.json();
+        assert.equal(walletData.balance, 10);
         assert.equal(walletData.credits_balance, 10);
+
+        const checkoutRes = await fetch(`${baseUrl}/api/wallet/checkout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${regularToken}`
+            },
+            body: JSON.stringify({ packageId: 'basic' })
+        });
+        assert.equal(checkoutRes.status, 200);
+        const checkoutData = await checkoutRes.json();
+        assert.ok(checkoutData.url);
     });
 
     it('enforces admin RBAC and allows admins to view stats, list users, and adjust credits', async () => {

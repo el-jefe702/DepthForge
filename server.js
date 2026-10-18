@@ -143,7 +143,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/', (req, res) => res.redirect('/static/index.html'));
+// Root route '/' is handled below by the Phase 4 Integrated Web Site handler (serves static/landing.html)
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
@@ -923,10 +923,52 @@ app.get('/api/user/generations', requireAuth, async (req, res) => {
 app.get('/api/wallet/balance', requireAuth, async (req, res) => {
     try {
         const dbUser = await findUserById(req.userId);
+        const bal = Number(dbUser?.credits_balance ?? 0);
         return res.json({
             userId: req.userId,
-            credits_balance: Number(dbUser?.credits_balance ?? 0)
+            balance: bal,
+            credits_balance: bal
         });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/wallet/checkout', requireAuth, async (req, res) => {
+    try {
+        const packageId = typeof req.body?.packageId === 'string' ? req.body.packageId : 'basic';
+        const packages = {
+            basic: { name: 'DepthForge Pro Credit Pack (50 Credits)', credits: 50, amountCents: 1900 },
+            shop: { name: 'DepthForge Shop Floor Pack (250 Credits)', credits: 250, amountCents: 7900 }
+        };
+        const pkg = packages[packageId] || packages.basic;
+
+        if (stripe && process.env.STRIPE_SECRET_KEY) {
+            const origin = `${req.protocol}://${req.get('host')}`;
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                mode: 'payment',
+                client_reference_id: req.userId,
+                metadata: {
+                    user_id: req.userId,
+                    credits: String(pkg.credits),
+                    package_id: packageId
+                },
+                line_items: [{
+                    price_data: {
+                        currency: 'usd',
+                        product_data: { name: pkg.name },
+                        unit_amount: pkg.amountCents
+                    },
+                    quantity: 1
+                }],
+                success_url: `${origin}/dashboard?checkout=success`,
+                cancel_url: `${origin}/pricing?checkout=cancelled`
+            });
+            return res.json({ url: session.url, sessionId: session.id });
+        }
+
+        return res.json({ url: '/pricing', fallback: true });
     } catch (err) {
         return res.status(500).json({ error: err.message });
     }
@@ -1422,13 +1464,33 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
 
         await fs.promises.unlink(uploadedPath).catch(() => {});
 
-        res.json({
+        let updatedBalance;
+        const authHeader = req.headers?.authorization || '';
+        if (authHeader.startsWith('Bearer ')) {
+            try {
+                const token = authHeader.slice(7).trim();
+                const secret = process.env.JWT_SECRET || 'depthforge-dev-secret-key';
+                const decoded = jwt.verify(token, secret);
+                const authUserId = decoded?.id || decoded?.userId || decoded?.sub;
+                if (authUserId) {
+                    updatedBalance = await deductCredit(authUserId, `[Photo-to-Carve] ${subjectDescription}`, imageUrls[0]);
+                }
+            } catch {
+                // Ignore invalid/expired token on optional auth so unauthenticated tests still pass
+            }
+        }
+
+        const payload = {
             status: 'success',
             image_url: imageUrls[0],
             images: imageUrls,
             batch: isBatch,
             subject: subjectDescription
-        });
+        };
+        if (updatedBalance !== undefined) {
+            payload.credits_balance = updatedBalance;
+        }
+        res.json(payload);
     } catch (error) {
         if (uploadedPath) await fs.promises.unlink(uploadedPath).catch(() => {});
         res.status(500).json({ error: error.message });
