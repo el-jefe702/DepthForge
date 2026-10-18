@@ -43,13 +43,39 @@ describe('Phase 4: Integrated Web Site, User Auth, User Dashboard & Admin Consol
         }
     });
 
-    it('serves integrated web site pages (/, /app, /login, /signup, /dashboard, /admin)', async () => {
-        for (const route of ['/', '/app', '/login', '/signup', '/dashboard', '/admin']) {
+    it('serves integrated SpatialOps web site pages (/, /app, /solutions, /pricing, /about, /terms, /privacy, /login, /signup, /dashboard, /admin)', async () => {
+        for (const route of ['/', '/app', '/solutions', '/pricing', '/about', '/terms', '/privacy', '/login', '/signup', '/dashboard', '/admin']) {
             const res = await fetch(`${baseUrl}${route}`);
             assert.equal(res.status, 200, `Expected 200 for ${route}`);
             const html = await res.text();
-            assert.match(html, /DepthForge/i);
+            assert.match(html, /DepthForge|SpatialOps/i);
         }
+    });
+
+    it('exposes SpatialOps & SLCreations.llc ecosystem info and accepts contact/fabrication inquiries', async () => {
+        const infoRes = await fetch(`${baseUrl}/api/ecosystem/info`, {
+            headers: { Origin: 'https://SLCreations.llc' }
+        });
+        assert.equal(infoRes.status, 200);
+        assert.equal(infoRes.headers.get('access-control-allow-origin'), 'https://SLCreations.llc');
+        const info = await infoRes.json();
+        assert.equal(info.company, 'SpatialOps, LLC');
+        assert.equal(info.partner.url, 'https://SLCreations.llc');
+
+        const contactRes = await fetch(`${baseUrl}/api/contact`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'Shop Owner',
+                email: 'shop@slcreations.llc',
+                category: 'slcreations_fabrication',
+                message: 'Custom hardwood CNC relief order from DepthForge heightmap'
+            })
+        });
+        assert.equal(contactRes.status, 201);
+        const contactData = await contactRes.json();
+        assert.equal(contactData.status, 'success');
+        assert.ok(contactData.inquiryId);
     });
 
     it('registers the first user as admin with starter credits', async () => {

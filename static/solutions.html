@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Solutions &amp; Ecosystem · SpatialOps, LLC &amp; SLCreations.llc</title>
+  <link rel="stylesheet" href="/static/spatialops.css">
+  <style>
+    pre.code-block {
+      background: #04070e;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #bae6fd;
+      margin: 12px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="so-header">
+    <div class="so-brand-wrap">
+      <a href="/" class="so-brand">
+        <span class="so-brand-mark">SO</span>
+        SPATIAL<span>OPS</span>
+      </a>
+      <span class="so-brand-sub">// SOLUTIONS</span>
+    </div>
+    <nav class="so-nav">
+      <a href="/">Home</a>
+      <a href="/solutions" class="active">Solutions</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/about">About &amp; Contact</a>
+      <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="partner-link">SLCreations.llc ↗</a>
+      <a href="/app" class="so-btn so-btn-cyan">Launch Studio</a>
+    </nav>
+  </header>
+
+  <main class="so-container">
+    <div class="so-telemetry-bar">
+      <span class="so-telemetry-pill"><span class="dot"></span> MULTI-PLATFORM ARCHITECTURE</span>
+      <span class="so-telemetry-pill">WEB · BLENDER · ANDROID · CLOUD API</span>
+    </div>
+    <h1 class="so-h1">Precision Tools for <span>Every Stage of Production</span></h1>
+    <p class="so-lead">
+      SpatialOps, LLC delivers end-to-end software for generating, refining, previewing, and exporting 16-bit depth maps—seamlessly connected to physical fabrication through <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);">SLCreations.llc</a>.
+    </p>
+
+    <section class="so-grid-3" style="margin-bottom:56px;">
+      <div class="so-card">
+        <span class="so-card-tag">MODULE 01 // WEB APPLICATION</span>
+        <h3>DepthForge Web Studio</h3>
+        <p>Full browser-based CAD/CAM relief studio featuring Text-to-Depth, Photo-to-Depth, 5-step SSE OpenCV smoothing, subject background isolation, side-by-side comparison slider, and real-time Three.js STL/OBJ export.</p>
+        <div style="margin-top:18px;">
+          <a href="/app" class="so-btn so-btn-cyan">Open Web Studio →</a>
+        </div>
+      </div>
+
+      <div class="so-card">
+        <span class="so-card-tag">MODULE 02 // DESKTOP CAD ADD-ON</span>
+        <h3>Blender 3D Displacement Plugin</h3>
+        <p>Import DepthForge 16-bit PNG heightmaps directly into Blender with pre-configured subdivided displacement modifiers, normal recalculation, and CNC bed scaling.</p>
+        <div style="margin-top:18px;">
+          <a href="/app" class="so-btn so-btn-outline">Available in Studio</a>
+        </div>
+      </div>
+
+      <div class="so-card">
+        <span class="so-card-tag">MODULE 03 // MOBILE COMPANION</span>
+        <h3>DepthForge Android App</h3>
+        <p>Capture reference objects on the shop floor, generate 4× batch candidates on the go, preview 3D meshes in a native WebGL viewport, and share directly to your CAM workstation.</p>
+        <div style="margin-top:18px;">
+          <a href="/about#contact" class="so-btn so-btn-outline">Mobile Deployment Info</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="slcreations-integration" class="so-partner-banner">
+      <div>
+        <span class="so-telemetry-pill" style="margin-bottom:12px;">CROSS-SITE BRIDGE // SPATIALOPS.LLC ↔ SLCREATIONS.LLC</span>
+        <h2 style="margin:0 0 10px;font-size:26px;">How <span style="color:var(--accent-cyan);">SLCreations.llc</span> &amp; SpatialOps Integrate Together</h2>
+        <p style="margin:0 0 14px;color:var(--text-muted);font-size:14px;">
+          We built native cross-site integration so visitors on <strong><a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);">https://SLCreations.llc</a></strong> can launch DepthForge with referral tracking (<code>?ref=slcreations</code>), design their custom 3D relief, and submit their generated heightmap back for physical CNC/laser manufacturing.
+        </p>
+        <p style="margin:0 0 8px;font-size:13px;color:#e2e8f0;font-weight:600;">Drop-In Embed Snippet for SLCreations.llc:</p>
+        <pre class="code-block">&lt;!-- Place on SLCreations.llc to link or embed DepthForge Studio --&gt;
+&lt;a href="https://depthforge.spatialops.llc/app?ref=slcreations&amp;partner=SLCreations"
+   style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#020617;font-weight:700;text-decoration:none;font-family:sans-serif;"&gt;
+  ⚡ Custom 3D Relief Designer (Powered by SpatialOps DepthForge)
+&lt;/a&gt;</pre>
+      </div>
+      <div class="so-card">
+        <span class="so-card-tag">LIVE ECOSYSTEM API</span>
+        <h3>Partner Referral &amp; Fabrication API</h3>
+        <p style="margin-bottom:14px;">
+          <code>GET /api/ecosystem/info</code> exposes live service metadata with CORS enabled for <code>https://SLCreations.llc</code>, and <code>POST /api/contact</code> accepts direct custom fabrication &amp; design requests.
+        </p>
+        <a href="/about#fabrication" class="so-btn so-btn-primary" style="width:100%;">Submit Fabrication Request →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="so-footer">
+    <div class="so-footer-bottom">
+      <div>© 2026 SpatialOps, LLC. All Rights Reserved.</div>
+      <div>Partnered with <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);text-decoration:none;">SLCreations.llc ↗</a> · <a href="/terms" style="color:var(--text-muted);">Terms &amp; Copyright</a></div>
+    </div>
+  </footer>
+  <script src="/static/auth.js"></script>
+</body>
+</html>

@@ -703,6 +703,78 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(staticDir, 'admin.html'));
 });
 
+app.get('/solutions', (req, res) => {
+    res.sendFile(path.join(staticDir, 'solutions.html'));
+});
+
+app.get('/pricing', (req, res) => {
+    res.sendFile(path.join(staticDir, 'pricing.html'));
+});
+
+app.get('/about', (req, res) => {
+    res.sendFile(path.join(staticDir, 'about.html'));
+});
+
+app.get(['/terms', '/privacy'], (req, res) => {
+    res.sendFile(path.join(staticDir, 'terms.html'));
+});
+
+// Cross-Site Ecosystem & Partner Integration (SpatialOps, LLC <-> SLCreations.llc)
+const setPartnerCors = (req, res) => {
+    const origin = req.headers.origin || '';
+    if (/^https?:\/\/(www\.)?slcreations\.llc$/i.test(origin) || /^https?:\/\/([^.]+\.)?spatialops\.llc$/i.test(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+    } else {
+        res.set('Access-Control-Allow-Origin', 'https://SLCreations.llc');
+    }
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+};
+
+app.options(['/api/ecosystem/info', '/api/contact'], (req, res) => {
+    setPartnerCors(req, res);
+    res.status(204).end();
+});
+
+app.get('/api/ecosystem/info', (req, res) => {
+    setPartnerCors(req, res);
+    res.json({
+        status: 'ok',
+        company: 'SpatialOps, LLC',
+        product: 'DepthForge',
+        version: getPackageVersion(),
+        copyright: 'Copyright © 2026 SpatialOps, LLC. All Rights Reserved.',
+        partner: {
+            name: 'SLCreations, LLC',
+            url: 'https://SLCreations.llc',
+            role: 'Official Custom Fabrication & Creative Partner',
+            studioDeepLink: '/app?ref=slcreations&partner=SLCreations',
+            fabricationRequestUrl: '/about#fabrication'
+        }
+    });
+});
+
+app.post('/api/contact', (req, res) => {
+    setPartnerCors(req, res);
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+    const category = typeof req.body?.category === 'string' ? req.body.category.trim() : 'general';
+    const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+
+    if (!name || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !message) {
+        return res.status(400).json({ error: 'Name, valid email, and message are required.' });
+    }
+
+    const inquiryId = uuidv4();
+    console.log(`[SpatialOps Inquiry #${inquiryId}] (${category}) from ${name} <${email}>: ${message.slice(0, 120)}`);
+    return res.status(201).json({
+        status: 'success',
+        inquiryId,
+        company: 'SpatialOps, LLC',
+        partner: 'https://SLCreations.llc'
+    });
+});
+
 // Phase 4: User Sign Up & Authorization API
 app.post('/api/auth/signup', async (req, res) => {
     try {
