@@ -1064,6 +1064,58 @@ app.post('/api/admin/role', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
+app.post('/api/admin/claim', requireAuth, async (req, res) => {
+    try {
+        const totalAdmins = await countAdmins();
+        let dbUser = await findUserById(req.userId);
+        const isConfiguredAdmin = Boolean(
+            process.env.ADMIN_EMAIL &&
+            dbUser?.email &&
+            dbUser.email.toLowerCase() === process.env.ADMIN_EMAIL.trim().toLowerCase()
+        );
+        if (dbUser?.role === 'admin' || totalAdmins === 0 || isConfiguredAdmin) {
+            const promoted = await setRole(req.userId, 'admin');
+            const user = promoted || { ...dbUser, role: 'admin' };
+            const token = signAuthToken(user);
+            return res.json({ status: 'success', token, user });
+        }
+        return res.status(403).json({ error: 'An administrator account already exists. Please sign in with your admin email and password.' });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/users/upsert', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+        const role = req.body?.role === 'admin' ? 'admin' : 'user';
+        const credits = Number.isFinite(Number(req.body?.credits)) ? Math.trunc(Number(req.body.credits)) : 10;
+
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email address is required.' });
+        }
+
+        const existing = await findUserByEmail(email);
+        if (existing) {
+            await setRole(existing.id, role);
+            const delta = credits - Number(existing.credits_balance ?? 0);
+            const updated = delta !== 0 ? await adjustCredits(existing.id, delta) : await findUserById(existing.id);
+            return res.json({ status: 'success', user: updated, updated: true });
+        }
+
+        const created = await createUser({
+            email,
+            password: password && password.length >= 6 ? password : 'password123',
+            role,
+            credits
+        });
+        return res.status(201).json({ status: 'success', user: created, created: true });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 app.route('/api/health')
     .get((req, res) => {
         try {
