@@ -296,6 +296,6 @@ DepthForge/
 
 ## License
 
-**Copyright © 2026 SLCreations, LLC. All Rights Reserved.**
+**Copyright © 2026 SpatialOps, LLC. All Rights Reserved.**
 
-This software and all associated source code, documentation, and assets are proprietary and confidential to SLCreations, LLC. Unauthorized copying, distribution, modification, or use of any part of this repository without prior written permission is strictly prohibited. See [LICENSE](./LICENSE) for details.
+This software and all associated source code, documentation, and assets are proprietary and confidential to SpatialOps, LLC. Unauthorized copying, distribution, modification, or use of any part of this repository without prior written permission is strictly prohibited. See [LICENSE](./LICENSE) for details.
