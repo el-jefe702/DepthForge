@@ -1653,8 +1653,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const buyCreditsBtn = document.getElementById('buy-credits-btn');
     const closePaywallBtn = document.getElementById('close-paywall-btn');
     const creditDisplay = document.getElementById('credit-display');
+    const originalFetch = window.fetch;
 
     const getAuthToken = () => localStorage.getItem('depthforge_token') || localStorage.getItem('supabase_token');
+
+    const clearStaleTokens = () => {
+        localStorage.removeItem('depthforge_token');
+        localStorage.removeItem('supabase_token');
+    };
+
+    const provisionFreshSession = async () => {
+        try {
+            let cachedEmail = '';
+            try {
+                const rawUser = localStorage.getItem('depthforge_user');
+                if (rawUser) cachedEmail = JSON.parse(rawUser)?.email || '';
+            } catch (e) {}
+            const res = await originalFetch.call(window, '/api/auth/guest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: cachedEmail })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.token) {
+                    localStorage.setItem('depthforge_token', data.token);
+                    localStorage.setItem('supabase_token', data.token);
+                    if (data.user) {
+                        localStorage.setItem('depthforge_user', JSON.stringify(data.user));
+                        if (data.user.credits_balance !== undefined) {
+                            updateCreditDisplay(data.user.credits_balance);
+                        }
+                    }
+                    return data.token;
+                }
+            }
+        } catch (e) {}
+        return null;
+    };
 
     try {
         const params = new URLSearchParams(window.location.search);
@@ -1663,12 +1699,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {}
 
-    try {
-        const headerMeta = document.querySelector('.header-meta');
-        if (headerMeta && !document.getElementById('studioNavLinks')) {
-            const navWrap = document.createElement('div');
-            navWrap.id = 'studioNavLinks';
-            navWrap.style.cssText = 'display:flex;align-items:center;gap:12px;margin-left:8px;font-size:13px;font-weight:600;';
+    function renderStudioNav() {
+        try {
+            const headerMeta = document.querySelector('.header-meta');
+            if (!headerMeta) return;
+            let navWrap = document.getElementById('studioNavLinks');
+            if (!navWrap) {
+                navWrap = document.createElement('div');
+                navWrap.id = 'studioNavLinks';
+                navWrap.style.cssText = 'display:flex;align-items:center;gap:12px;margin-left:8px;font-size:13px;font-weight:600;';
+                headerMeta.appendChild(navWrap);
+            }
             const token = getAuthToken();
             let userRole = 'user';
             try {
@@ -1682,13 +1723,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? '<a href="/dashboard" style="color:#38bdf8;text-decoration:none;">Dashboard</a>' +
                       (userRole === 'admin' ? '<a href="/admin" style="color:#a5b4fc;text-decoration:none;">Admin</a>' : '')
                     : '<a href="/login" style="color:#38bdf8;text-decoration:none;">Sign In</a>');
-            headerMeta.appendChild(navWrap);
-        }
-    } catch (e) {}
+        } catch (e) {}
+    }
+
+    renderStudioNav();
 
     async function fetchCredits() {
         try {
-            const token = getAuthToken();
+            let token = getAuthToken();
+            if (!token) {
+                token = await provisionFreshSession();
+                renderStudioNav();
+            }
             const headers = {};
             if (token) headers['Authorization'] = 'Bearer ' + token;
             
@@ -1755,22 +1801,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const originalFetch = window.fetch;
     window.fetch = async function(input, init) {
-        const token = getAuthToken();
         const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-        let callArgs = arguments;
-        if (token && urlStr.startsWith('/api/')) {
-            const nextInit = Object.assign({}, init);
-            const existingHeaders = Object.assign({}, nextInit.headers || {});
-            if (!existingHeaders['Authorization'] && !existingHeaders['authorization']) {
-                existingHeaders['Authorization'] = 'Bearer ' + token;
-            }
-            nextInit.headers = existingHeaders;
-            callArgs = [input, nextInit];
+        let token = getAuthToken();
+        if (!token && (urlStr.startsWith('/api/generate') || urlStr.startsWith('/api/wallet/'))) {
+            token = await provisionFreshSession();
+            renderStudioNav();
         }
 
-        const response = await originalFetch.apply(this, callArgs);
+        const buildCallArgs = (bearerToken) => {
+            if (!bearerToken || !urlStr.startsWith('/api/')) return arguments;
+            const nextInit = Object.assign({}, init);
+            const existingHeaders = Object.assign({}, nextInit.headers || {});
+            existingHeaders['Authorization'] = 'Bearer ' + bearerToken;
+            delete existingHeaders['authorization'];
+            nextInit.headers = existingHeaders;
+            return [input, nextInit];
+        };
+
+        let response = await originalFetch.apply(this, buildCallArgs(token));
+
+        if (response.status === 401 && urlStr.startsWith('/api/') && !urlStr.startsWith('/api/auth/')) {
+            clearStaleTokens();
+            const freshToken = await provisionFreshSession();
+            renderStudioNav();
+            if (freshToken) {
+                response = await originalFetch.apply(this, buildCallArgs(freshToken));
+            }
+        }
         
         if (response.status === 402) {
             showPaywall();

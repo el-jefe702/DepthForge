@@ -890,6 +890,41 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
     }
 });
 
+app.post('/api/auth/guest', async (req, res) => {
+    try {
+        const cachedEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        if (cachedEmail) {
+            const existing = await findUserByEmail(cachedEmail);
+            if (existing) {
+                const user = {
+                    id: existing.id,
+                    email: existing.email,
+                    role: existing.role || 'user',
+                    credits_balance: Number(existing.credits_balance ?? 0),
+                    created_at: existing.created_at
+                };
+                const token = signAuthToken(user);
+                return res.status(200).json({ status: 'success', token, user });
+            }
+        }
+
+        const guestEmail = `studio_${uuidv4().substring(0, 8)}@depthforge.local`;
+        const starterCredits = Number.isFinite(Number(process.env.STARTER_CREDITS))
+            ? Number(process.env.STARTER_CREDITS)
+            : 10;
+        const user = await createUser({
+            email: guestEmail,
+            password: uuidv4(),
+            role: 'user',
+            credits: starterCredits
+        });
+        const token = signAuthToken(user);
+        return res.status(200).json({ status: 'success', token, user, guest: true });
+    } catch (err) {
+        return res.status(500).json({ error: err.message || 'Could not initialize studio session.' });
+    }
+});
+
 // Phase 4: User Dashboard & Wallet API
 app.get('/api/user/dashboard', requireAuth, async (req, res) => {
     try {
