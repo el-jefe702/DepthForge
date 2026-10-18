@@ -1,19 +1,48 @@
 <div align="center">
-  <h1>⚡ DepthForge</h1>
-  <p><strong>AI-Powered 16-bit 3D Relief & Depth Map Generator for CNC Laser Engraving</strong></p>
+  <h1>⚡ DepthForge v2.0</h1>
+  <p><strong>Industrial 16-Bit 3D Relief, Photo-to-Carve &amp; Spatial AI CAD/CAM Platform by SpatialOps, LLC</strong></p>
+  <p><em>Official Fabrication &amp; Creative Ecosystem Partner: <a href="https://SLCreations.llc">SLCreations.llc</a></em></p>
 
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
+  <img src="https://img.shields.io/badge/License-Proprietary%20SpatialOps%20LLC-0ea5e9?style=for-the-badge" alt="Proprietary License" />
 </div>
 
 <hr />
 
-This repository is deployed on a VPS; Vercel config has been removed.
+This repository is deployed on a live Linux VPS via automated GitHub Actions CI/CD (`.github/workflows/deploy.yml`) and Docker Compose.
 
 ## Overview
 
-DepthForge generates flawless 16-bit 3D grayscale height maps optimized for CNC laser engraving. It combines **Google Gemini** for intelligent prompt expansion, **Google Imagen 4** for depth map generation, and an **OpenCV post-processing pipeline** for production-quality output.
+Engineered by **SpatialOps, LLC**, **DepthForge** generates flawless 16-bit 3D grayscale height maps (`0–65535` Z-axis precision) and watertight 3D meshes (`STL` / `OBJ`) optimized for CNC routers, fiber/CO₂ laser engraving, and additive manufacturing. It combines **Google Gemini** for spatial prompt engineering and photo depth analysis, **Google Imagen 4** for heightmap synthesis, an **OpenCV 16-bit post-processing pipeline** for zero-banding surface smoothing, and direct physical fabrication integration with **[SLCreations.llc](https://SLCreations.llc)**.
+
+---
+
+## Project Updates & Release Timeline
+
+| Phase | Milestone | Status | Key Deliverables |
+|---|---|---|---|
+| **Phase 1** | **Core 16-Bit AI Relief & OpenCV Pipeline** | ✅ **Completed** | Text-to-Depth (`/api/generate`), Photo-to-Carve (`/api/photo-to-depth`), 5-stage 16-bit OpenCV smoothing (`processor.py`), `rembg` subject isolation, depth inversion, SSE live progress streaming, session gallery, side-by-side comparison slider, and full `F1`–`F20` feature suite. |
+| **Phase 2** | **3D CAD/CAM Mesh Engine & Native Mobile** | ✅ **Completed** | Interactive Three.js WebGL 3D relief inspector, client/server binary **STL** & **OBJ** watertight mesh exporter (`static/mesh-exporter.js`), Blender add-on (`blender_plugin/`), and Jetpack Compose Android app (`android_app/`). |
+| **Phase 3** | **Production Infrastructure, Queueing & Ledger** | ✅ **Completed** | BullMQ + Redis job queue (`worker.js`), `PQueue` Python process serialization, IP rate limiting, SQLite/PostgreSQL credit wallet ledger, Stripe webhook integration, and automated GitHub Actions VPS deployment (`.github/workflows/deploy.yml`). |
+| **Phase 4** | **SpatialOps Corporate Web Suite, Auth, User & Admin Consoles** | ✅ **Live (v2.0)** | Self-hosted `crypto.scrypt` + `HS256` JWT authentication (`/login`, `/signup`, `/api/auth/*`) with automatic admin promotion & `401` session self-healing; User Dashboard (`/dashboard`); Admin Console (`/admin`) with live KPIs, user search, credit grants & role management; **SpatialOps, LLC** corporate website (`/`, `/solutions`, `/pricing`, `/about`, `/terms`, `/privacy`); direct **Photo-to-Carve** (`?mode=photo`) studio entry; and **[SLCreations.llc](https://SLCreations.llc)** cross-site API (`/api/ecosystem/info`, `/api/contact`). |
+| **Phase 5** | **Commercial Billing & Direct Fabrication Handoff** | 🗓️ **Next Up (v2.1)** | **T+1–2 Days**: Live Stripe production Price IDs & webhook secret activation for instant credit pack top-ups (`/api/wallet/checkout`) + production domain TLS/SSL.<br>**T+1–2 Weeks**: 1-click **"Send to SLCreations.llc for Physical Carving"** automated job ticket handoff (attaching 16-bit PNG + STL mesh directly to an SLCreations custom fabrication order) and CNC toolpath preview. |
+
+### Latest v2.0 Platform Updates (October 2026)
+
+- **SpatialOps, LLC Corporate Web Suite (Direction A — Industrial Precision CAD/CAM)**:
+  - `/` (`static/landing.html`): Interactive Z-Relief split-screen inspector, telemetry bar, 4-stage pipeline showcase, and direct CTAs for **✏️ Text to Relief Studio** (`/app`) and **📷 Photo to Carve** (`/app?mode=photo`).
+  - `/solutions` (`static/solutions.html`): Deep dive into CNC 3-axis/4-axis routing, fiber/CO₂ laser 3D relief, additive manufacturing, and physical custom fabrication via **[SLCreations.llc](https://SLCreations.llc)**.
+  - `/pricing` (`static/pricing.html`): Transparent **Starter (10 Free Credits)**, **Pro Maker (\$19 / 50 Credits)**, and **Shop Floor / Enterprise (\$79 / 250 Credits)** tiers.
+  - `/about` (`static/about.html`): SpatialOps, LLC company profile, SLCreations.llc ecosystem partnership, and interactive contact/fabrication inquiry form (`POST /api/contact`).
+  - `/terms` & `/privacy` (`static/terms.html`): Proprietary software licensing, customer output ownership, and data privacy policies under **Copyright © 2026 SpatialOps, LLC. All Rights Reserved.**
+- **Self-Hosted Authentication, User Dashboard & Admin Console**:
+  - Zero external auth vendor lock-in: `crypto.scrypt` password hashing + `HS256` JWT tokens stored in dual-mode PostgreSQL (`DATABASE_URL`) or SQLite (`SUBSCRIPTIONS_DB_PATH`) via `db/store.js`.
+  - First registered account (or `ADMIN_EMAIL`) is automatically granted `admin` privileges, and legacy passwordless rows are seamlessly upgraded on first sign-in.
+  - Multi-secret fallback verification (`verifyTokenWithFallbacks`) and automatic `401` session recovery (`POST /api/auth/guest`) ensure zero token-expiration interruptions in Forge Studio (`/app`).
+
+---
 
 ### Core Features
 
@@ -186,6 +215,19 @@ curl --fail http://localhost:8000/api/health
 | `/api/postprocess-stream` | GET / POST | `?image_url=...` | `text/event-stream` | Streams 5-step smoothing progress in real-time over Server-Sent Events (SSE). |
 | `/api/invert` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/inv_xxx.png"}` | Inverts depth map pixel values (16-bit or 8-bit) via serialized Python processor. |
 | `/api/remove_bg` | POST | `{"image_url": "..."}` | `{"status": "success", "image_url": "/static/generated/iso_xxx.png"}` | Isolates subject onto pure black background using rembg U2Net model. |
+| `/api/auth/signup` | POST | `{"email": "...", "password": "..."}` | `{"status": "success", "token": "...", "user": {...}}` | Registers a new account with 10 starter credits (first user or `ADMIN_EMAIL` receives `admin` role). |
+| `/api/auth/login` | POST | `{"email": "...", "password": "..."}` | `{"status": "success", "token": "...", "user": {...}}` | Authenticates user via `crypto.scrypt` and returns a 7-day `HS256` JWT token. |
+| `/api/auth/guest` | POST | `{"email": "..."}` (optional) | `{"status": "success", "token": "...", "user": {...}}` | Provisions or refreshes a Studio session token for seamless `401` recovery in `/app`. |
+| `/api/auth/me` | GET | Header `Authorization: Bearer <token>` | `{"user": {...}}` | Returns the currently authenticated user's profile, role, and credit balance. |
+| `/api/user/dashboard` | GET | Header `Authorization: Bearer <token>` | `{"user": {...}, "credits_balance": 10, "generations": [...]}` | Returns user profile, live credit balance, and up to 50 recent depth map generations. |
+| `/api/wallet/balance` | GET | Header `Authorization: Bearer <token>` | `{"userId": "...", "balance": 10, "credits_balance": 10}` | Returns live credit balance for the Studio header badge and User Dashboard. |
+| `/api/wallet/checkout` | POST | `{"packageId": "basic" \| "shop"}` | `{"url": "..."}` | Creates a Stripe Checkout session (when configured) or redirects to `/pricing`. |
+| `/api/admin/stats` | GET | Header `Authorization: Bearer <admin_token>` | `{"totalUsers": 12, "outstandingCredits": 120, "totalGenerations": 45}` | Admin-only platform KPI metrics for the `/admin` console. |
+| `/api/admin/users` | GET | `?search=...&limit=100` | `{"users": [...]}` | Admin-only searchable user directory with roles and credit balances. |
+| `/api/admin/credits` | POST | `{"userId": "...", "amount": 10}` | `{"status": "success", "user": {...}}` | Admin-only credit grant or deduction (`+10`, `-1`, or custom delta). |
+| `/api/admin/role` | POST | `{"userId": "...", "role": "admin" \| "user"}` | `{"status": "success", "user": {...}}` | Admin-only role promotion or demotion. |
+| `/api/ecosystem/info` | GET | None (CORS enabled for `SLCreations.llc`) | `{"status": "ok", "company": "SpatialOps, LLC", "partner": {...}}` | Cross-site ecosystem metadata for SpatialOps, LLC and SLCreations.llc integration. |
+| `/api/contact` | POST | `{"name": "...", "email": "...", "category": "...", "message": "..."}` | `{"status": "success", "inquiryId": "..."}` | Records enterprise, support, and SLCreations.llc physical fabrication inquiries. |
 | `/api/webhooks/stripe` | POST | Raw Stripe event payload | `{"received": true}` | Verifies Stripe webhook signatures and credits user wallets on `checkout.session.completed`. |
 
 ---
@@ -224,26 +266,39 @@ The Android app (`android_app/`) is a native Jetpack Compose application providi
 
 ```
 DepthForge/
-├── server.js                          # Express API server, routes, rate limiting, and PQueue runner
+├── server.js                          # Express API server, Phase 4 routes, rate limiting, and PQueue runner
 ├── worker.js                          # BullMQ background worker for async Gemini/Imagen generation
 ├── cleanup.js                         # Automated TTL cleanup routine & background scheduler
-├── credit-backend.js                  # Supabase RPC credit reservation, commit, and refund client
+├── credit-backend.js                  # Credit reservation, deduction, and ledger client
 ├── processor.py                       # OpenCV 16-bit post-processing pipeline & rembg integration
+├── LICENSE                            # Proprietary Copyright © 2026 SpatialOps, LLC. All Rights Reserved.
 ├── package.json                       # Node.js project manifest & script declarations
 ├── package-lock.json                  # Deterministic Node dependency lockfile
-├── Dockerfile                         # Container definition with Node, Python, and OpenCV
-├── docker-compose.yaml                # Multi-container VPS deployment definition
-├── db/                                # SQLite credit wallet & transaction ledger initialization
-│   └── init.js                        # Wallet schema, deductCredits, addCredits, and middleware
+├── Dockerfile                         # Container definition with Node 20, Python 3, OpenCV, and rembg
+├── docker-compose.yaml                # Multi-container VPS deployment definition (app, worker, redis)
+├── db/                                # Dual PostgreSQL / SQLite user, credit wallet & generation store
+│   ├── init.js                        # Legacy SQLite wallet schema & helpers
+│   └── store.js                       # Phase 4 unified user auth, RBAC, credit ledger & stats store
 ├── middleware/                        # Express authentication and request guards
-│   └── auth.js                        # JWT token extraction, verification, and creditGate
+│   └── auth.js                        # JWT verification (with fallback support), creditGate, requireAuth, requireAdmin
 ├── blender_plugin/                    # Blender add-on for direct 3D displacement mesh import
 ├── scripts/                           # VPS deployment, provisioning, and maintenance scripts
-├── supabase/migrations/               # Supabase PostgreSQL schema and credit RPC migrations
+├── supabase/migrations/               # PostgreSQL schema and credit RPC migrations
 ├── systemd/                           # Linux systemd unit files for DepthForge service management
-├── static/                            # Web frontend assets (served at /static)
-│   ├── index.html                     # Single-page web UI (Three.js, 3D preview, compare slider)
-│   └── style.css                      # Modern dark-theme responsive design system
+├── static/                            # Web frontend & SpatialOps, LLC corporate site assets
+│   ├── spatialops.css                 # Direction A Industrial Precision CAD/CAM design system
+│   ├── landing.html                   # SpatialOps, LLC corporate home page (/)
+│   ├── solutions.html                 # CNC, Laser, 3D Printing & SLCreations.llc solutions (/solutions)
+│   ├── pricing.html                   # Starter, Pro Maker & Shop Floor credit plans (/pricing)
+│   ├── about.html                     # SpatialOps, LLC company profile & contact form (/about)
+│   ├── terms.html                     # Proprietary terms of service & privacy policy (/terms, /privacy)
+│   ├── login.html                     # Self-hosted Sign In & Create Account UI (/login, /signup)
+│   ├── dashboard.html                 # User Dashboard: credit wallet & depth map history (/dashboard)
+│   ├── admin.html                     # Admin Console: platform KPIs, user search & credit/role controls (/admin)
+│   ├── auth.js                        # Client-side JWT session manager
+│   ├── mesh-exporter.js               # Binary STL & Wavefront OBJ watertight 3D mesh generator
+│   ├── index.html                     # DepthForge Studio UI (/app & /app?mode=photo)
+│   └── style.css                      # Forge Studio dark-theme responsive stylesheet
 ├── tests/                             # Node.js native test runner test suites
 │   ├── aspect_ratio.test.js           # F1: Aspect ratio selector tests
 │   ├── invert.test.js                 # F2: Pixel inversion tests
@@ -264,7 +319,8 @@ DepthForge/
 │   ├── processor_steps.test.js        # F17: processor.py step comment alignment tests
 │   ├── python_queue.test.js           # F18: Python processor concurrency queue tests
 │   ├── android_share.test.js          # F19: Android Share Intent & FileProvider tests
-│   └── readme_verification.test.js    # F20: README documentation verification tests
+│   ├── readme_verification.test.js    # F20: README documentation verification tests
+│   └── phase4_auth_dashboard.test.js  # Phase 4: SpatialOps site, Auth, Dashboard & Admin tests
 └── android_app/                       # Native Android application
     ├── README.md                      # Android app architecture & setup guide
     └── app/
