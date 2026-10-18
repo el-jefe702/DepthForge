@@ -604,11 +604,24 @@
         }
         window.DepthForgeAuth.saveSession(data.token, data.user);
         token = data.token;
-        await tryClaimAdmin();
+        hideError();
+
+        // If user is not yet admin, attempt one-click promotion claim
+        if (data.user?.role !== 'admin') {
+          const claimed = await tryClaimAdmin();
+          if (!claimed) {
+            adminGateMsg.textContent = 'Signed in, but this account does not have admin privileges. Contact the primary administrator or use the founder account.';
+            return;
+          }
+        }
+
         const ok = await loadStats();
         if (ok) {
           await loadHealth();
           await loadUsers();
+          await loadLaserQueue();
+        } else {
+          adminGateMsg.textContent = 'Admin access denied. Account role is not admin.';
         }
       } catch (err) {
         adminGateMsg.textContent = err.message || 'Network error.';
