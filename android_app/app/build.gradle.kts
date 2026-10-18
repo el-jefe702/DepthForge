@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.depthforge.app"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 2
         versionName = "2.0.0"
     }

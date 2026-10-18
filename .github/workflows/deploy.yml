@@ -52,3 +52,9 @@ jobs:
             docker compose up -d --build
             docker compose ps
 
+            # Remove Nginx HTTP Basic Auth prompts since unified login system is in place
+            if [ -f scripts/remove-nginx-basic-auth.sh ]; then
+              chmod +x scripts/remove-nginx-basic-auth.sh
+              bash scripts/remove-nginx-basic-auth.sh || true
+            fi
+
