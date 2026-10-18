@@ -16,6 +16,20 @@ jobs:
     name: Deploy DepthForge
     runs-on: ubuntu-latest
     steps:
+      - name: Verify VPS Secrets Configured
+        env:
+          HAS_HOST: ${{ secrets.VPS_HOST != '' }}
+          HAS_USER: ${{ secrets.VPS_USER != '' }}
+          HAS_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
+        run: |
+          echo "VPS_HOST configured: $HAS_HOST"
+          echo "VPS_USER configured: $HAS_USER"
+          echo "VPS_SSH_KEY configured: $HAS_KEY"
+          if [ "$HAS_HOST" != "true" ] || [ "$HAS_USER" != "true" ] || [ "$HAS_KEY" != "true" ]; then
+            echo "::error::Missing VPS_HOST, VPS_USER, or VPS_SSH_KEY secret in GitHub repository settings."
+            exit 1
+          fi
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -23,14 +37,15 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -e
+            set -ex
             cd /opt/depthforge
 
             TARGET_REF="${{ github.event.inputs.ref || 'main' }}"
             echo "Deploying ${TARGET_REF}"
 
+            git stash push -m "pre-deploy-$(date +%s)" || true
             git fetch origin
-            git checkout "${TARGET_REF}"
+            git checkout -f "${TARGET_REF}"
             git reset --hard "origin/${TARGET_REF}"
 
             docker compose up -d --build
