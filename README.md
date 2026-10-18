@@ -296,4 +296,6 @@ DepthForge/
 
 ## License
 
-SLCreations, LLC © 2026
+**Copyright © 2026 SLCreations, LLC. All Rights Reserved.**
+
+This software and all associated source code, documentation, and assets are proprietary and confidential to SLCreations, LLC. Unauthorized copying, distribution, modification, or use of any part of this repository without prior written permission is strictly prohibited. See [LICENSE](./LICENSE) for details.

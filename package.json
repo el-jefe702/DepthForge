@@ -1,6 +1,8 @@
 {
   "name": "depthforge",
   "version": "2.0.0",
+  "license": "UNLICENSED",
+  "private": true,
   "type": "module",
   "scripts": {
     "start": "node db/init.js && node server.js",
