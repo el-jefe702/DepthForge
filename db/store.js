@@ -117,6 +117,19 @@ export async function countUsers() {
     return Number(rows[0]?.n || 0);
 }
 
+export async function countAdmins() {
+    const { rows } = await query("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND password_hash IS NOT NULL");
+    return Number(rows[0]?.n || 0);
+}
+
+export async function upgradeLegacyUser({ id, password, role }) {
+    await query(
+        'UPDATE users SET password_hash = ?, role = COALESCE(?, role) WHERE id = ?',
+        [hashPassword(password), role || null, id]
+    );
+    return findUserById(id);
+}
+
 export async function createUser({ email, password, role = 'user', credits = 0 }) {
     const id = crypto.randomUUID();
     await query(

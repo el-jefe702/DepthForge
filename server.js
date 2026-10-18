@@ -17,6 +17,8 @@ import {
     findUserByEmail,
     findUserById,
     countUsers,
+    countAdmins,
+    upgradeLegacyUser,
     createUser,
     listUsers,
     adjustCredits,
@@ -789,16 +791,21 @@ app.post('/api/auth/signup', async (req, res) => {
         }
 
         const existing = await findUserByEmail(rawEmail);
-        if (existing) {
-            return res.status(409).json({ error: 'An account with this email already exists.' });
-        }
-
-        const totalExisting = await countUsers();
-        const isFirstUser = totalExisting === 0;
+        const totalAdmins = await countAdmins();
         const isAdminEmail = Boolean(
             process.env.ADMIN_EMAIL && rawEmail === process.env.ADMIN_EMAIL.trim().toLowerCase()
         );
-        const role = (isFirstUser || isAdminEmail) ? 'admin' : 'user';
+        const role = (totalAdmins === 0 || isAdminEmail) ? 'admin' : 'user';
+
+        if (existing) {
+            if (!existing.password_hash) {
+                const upgraded = await upgradeLegacyUser({ id: existing.id, password, role });
+                const token = signAuthToken(upgraded);
+                return res.status(200).json({ status: 'success', token, user: upgraded });
+            }
+            return res.status(409).json({ error: 'An account with this email already exists.' });
+        }
+
         const starterCredits = Number.isFinite(Number(process.env.STARTER_CREDITS))
             ? Number(process.env.STARTER_CREDITS)
             : 10;
@@ -827,15 +834,32 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required.' });
         }
 
-        const row = await findUserByEmail(rawEmail);
+        let row = await findUserByEmail(rawEmail);
+        if (row && !row.password_hash && password.length >= 6) {
+            const totalAdmins = await countAdmins();
+            const isAdminEmail = Boolean(
+                process.env.ADMIN_EMAIL && rawEmail === process.env.ADMIN_EMAIL.trim().toLowerCase()
+            );
+            const nextRole = (totalAdmins === 0 || isAdminEmail) ? 'admin' : (row.role || 'user');
+            const upgraded = await upgradeLegacyUser({ id: row.id, password, role: nextRole });
+            const token = signAuthToken(upgraded);
+            return res.status(200).json({ status: 'success', token, user: upgraded });
+        }
+
         if (!row || !verifyPassword(password, row.password_hash)) {
             return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        let effectiveRole = row.role || 'user';
+        if (effectiveRole !== 'admin' && (await countAdmins()) === 0) {
+            const promoted = await setRole(row.id, 'admin');
+            effectiveRole = promoted?.role || 'admin';
         }
 
         const user = {
             id: row.id,
             email: row.email,
-            role: row.role || 'user',
+            role: effectiveRole,
             credits_balance: Number(row.credits_balance ?? 0),
             created_at: row.created_at
         };

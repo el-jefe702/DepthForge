@@ -1,6 +1,9 @@
 name: Deploy to VPS
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ref:
@@ -23,25 +26,13 @@ jobs:
             set -e
             cd /opt/depthforge
 
-            echo "Deploying ${{ github.event.inputs.ref || 'main' }}"
-
-            # Preserve any uncommitted edits to the two actively edited web files.
-            if git diff --quiet -- static/auth.js static/index.html; then
-              echo "No local web-file edits to preserve."
-            else
-              git stash push -m "deployment-backup-$(date +%s)" -- static/auth.js static/index.html || true
-            fi
+            TARGET_REF="${{ github.event.inputs.ref || 'main' }}"
+            echo "Deploying ${TARGET_REF}"
 
             git fetch origin
-            git checkout "${{ github.event.inputs.ref || 'main' }}"
-            git pull --rebase origin "${{ github.event.inputs.ref || 'main' }}"
-
-            # Restore local edits only if the stash exists and applies cleanly.
-            if git stash list | grep -q 'deployment-backup'; then
-              git stash pop || {
-                echo "::warning::Local edits could not be restored automatically. They remain in git stash."
-              }
-            fi
+            git checkout "${TARGET_REF}"
+            git reset --hard "origin/${TARGET_REF}"
 
             docker compose up -d --build
             docker compose ps
+
