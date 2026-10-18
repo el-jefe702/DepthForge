@@ -11,8 +11,9 @@ services:
         required: false
     environment:
       PORT: "8080"
-      PYTHON_EXEC: "/opt/venv/bin/python"
+      PYTHON_EXEC: "python3"
       SUBSCRIPTIONS_DB_PATH: "/app/data/subscriptions.db"
+      JWT_SECRET: "${JWT_SECRET:-depthforge-spatialops-prod-jwt-secret}"
     volumes:
       - depthforge_generated_data:/app/static/generated
       - depthforge_app_data:/app/data

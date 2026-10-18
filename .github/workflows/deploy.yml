@@ -44,8 +44,9 @@ jobs:
             echo "Deploying ${TARGET_REF}"
 
             git stash push -m "pre-deploy-$(date +%s)" || true
-            git fetch origin
-            git checkout -f "${TARGET_REF}"
+            git remote set-url origin https://github.com/el-jefe702/DepthForge.git
+            git fetch origin "+refs/heads/${TARGET_REF}:refs/remotes/origin/${TARGET_REF}"
+            git checkout -B "${TARGET_REF}" "origin/${TARGET_REF}"
             git reset --hard "origin/${TARGET_REF}"
 
             docker compose up -d --build
