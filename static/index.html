@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DepthForge | 3D Relief Generator</title>
-    <meta name="description" content="Generate flawless 16-bit 3D relief depth maps for CNC laser engraving. AI-powered depth map creation and post-processing.">
+    <title>SpatialOps | DepthForge 3D Relief Generator</title>
+    <meta name="description" content="SpatialOps, LLC — Generate flawless 16-bit 3D relief depth maps for CNC laser engraving. AI-powered depth map creation and post-processing.">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,12 +12,12 @@
 <body>
     <header class="app-header">
         <h1>
-            <img src="/static/logo.png" alt="Logo">
-            <span class="vintage-font">DepthForge</span>
+            <img src="/static/logo.png" alt="SpatialOps Logo">
+            <span class="vintage-font">SpatialOps</span>
         </h1>
         <div class="header-meta">
             <div class="status-badge"><span class="pulse-dot"></span> 16-Bit CNC Precision</div>
-            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">v2.0</span>
+            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">DepthForge v2.0</span>
         </div>
       <div class="credit-display" id="credit-display" title="Remaining Credits"><span class="credit-icon">🪙</span><span id="credit-balance">...</span></div>
 </header>
@@ -1717,12 +1717,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (rawUser) userRole = JSON.parse(rawUser)?.role || 'user';
             } catch (e) {}
             navWrap.innerHTML =
-                '<a href="/" style="color:var(--text-muted);text-decoration:none;">Home</a>' +
-                '<a href="/pricing" style="color:var(--text-muted);text-decoration:none;">Pricing</a>' +
+                '<a href="/app?mode=photo" onclick="if(typeof switchMode===\'function\'){switchMode(\'photo\');return false;}" style="color:var(--accent-gold);text-decoration:none;">📷 Photo to Carve</a>' +
+                '<a href="/solutions" style="color:var(--text-secondary);text-decoration:none;">Solutions</a>' +
+                '<a href="/pricing" style="color:var(--text-secondary);text-decoration:none;">Pricing</a>' +
+                '<a href="/about" style="color:var(--text-secondary);text-decoration:none;">About</a>' +
                 (token
-                    ? '<a href="/dashboard" style="color:#38bdf8;text-decoration:none;">Dashboard</a>' +
-                      (userRole === 'admin' ? '<a href="/admin" style="color:#a5b4fc;text-decoration:none;">Admin</a>' : '')
-                    : '<a href="/login" style="color:#38bdf8;text-decoration:none;">Sign In</a>');
+                    ? '<a href="/dashboard" style="color:var(--accent-gold);text-decoration:none;">Dashboard</a>' +
+                      (userRole === 'admin' ? '<a href="/admin" style="color:var(--accent-indigo);text-decoration:none;">Admin</a>' : '')
+                    : '<a href="/login" style="color:var(--accent-gold);text-decoration:none;">Sign In</a>');
         } catch (e) {}
     }
 

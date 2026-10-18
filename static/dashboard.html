@@ -3,31 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>User Dashboard · DepthForge</title>
+  <title>User Dashboard · SpatialOps DepthForge</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #070b14;
-      color: #f8fafc;
-      font-family: 'Outfit', system-ui, -apple-system, Segoe UI, sans-serif;
+      background-color: #07070b;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.08) 0px, transparent 50%);
+      color: #f0f0f8;
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
     }
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 18px 36px;
-      background: #0b1120;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(10, 10, 15, 0.75);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .brand {
-      font-weight: 800;
-      font-size: 20px;
-      color: #f8fafc;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 21px;
+      color: #f0f0f8;
       text-decoration: none;
+      letter-spacing: 0.5px;
     }
-    .brand span { color: #818cf8; }
+    .brand span { color: #d4af37; }
     nav { display: flex; align-items: center; gap: 16px; }
     nav a, nav button {
       color: #cbd5e1;
@@ -133,7 +140,7 @@
 </head>
 <body>
   <header>
-    <a href="/" class="brand">DEPTH<span>FORGE</span></a>
+    <a href="/" class="brand">SPATIAL<span>OPS</span> · DEPTHFORGE</a>
     <nav>
       <a href="/">Home</a>
       <a href="/app" class="btn">✏️ Text to Relief</a>

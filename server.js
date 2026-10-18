@@ -680,17 +680,17 @@ const signAuthToken = (user) => {
     );
 };
 
-// Integrated Web Site Pages (Phase 4)
-app.get('/', (req, res) => {
+// Integrated Web Site Pages (Phase 4) — Root '/' serves the classic Forge UI with SpatialOps branding
+app.get(['/', '/app'], (req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+});
+
+app.get('/home', (req, res) => {
     const landingFile = path.join(staticDir, 'landing.html');
     if (fs.existsSync(landingFile)) {
         return res.sendFile(landingFile);
     }
     return res.sendFile(path.join(staticDir, 'index.html'));
-});
-
-app.get('/app', (req, res) => {
-    res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 app.get(['/login', '/signup'], (req, res) => {
