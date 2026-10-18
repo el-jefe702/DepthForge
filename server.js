@@ -25,7 +25,9 @@ import {
     setRole,
     listGenerations,
     getStats,
-    verifyPassword
+    verifyPassword,
+    isStripeEventProcessed,
+    recordStripeEvent
 } from './db/store.js';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
@@ -88,17 +90,32 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
-        const userId = session.client_reference_id || session.metadata?.user_id;
-        const creditsToAdd = parseInt(session.metadata?.credits || '0', 10);
+        const eventId = event.id || session.id;
 
-        if (userId && creditsToAdd > 0) {
-            try {
-                await addCredits(userId, creditsToAdd);
-                console.log(`[Stripe Webhook] Added ${creditsToAdd} credits to user ${userId}`);
-            } catch (err) {
-                console.error(`[Stripe Webhook] Failed to add credits: ${err.message}`);
-                return res.status(500).json({ error: 'Failed to update ledger' });
+        try {
+            if (await isStripeEventProcessed(eventId)) {
+                console.log(`[Stripe Webhook] Event ${eventId} already processed, skipping duplicate.`);
+                return res.json({ received: true, duplicate: true });
             }
+
+            const userId = session.client_reference_id || session.metadata?.user_id;
+            const creditsToAdd = parseInt(session.metadata?.credits || '0', 10);
+            const amountCents = session.amount_total || 0;
+
+            if (userId && creditsToAdd > 0) {
+                await addCredits(userId, creditsToAdd);
+                await recordStripeEvent({
+                    eventId,
+                    eventType: event.type,
+                    userId,
+                    credits: creditsToAdd,
+                    amountCents
+                });
+                console.log(`[Stripe Webhook] Added ${creditsToAdd} credits to user ${userId} (event: ${eventId})`);
+            }
+        } catch (err) {
+            console.error(`[Stripe Webhook] Failed to process webhook event: ${err.message}`);
+            return res.status(500).json({ error: 'Failed to process event' });
         }
     }
 
@@ -106,7 +123,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 });
 
 app.use(express.json({ limit: '50kb' }));
-app.use('/api/generate', creditGate);
+app.use(['/api/generate', '/api/photo-to-depth'], creditGate);
 
 const creditDeductionMiddleware = (req, res, next) => {
     const originalJson = res.json;
@@ -115,8 +132,11 @@ const creditDeductionMiddleware = (req, res, next) => {
         if (res.statusCode === 200 && body && !body.error && userId) {
             Promise.resolve().then(async () => {
                 try {
+                    const isBatch = req.body?.batch === true || req.body?.batch === 'true' || req.body?.numberOfImages === 4 || req.body?.numberOfImages === '4';
+                    const cost = isBatch ? 4 : 1;
                     const imageUrl = body.imageUrl || body.url || body.image_url || (body.generatedImages && body.generatedImages[0] && body.generatedImages[0].url) || '';
-                    const newBalance = await deductCredit(userId, req.body?.prompt || 'Generation', imageUrl);
+                    const prompt = req.body?.prompt || (req.file ? `Photo to Carve: ${req.file.originalname}` : 'Generation');
+                    const newBalance = await deductCredit(userId, prompt, imageUrl, cost);
                     body.credits_balance = newBalance;
                 } catch (err) {
                     console.error('Credit deduction failed:', err);
@@ -127,7 +147,7 @@ const creditDeductionMiddleware = (req, res, next) => {
     };
     next();
 };
-app.use('/api/generate', creditDeductionMiddleware);
+app.use(['/api/generate', '/api/photo-to-depth'], creditDeductionMiddleware);
 
 // Global unhandled rejection guard — prevents silent process crashes
 process.on('unhandledRejection', (reason) => {
@@ -1193,12 +1213,14 @@ app.get('/api/wallet/balance', requireAuth, async (req, res) => {
 
 app.post('/api/wallet/checkout', requireAuth, async (req, res) => {
     try {
-        const packageId = typeof req.body?.packageId === 'string' ? req.body.packageId : 'basic';
+        const packageId = typeof req.body?.packageId === 'string' ? req.body.packageId.toLowerCase() : 'pro';
         const packages = {
-            basic: { name: 'DepthForge Pro Credit Pack (50 Credits)', credits: 50, amountCents: 1900 },
-            shop: { name: 'DepthForge Shop Floor Pack (250 Credits)', credits: 250, amountCents: 7900 }
+            pro: { name: 'DepthForge Pro CNC & Laser Pack (100 Credits)', credits: 100, amountCents: 1900 },
+            studio: { name: 'DepthForge Studio Pack (350 Credits)', credits: 350, amountCents: 4900 },
+            basic: { name: 'DepthForge Pro Credit Pack (100 Credits)', credits: 100, amountCents: 1900 },
+            shop: { name: 'DepthForge Studio Pack (350 Credits)', credits: 350, amountCents: 4900 }
         };
-        const pkg = packages[packageId] || packages.basic;
+        const pkg = packages[packageId] || packages.pro;
 
         if (stripe && process.env.STRIPE_SECRET_KEY) {
             const origin = `${req.protocol}://${req.get('host')}`;

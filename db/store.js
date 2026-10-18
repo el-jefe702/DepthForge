@@ -93,7 +93,29 @@ async function ensureSchema() {
             await rawQuery(`ALTER TABLE generations ADD COLUMN ${usePostgres() ? 'IF NOT EXISTS ' : ''}${col}`);
         } catch { /* column already exists */ }
     }
+
+    await rawQuery(`CREATE TABLE IF NOT EXISTS stripe_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT,
+        user_id TEXT,
+        credits INTEGER DEFAULT 0,
+        amount_cents INTEGER DEFAULT 0,
+        processed_at ${ts} DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     initialized.add(key);
+}
+
+export async function isStripeEventProcessed(eventId) {
+    const res = await query('SELECT event_id FROM stripe_events WHERE event_id = ?', [eventId]);
+    return Boolean(res.rows && res.rows.length > 0);
+}
+
+export async function recordStripeEvent({ eventId, eventType, userId, credits = 0, amountCents = 0 }) {
+    await query(
+        'INSERT INTO stripe_events (event_id, event_type, user_id, credits, amount_cents) VALUES (?, ?, ?, ?, ?)',
+        [eventId, eventType, userId || null, credits, amountCents]
+    );
 }
 
 export async function query(sql, params = []) {

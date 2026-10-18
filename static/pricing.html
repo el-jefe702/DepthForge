@@ -95,7 +95,7 @@
           <li>Photo-to-Depth Vision Analysis</li>
           <li>Full Commercial Machining Rights</li>
         </ul>
-        <a href="/signup?plan=pro" class="so-btn so-btn-cyan" style="width:100%;">Get Pro Pack →</a>
+        <a href="/signup?plan=pro" data-checkout="pro" class="so-btn so-btn-cyan" style="width:100%;">Get Pro Pack →</a>
       </div>
 
       <div class="so-card">
@@ -109,7 +109,7 @@
           <li>S3 Cloud Archive &amp; History</li>
           <li>Priority Support from SLCreations</li>
         </ul>
-        <a href="/signup?plan=studio" class="so-btn so-btn-primary" style="width:100%;">Get Studio Pack →</a>
+        <a href="/signup?plan=studio" data-checkout="studio" class="so-btn so-btn-primary" style="width:100%;">Get Studio Pack →</a>
       </div>
 
       <div class="so-card">
@@ -135,6 +135,55 @@
     </div>
   </footer>
   <script src="/static/auth.js"></script>
+  <script>
+    async function checkoutPack(packageId) {
+      const token = window.DepthForgeAuth?.getStoredToken();
+      if (!token) {
+        location.href = `/signup?plan=${encodeURIComponent(packageId)}&next=/pricing?buy=${encodeURIComponent(packageId)}`;
+        return;
+      }
+      try {
+        const btn = event?.currentTarget;
+        if (btn) { btn.disabled = true; btn.textContent = 'Launching Stripe...'; }
+        const res = await fetch('/api/wallet/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ packageId })
+        });
+        const data = await res.json();
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          alert(data?.error || 'Could not initiate checkout session.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Retry Checkout'; }
+        }
+      } catch (err) {
+        alert('Network error connecting to payment gateway: ' + err.message);
+      }
+    }
+
+    document.querySelectorAll('[data-checkout]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        checkoutPack(el.getAttribute('data-checkout'));
+      });
+    });
+
+    (async () => {
+      const token = window.DepthForgeAuth?.getStoredToken();
+      if (token) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const buyParam = urlParams.get('buy');
+        if (buyParam && (buyParam === 'pro' || buyParam === 'studio')) {
+          history.replaceState(null, '', '/pricing');
+          checkoutPack(buyParam);
+        }
+      }
+    })();
+  </script>
 </body>
 </html>
 

@@ -53,9 +53,10 @@ export function createCreditBackend({ url, publicKey, serviceRoleKey, fetchImpl 
   });
 }
 
-export const deductCredit = (userId, prompt, imageUrl) => {
+export const deductCredit = (userId, prompt, imageUrl, cost = 1) => {
     return new Promise(async (resolve, reject) => {
         try {
+            const deductionAmount = Math.max(1, Math.trunc(Number(cost) || 1));
             if (process.env.NODE_ENV === 'test' && (!process.env.SUBSCRIPTIONS_DB_PATH || userId === 'test-user' || userId === 'test_user')) {
                 return resolve(999);
             }
@@ -69,8 +70,8 @@ export const deductCredit = (userId, prompt, imageUrl) => {
                     try {
                         await client.query('BEGIN');
                         const updateRes = await client.query(
-                            'UPDATE users SET credits_balance = credits_balance - 1 WHERE id = $1 AND credits_balance > 0 RETURNING credits_balance',
-                            [userId]
+                            'UPDATE users SET credits_balance = credits_balance - $1 WHERE id = $2 AND credits_balance >= $1 RETURNING credits_balance',
+                            [deductionAmount, userId]
                         );
                         if (!updateRes.rows || updateRes.rows.length === 0) {
                             await client.query('ROLLBACK');
@@ -78,8 +79,8 @@ export const deductCredit = (userId, prompt, imageUrl) => {
                             return reject(new Error('Insufficient credits'));
                         }
                         await client.query(
-                            'INSERT INTO generations (id, user_id, prompt, image_url) VALUES ($1, $2, $3, $4)',
-                            [Date.now().toString(), userId, prompt, imageUrl]
+                            'INSERT INTO generations (id, user_id, prompt, image_url, cost) VALUES ($1, $2, $3, $4, $5)',
+                            [Date.now().toString(), userId, prompt, imageUrl, deductionAmount]
                         );
                         await client.query('COMMIT');
                         const balance = updateRes.rows[0].credits_balance;
@@ -102,10 +103,10 @@ export const deductCredit = (userId, prompt, imageUrl) => {
             
             localDb.serialize(() => {
                 localDb.run('BEGIN TRANSACTION');
-                localDb.run('UPDATE users SET credits_balance = credits_balance - 1 WHERE id = ? AND credits_balance > 0', [userId], function(err) {
+                localDb.run('UPDATE users SET credits_balance = credits_balance - ? WHERE id = ? AND credits_balance >= ?', [deductionAmount, userId, deductionAmount], function(err) {
                     if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
                     if (this.changes === 0) { localDb.run('ROLLBACK'); localDb.close(); return reject(new Error('Insufficient credits')); }
-                    localDb.run('INSERT INTO generations (user_id, prompt, image_url) VALUES (?, ?, ?)', [userId, prompt, imageUrl], function(err) {
+                    localDb.run('INSERT INTO generations (user_id, prompt, image_url, cost) VALUES (?, ?, ?, ?)', [userId, prompt, imageUrl, deductionAmount], function(err) {
                         if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }
                         localDb.get('SELECT credits_balance FROM users WHERE id = ?', [userId], (err, row) => {
                             if (err) { localDb.run('ROLLBACK'); localDb.close(); return reject(err); }

@@ -170,6 +170,17 @@ export async function initDb() {
                 )
             `);
 
+            db.run(`
+                CREATE TABLE IF NOT EXISTS stripe_events (
+                    event_id TEXT PRIMARY KEY,
+                    event_type TEXT,
+                    user_id TEXT,
+                    credits INTEGER DEFAULT 0,
+                    amount_cents INTEGER DEFAULT 0,
+                    processed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
             // Migration for existing databases that predate Phase 4 columns
             const userMigrations = [
                 'ALTER TABLE users ADD COLUMN email TEXT',
