@@ -119,7 +119,7 @@ export const creditGate = (req, res, next) => {
     checkSqliteLedger();
 
     function checkSqliteLedger() {
-        const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || './subscriptions.db';
+        const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || (fs.existsSync('./subscriptions.db') ? './subscriptions.db' : './data/subscriptions.db');
         
         if (!fs.existsSync(dbPath)) {
             if (process.env.NODE_ENV === 'test') {
@@ -185,6 +185,53 @@ export const creditGate = (req, res, next) => {
         
         tryNextTable();
     });
+    }
+};
+
+export const requireAuth = (req, res, next) => {
+    const token = extractToken(req);
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid authorization token' });
+    }
+    const secret = process.env.JWT_SECRET || 'depthforge-dev-secret-key';
+    try {
+        const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
+        const userId = typeof decoded === 'string'
+            ? decoded
+            : decoded && typeof decoded === 'object'
+                ? decoded.id || decoded.user_id || decoded.userId || decoded.sub
+                : null;
+        if (typeof userId !== 'string' || !userId.trim()) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid token payload' });
+        }
+        req.user = decoded;
+        req.userId = userId;
+        return next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+    }
+};
+
+export const requireAdmin = async (req, res, next) => {
+    if (!req.userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    try {
+        const { findUserById } = await import('../db/store.js');
+        const dbUser = await findUserById(req.userId);
+        const role = dbUser?.role || req.user?.role;
+        if (role !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden: Admin access required' });
+        }
+        req.dbUser = dbUser;
+        return next();
+    } catch (err) {
+        if (req.user?.role === 'admin') {
+            return next();
+        }
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
 };
 
 export default creditGate;
+

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DepthForge · AI 3D Relief &amp; 16-Bit Depth Map Studio</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #070b14;
+      color: #f8fafc;
+      font-family: 'Outfit', system-ui, -apple-system, Segoe UI, sans-serif;
+      line-height: 1.6;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px;
+      background: rgba(7, 11, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 22px;
+      color: #f8fafc;
+      text-decoration: none;
+      letter-spacing: -0.03em;
+    }
+    .brand span { color: #818cf8; }
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    nav a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    nav a:hover { color: #fff; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
+    }
+    .btn-outline {
+      border-color: rgba(148, 163, 184, 0.3);
+      color: #e2e8f0;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .hero {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 72px 24px 56px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 40px; }
+      header { padding: 14px 20px; flex-wrap: wrap; gap: 12px; }
+    }
+    .pill {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(99, 102, 241, 0.16);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      margin-bottom: 18px;
+    }
+    h1 {
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1.1;
+      margin: 0 0 18px;
+      letter-spacing: -0.03em;
+    }
+    h1 span {
+      background: linear-gradient(135deg, #818cf8, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lead {
+      font-size: 18px;
+      color: #94a3b8;
+      margin: 0 0 28px;
+      max-width: 560px;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .demo-card {
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    }
+    .demo-stage {
+      position: relative;
+      height: 300px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #94a3b8 32%, #334155 62%, #020617 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 16px;
+    }
+    .demo-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 45%, #fde68a 0%, #d97706 38%, #78350f 68%, #090d16 100%);
+      clip-path: inset(0 50% 0 0);
+      transition: clip-path 0.05s linear;
+    }
+    .demo-badge {
+      position: relative;
+      z-index: 2;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(2, 6, 23, 0.78);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .slider-wrap {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .slider-wrap input[type="range"] {
+      flex: 1;
+      accent-color: #6366f1;
+    }
+    .features {
+      max-width: 1180px;
+      margin: 24px auto 80px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 22px;
+    }
+    .feature-box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .feature-box h3 { margin: 0 0 8px; font-size: 18px; color: #f1f5f9; }
+    .feature-box p { margin: 0; font-size: 14px; color: #94a3b8; }
+    footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 28px 40px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">DEPTH<span>FORGE</span></a>
+    <nav>
+      <a href="/app">Forge Studio</a>
+      <a href="/dashboard">User Dashboard</a>
+      <a href="/admin" id="adminNavLink" style="display:none;">Admin Console</a>
+      <a href="/login" id="navSignIn" class="btn btn-outline">Sign In</a>
+      <a href="/signup" id="navSignUp" class="btn btn-primary">Get Started Free</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <span class="pill">16-Bit CNC · Laser · 3D Printing</span>
+      <h1>Turn prompts &amp; photos into <span>precision 3D relief</span></h1>
+      <p class="lead">
+        DepthForge combines Gemini 3.6 spatial prompt engineering, Imagen 4 heightmaps, 16-bit OpenCV bilateral smoothing, and live WebGL 3D STL/OBJ mesh export in one unified studio.
+      </p>
+      <div class="cta-row">
+        <a href="/app" class="btn btn-primary">Launch Forge Studio →</a>
+        <a href="/signup" class="btn btn-outline">Create Account (10 Free Credits)</a>
+        <a href="/dashboard" class="btn btn-outline">My Dashboard</a>
+      </div>
+    </div>
+
+    <div class="demo-card">
+      <div class="demo-stage">
+        <div class="demo-overlay" id="demoOverlay"></div>
+        <span class="demo-badge">Source Relief Concept</span>
+        <span class="demo-badge">16-Bit Heightmap Output</span>
+      </div>
+      <div class="slider-wrap">
+        <span>Before</span>
+        <input id="compareSlider" type="range" min="0" max="100" value="50" aria-label="Before and after depth comparison">
+        <span>16-Bit Depth</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="feature-box">
+      <h3>AI Prompt &amp; Photo-to-Depth</h3>
+      <p>Generate bas-relief, high-relief,intaglio, or medallion heightmaps from text prompts or reference photos.</p>
+    </div>
+    <div class="feature-box">
+      <h3>16-Bit OpenCV Polish</h3>
+      <p>Eliminate 8-bit stepping artifacts with our 16-bit bilateral + Gaussian smoothing pipeline and background isolation.</p>
+    </div>
+    <div class="feature-box">
+      <h3>Interactive 3D STL &amp; OBJ Export</h3>
+      <p>Inspect displacement meshes in real time with Three.js and download watertight binary STL or OBJ files directly.</p>
+    </div>
+    <div class="feature-box">
+      <h3>Cloud Queue &amp; Credit Wallet</h3>
+      <p>Track your generations, manage credits in your User Dashboard, and scale with BullMQ + S3 storage.</p>
+    </div>
+  </section>
+
+  <footer>
+    DepthForge Studio · Integrated Web Platform · <a href="/app" style="color:#818cf8;">Open Generator</a> · <a href="/dashboard" style="color:#818cf8;">Dashboard</a> · <a href="/admin" style="color:#818cf8;">Admin</a>
+  </footer>
+
+  <script src="/static/auth.js"></script>
+  <script>
+    const slider = document.getElementById('compareSlider');
+    const overlay = document.getElementById('demoOverlay');
+    slider.addEventListener('input', () => {
+      const rightInset = 100 - Number(slider.value);
+      overlay.style.clipPath = `inset(0 ${rightInset}% 0 0)`;
+    });
+
+    (async () => {
+      if (!window.DepthForgeAuth) return;
+      const session = await window.DepthForgeAuth.getCurrentSession();
+      if (session?.user) {
+        const navSignIn = document.getElementById('navSignIn');
+        const navSignUp = document.getElementById('navSignUp');
+        if (navSignIn) {
+          navSignIn.textContent = `${session.user.email} (${session.user.credits_balance ?? 0} cr)`;
+          navSignIn.href = '/dashboard';
+        }
+        if (navSignUp) {
+          navSignUp.textContent = 'Open Studio';
+          navSignUp.href = '/app';
+        }
+        if (session.user.role === 'admin') {
+          const adminLink = document.getElementById('adminNavLink');
+          if (adminLink) adminLink.style.display = 'inline';
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import express from 'express';
-import { creditGate } from './middleware/auth.js';
+import { creditGate, requireAuth, requireAdmin } from './middleware/auth.js';
+import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +13,18 @@ import rateLimit from 'express-rate-limit';
 import PQueue from 'p-queue';
 import Stripe from 'stripe';
 import { addCredits, deductCredit } from './credit-backend.js';
+import {
+    findUserByEmail,
+    findUserById,
+    countUsers,
+    createUser,
+    listUsers,
+    adjustCredits,
+    setRole,
+    listGenerations,
+    getStats,
+    verifyPassword
+} from './db/store.js';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
@@ -648,6 +661,235 @@ const sanitizeAspectRatio = (ratio) => {
 };
 
 // --- ROUTES ---
+
+const signAuthToken = (user) => {
+    const secret = process.env.JWT_SECRET || 'depthforge-dev-secret-key';
+    return jwt.sign(
+        {
+            id: user.id,
+            userId: user.id,
+            user_id: user.id,
+            sub: user.id,
+            email: user.email,
+            role: user.role || 'user'
+        },
+        secret,
+        { algorithm: 'HS256', expiresIn: '7d' }
+    );
+};
+
+// Integrated Web Site Pages (Phase 4)
+app.get('/', (req, res) => {
+    const landingFile = path.join(staticDir, 'landing.html');
+    if (fs.existsSync(landingFile)) {
+        return res.sendFile(landingFile);
+    }
+    return res.sendFile(path.join(staticDir, 'index.html'));
+});
+
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+});
+
+app.get(['/login', '/signup'], (req, res) => {
+    res.sendFile(path.join(staticDir, 'login.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(staticDir, 'dashboard.html'));
+});
+
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(staticDir, 'admin.html'));
+});
+
+// Phase 4: User Sign Up & Authorization API
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const rawEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+        if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+            return res.status(400).json({ error: 'A valid email address is required.' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+        }
+
+        const existing = await findUserByEmail(rawEmail);
+        if (existing) {
+            return res.status(409).json({ error: 'An account with this email already exists.' });
+        }
+
+        const totalExisting = await countUsers();
+        const isFirstUser = totalExisting === 0;
+        const isAdminEmail = Boolean(
+            process.env.ADMIN_EMAIL && rawEmail === process.env.ADMIN_EMAIL.trim().toLowerCase()
+        );
+        const role = (isFirstUser || isAdminEmail) ? 'admin' : 'user';
+        const starterCredits = Number.isFinite(Number(process.env.STARTER_CREDITS))
+            ? Number(process.env.STARTER_CREDITS)
+            : 10;
+
+        const user = await createUser({
+            email: rawEmail,
+            password,
+            role,
+            credits: starterCredits
+        });
+
+        const token = signAuthToken(user);
+        return res.status(201).json({ status: 'success', token, user });
+    } catch (err) {
+        console.error('[Auth Signup Error]', err);
+        return res.status(500).json({ error: err.message || 'Failed to create account.' });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const rawEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+        if (!rawEmail || !password) {
+            return res.status(400).json({ error: 'Email and password are required.' });
+        }
+
+        const row = await findUserByEmail(rawEmail);
+        if (!row || !verifyPassword(password, row.password_hash)) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        const user = {
+            id: row.id,
+            email: row.email,
+            role: row.role || 'user',
+            credits_balance: Number(row.credits_balance ?? 0),
+            created_at: row.created_at
+        };
+        const token = signAuthToken(user);
+        return res.status(200).json({ status: 'success', token, user });
+    } catch (err) {
+        console.error('[Auth Login Error]', err);
+        return res.status(500).json({ error: err.message || 'Sign in failed.' });
+    }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+    try {
+        const dbUser = await findUserById(req.userId);
+        if (dbUser) {
+            return res.json({ user: dbUser });
+        }
+        return res.json({
+            user: {
+                id: req.userId,
+                email: req.user?.email || '',
+                role: req.user?.role || 'user',
+                credits_balance: req.credits_balance ?? 0
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// Phase 4: User Dashboard & Wallet API
+app.get('/api/user/dashboard', requireAuth, async (req, res) => {
+    try {
+        const dbUser = await findUserById(req.userId);
+        const generations = await listGenerations(req.userId, 50);
+        const user = dbUser || {
+            id: req.userId,
+            email: req.user?.email || '',
+            role: req.user?.role || 'user',
+            credits_balance: 0
+        };
+        return res.json({
+            user,
+            credits_balance: Number(user.credits_balance ?? 0),
+            generations
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/user/generations', requireAuth, async (req, res) => {
+    try {
+        const generations = await listGenerations(req.userId, 50);
+        return res.json({ generations });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/wallet/balance', requireAuth, async (req, res) => {
+    try {
+        const dbUser = await findUserById(req.userId);
+        return res.json({
+            userId: req.userId,
+            credits_balance: Number(dbUser?.credits_balance ?? 0)
+        });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// Phase 4: Admin Dashboard API
+app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const stats = await getStats();
+        return res.json(stats);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const search = typeof req.query?.search === 'string' ? req.query.search.trim() : '';
+        const limit = Number(req.query?.limit) || 100;
+        const users = await listUsers({ search, limit });
+        return res.json({ users });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/credits', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const userId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
+        const amount = Number(req.body?.amount);
+        if (!userId || !Number.isFinite(amount)) {
+            return res.status(400).json({ error: 'Valid userId and numeric amount are required.' });
+        }
+        const updatedUser = await adjustCredits(userId, Math.trunc(amount));
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        return res.json({ status: 'success', user: updatedUser });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/role', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const userId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
+        const role = typeof req.body?.role === 'string' ? req.body.role.trim().toLowerCase() : '';
+        if (!userId || !['user', 'admin'].includes(role)) {
+            return res.status(400).json({ error: "Valid userId and role ('user' or 'admin') are required." });
+        }
+        const updatedUser = await setRole(userId, role);
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        return res.json({ status: 'success', user: updatedUser });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
 
 app.route('/api/health')
     .get((req, res) => {

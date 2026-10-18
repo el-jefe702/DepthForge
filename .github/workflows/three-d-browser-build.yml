@@ -41,7 +41,7 @@ jobs:
 
       - name: Start server for Playwright smoke test
         run: |
-          PORT=8080 node server.js &
+          GEMINI_API_KEY=dummy-key JWT_SECRET=dummy-secret PORT=8080 node server.js &
           npx wait-on http://127.0.0.1:8080/static/index.html --timeout 30000
 
       - name: Run Playwright Chromium smoke test

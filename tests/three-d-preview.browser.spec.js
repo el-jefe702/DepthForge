@@ -4,7 +4,8 @@ test('Three.js preview initializes in Chromium', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await page.goto('/static/index.html');
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
+  await page.goto(`${baseUrl}/static/index.html`);
   await page.waitForFunction(() => typeof window.THREE !== 'undefined', null, { timeout: 20000 });
 
   const webglSupported = await page.evaluate(() => {

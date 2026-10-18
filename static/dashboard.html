@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>User Dashboard · DepthForge</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #070b14;
+      color: #f8fafc;
+      font-family: 'Outfit', system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 36px;
+      background: #0b1120;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 20px;
+      color: #f8fafc;
+      text-decoration: none;
+    }
+    .brand span { color: #818cf8; }
+    nav { display: flex; align-items: center; gap: 16px; }
+    nav a, nav button {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 14px;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+    .btn {
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      background: #4f46e5;
+      color: #fff;
+      text-decoration: none;
+      border: 0;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+    .container {
+      max-width: 1120px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .card-label {
+      font-size: 13px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card-value {
+      font-size: 32px;
+      font-weight: 800;
+      margin-top: 6px;
+      color: #f8fafc;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      text-transform: uppercase;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 18px;
+    }
+    .gen-item {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .gen-item img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #020617;
+    }
+    .gen-meta {
+      padding: 14px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .gen-date {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 6px;
+    }
+    .empty {
+      color: #94a3b8;
+      padding: 32px;
+      text-align: center;
+      background: #111827;
+      border: 1px dashed #334155;
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">DEPTH<span>FORGE</span></a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/app" class="btn">Launch Forge Studio</a>
+      <a href="/admin" id="adminLink" class="btn btn-secondary" style="display:none;">Admin Console</a>
+      <button id="logoutBtn" class="btn btn-secondary">Sign Out</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1 style="margin:0 0 6px;">User Dashboard</h1>
+    <p style="margin:0 0 24px;color:#94a3b8;">Manage your account, credit wallet, and generated 3D heightmaps.</p>
+
+    <section class="stats-grid">
+      <div class="card">
+        <div class="card-label">Signed In Account</div>
+        <div id="userEmailDisplay" style="font-size:18px;font-weight:700;margin-top:10px;word-break:break-all;">Loading...</div>
+        <div style="margin-top:10px;"><span id="userRoleBadge" class="role-badge">user</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Available Credits</div>
+        <div id="creditsBalance" class="card-value">—</div>
+        <div style="margin-top:8px;font-size:13px;color:#94a3b8;">1 credit per generation</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Total Generations</div>
+        <div id="generationsCount" class="card-value">0</div>
+        <div style="margin-top:8px;"><a href="/app" style="color:#818cf8;font-size:13px;text-decoration:none;">Create new heightmap →</a></div>
+      </div>
+    </section>
+
+    <h2 style="margin:0 0 16px;font-size:20px;">Recent Generations</h2>
+    <div id="generationsGrid" class="gallery-grid"></div>
+    <div id="emptyState" class="empty" style="display:none;">
+      No depth maps generated yet. <a href="/app" style="color:#818cf8;">Open Forge Studio</a> to create your first 16-bit heightmap!
+    </div>
+  </main>
+
+  <script src="/static/auth.js"></script>
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      window.DepthForgeAuth.clearSession();
+      location.replace('/login');
+    });
+
+    (async () => {
+      const token = window.DepthForgeAuth.getStoredToken();
+      if (!token) {
+        location.replace('/login?next=/dashboard');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/user/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 401) {
+          window.DepthForgeAuth.clearSession();
+          location.replace('/login?next=/dashboard');
+          return;
+        }
+        const data = await res.json();
+        const user = data.user || {};
+        document.getElementById('userEmailDisplay').textContent = user.email || user.id || 'Authenticated User';
+        document.getElementById('userRoleBadge').textContent = user.role || 'user';
+        document.getElementById('creditsBalance').textContent = data.credits_balance ?? user.credits_balance ?? 0;
+
+        if (user.role === 'admin') {
+          document.getElementById('adminLink').style.display = 'inline-flex';
+        }
+
+        const gens = Array.isArray(data.generations) ? data.generations : [];
+        document.getElementById('generationsCount').textContent = gens.length;
+        const grid = document.getElementById('generationsGrid');
+        if (gens.length === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          grid.innerHTML = gens.map(g => `
+            <div class="gen-item">
+              ${g.image_url ? `<a href="${g.image_url}" target="_blank"><img src="${g.image_url}" alt="Generated depth map"></a>` : ''}
+              <div class="gen-meta">
+                <div>${(g.prompt || 'Depth Map Generation').replace(/</g, '&lt;')}</div>
+                <div class="gen-date">${g.created_at || ''}</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        document.getElementById('userEmailDisplay').textContent = 'Error loading dashboard';
+      }
+    })();
+  </script>
+</body>
+</html>
