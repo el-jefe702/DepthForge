@@ -39,6 +39,11 @@ jobs:
       - name: Run isolated browser preview tests
         run: node --test tests/three_d_preview.browser.test.js
 
+      - name: Start server for Playwright smoke test
+        run: |
+          PORT=8080 node server.js &
+          npx wait-on http://127.0.0.1:8080/static/index.html --timeout 30000
+
       - name: Run Playwright Chromium smoke test
         run: npx playwright test tests/three-d-preview.browser.spec.js --reporter=line
         env:
