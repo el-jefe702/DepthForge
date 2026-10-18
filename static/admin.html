@@ -237,12 +237,25 @@
   <main class="container">
     <div id="errorBanner" class="banner"></div>
 
+    <!-- Loading State -->
+    <div id="adminLoadingState" style="text-align:center;padding:50px 20px;color:var(--text-secondary);">
+      <div style="font-family:'Cinzel',serif;font-size:18px;color:var(--accent-gold);margin-bottom:8px;">Authenticating Admin Console...</div>
+      Connecting to DepthForge core...
+    </div>
+
     <!-- Inline Admin Sign-In / Self-Promotion Gate (shown only if current session is not admin) -->
     <section id="adminAuthGate" class="card auth-gate-card">
       <h2 style="margin:0 0 8px;font-family:'Cinzel',serif;color:var(--accent-gold);">Admin Console Access</h2>
-      <p style="margin:0 0 18px;font-size:14px;color:var(--text-secondary);">
-        Sign in with your administrator account (or create the primary admin account) to manage users, roles, and credits.
+      <p style="margin:0 0 16px;font-size:14px;color:var(--text-secondary);">
+        Sign in with your administrator account (or founder credentials) to manage users, roles, and credits.
       </p>
+
+      <div id="currentSessionBanner" style="display:none;background:rgba(255,255,255,0.04);padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08);font-size:13px;">
+        <div style="color:var(--text-secondary);">Current Session:</div>
+        <div id="currentSessionEmail" style="font-weight:600;color:var(--accent-gold);margin-top:2px;word-break:break-all;"></div>
+        <button type="button" id="claimFounderBtn" class="btn btn-gold" style="margin-top:10px;width:100%;">👑 Elevate This Account to Admin</button>
+      </div>
+
       <form id="adminLoginForm">
         <div class="form-row">
           <label for="adminEmailInput">Admin Email</label>
@@ -251,6 +264,10 @@
         <div class="form-row">
           <label for="adminPasswordInput">Password</label>
           <input id="adminPasswordInput" type="password" minlength="6" placeholder="At least 6 characters" required>
+        </div>
+        <div class="form-row" id="adminKeyRow" style="display:none;">
+          <label for="adminKeyInput">Admin Master Key / Secret</label>
+          <input id="adminKeyInput" type="password" placeholder="Enter ADMIN_KEY or JWT_SECRET">
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
           <button type="submit" class="btn btn-gold" style="flex:1;">Sign In as Admin</button>
@@ -261,7 +278,7 @@
     </section>
 
     <!-- Main Admin Console Content -->
-    <div id="adminConsoleContent">
+    <div id="adminConsoleContent" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:22px;">
         <div>
           <h1 style="margin:0 0 6px;font-family:'Cinzel',serif;font-size:28px;">SLCreations Admin Console</h1>
@@ -381,6 +398,10 @@
     const adminAuthGate = document.getElementById('adminAuthGate');
     const adminConsoleContent = document.getElementById('adminConsoleContent');
     const adminGateMsg = document.getElementById('adminGateMsg');
+    const adminLoadingState = document.getElementById('adminLoadingState');
+    const currentSessionBanner = document.getElementById('currentSessionBanner');
+    const currentSessionEmail = document.getElementById('currentSessionEmail');
+    const adminKeyRow = document.getElementById('adminKeyRow');
 
     function showError(msg) {
       errorBanner.textContent = msg;
@@ -393,14 +414,28 @@
     }
 
     function showAuthGate(reason) {
+      if (adminLoadingState) adminLoadingState.style.display = 'none';
       adminConsoleContent.style.display = 'none';
       adminAuthGate.style.display = 'block';
+
+      try {
+        const rawUser = localStorage.getItem('depthforge_user');
+        if (rawUser) {
+          const u = JSON.parse(rawUser);
+          if (u?.email) {
+            currentSessionEmail.textContent = `${u.email} (${(u.role || 'user').toUpperCase()})`;
+            currentSessionBanner.style.display = 'block';
+          }
+        }
+      } catch (e) {}
+
       if (reason) {
         adminGateMsg.textContent = reason;
       }
     }
 
     function showConsole() {
+      if (adminLoadingState) adminLoadingState.style.display = 'none';
       adminAuthGate.style.display = 'none';
       adminConsoleContent.style.display = 'block';
       hideError();
@@ -409,15 +444,39 @@
     document.getElementById('adminSignOutBtn').addEventListener('click', () => {
       window.DepthForgeAuth.clearSession();
       token = null;
+      if (currentSessionBanner) currentSessionBanner.style.display = 'none';
       showAuthGate('Signed out. Enter your admin credentials below.');
     });
 
-    async function tryClaimAdmin() {
+    const claimFounderBtn = document.getElementById('claimFounderBtn');
+    if (claimFounderBtn) {
+      claimFounderBtn.addEventListener('click', async () => {
+        adminGateMsg.textContent = 'Attempting admin elevation...';
+        const key = document.getElementById('adminKeyInput').value.trim();
+        const claimed = await tryClaimAdmin(key);
+        if (claimed) {
+          adminGateMsg.textContent = '';
+          showConsole();
+          await loadStats();
+          await loadUsers();
+        } else {
+          adminKeyRow.style.display = 'block';
+          adminGateMsg.textContent = 'Elevation requires founder credentials or admin key. Enter the admin master key below or sign in.';
+        }
+      });
+    }
+
+    async function tryClaimAdmin(adminKey = '') {
       if (!token) return false;
       try {
+        const body = adminKey ? JSON.stringify({ adminKey }) : JSON.stringify({});
         const res = await fetch('/api/admin/claim', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body
         });
         if (res.ok) {
           const data = await res.json();
@@ -471,8 +530,7 @@
       }
 
       if (res.status === 403) {
-        showError('Admin privileges are required to view the Admin Console.');
-        showAuthGate('Your current browser session is a standard user/guest account. Sign in with your Admin account below.');
+        showAuthGate('Admin privileges required. Click "Elevate This Account to Admin" or sign in with your admin credentials.');
         return false;
       }
 
@@ -608,9 +666,11 @@
 
         // If user is not yet admin, attempt one-click promotion claim
         if (data.user?.role !== 'admin') {
-          const claimed = await tryClaimAdmin();
+          const adminKey = document.getElementById('adminKeyInput').value.trim();
+          const claimed = await tryClaimAdmin(adminKey);
           if (!claimed) {
-            adminGateMsg.textContent = 'Signed in, but this account does not have admin privileges. Contact the primary administrator or use the founder account.';
+            document.getElementById('adminKeyRow').style.display = 'block';
+            adminGateMsg.textContent = 'Signed in with user role. Enter your Admin Master Key below to elevate this account to Admin.';
             return;
           }
         }

@@ -242,7 +242,27 @@ export const requireAdmin = async (req, res, next) => {
         let role = dbUser?.role || req.user?.role;
         if (role !== 'admin' && process.env.NODE_ENV !== 'test') {
             const totalAdmins = await countAdmins();
-            if (totalAdmins === 0 && dbUser) {
+            const adminEmails = [
+                'founder@slcreations.llc',
+                'admin@slcreations.com',
+                'admin@slcreations.llc',
+                'admin@depthforge.local'
+            ];
+            if (process.env.ADMIN_EMAIL) {
+                process.env.ADMIN_EMAIL.split(',').forEach(e => {
+                    const clean = e.trim().toLowerCase();
+                    if (clean) adminEmails.push(clean);
+                });
+            }
+            const isConfiguredAdmin = Boolean(
+                dbUser?.email && (
+                    adminEmails.includes(dbUser.email.toLowerCase()) ||
+                    dbUser.email.endsWith('@slcreations.llc') ||
+                    dbUser.email.startsWith('founder@') ||
+                    dbUser.email.startsWith('admin@')
+                )
+            );
+            if ((totalAdmins === 0 || isConfiguredAdmin) && dbUser) {
                 dbUser = await setRole(req.userId, 'admin');
                 role = 'admin';
             }

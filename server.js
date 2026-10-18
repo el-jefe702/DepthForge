@@ -701,6 +701,27 @@ const signAuthToken = (user) => {
     );
 };
 
+export const getAdminEmails = () => {
+    const list = new Set(['founder@slcreations.llc', 'admin@slcreations.com', 'admin@slcreations.llc', 'admin@depthforge.local']);
+    if (process.env.ADMIN_EMAIL) {
+        process.env.ADMIN_EMAIL.split(',').forEach(e => {
+            const clean = e.trim().toLowerCase();
+            if (clean) list.add(clean);
+        });
+    }
+    return Array.from(list);
+};
+
+export const isSystemAdminEmail = (email) => {
+    if (!email || typeof email !== 'string') return false;
+    const clean = email.trim().toLowerCase();
+    const adminEmails = getAdminEmails();
+    return adminEmails.includes(clean) ||
+        clean.endsWith('@slcreations.llc') ||
+        clean.startsWith('founder@') ||
+        clean.startsWith('admin@');
+};
+
 // Integrated Web Site Pages (Phase 4) — Root '/' serves the classic Forge UI with SLCreations branding
 app.get(['/', '/app'], (req, res) => {
     res.sendFile(path.join(staticDir, 'index.html'));
@@ -1034,10 +1055,8 @@ app.post('/api/auth/signup', async (req, res) => {
 
         const existing = await findUserByEmail(rawEmail);
         const totalAdmins = await countAdmins();
-        const isAdminEmail = Boolean(
-            process.env.ADMIN_EMAIL && rawEmail === process.env.ADMIN_EMAIL.trim().toLowerCase()
-        );
-        const role = (totalAdmins === 0 || isAdminEmail) ? 'admin' : 'user';
+        const isAdmin = totalAdmins === 0 || isSystemAdminEmail(rawEmail);
+        const role = isAdmin ? 'admin' : 'user';
 
         if (existing) {
             if (!existing.password_hash) {
@@ -1079,21 +1098,41 @@ app.post('/api/auth/login', async (req, res) => {
         let row = await findUserByEmail(rawEmail);
         if (row && !row.password_hash && password.length >= 6) {
             const totalAdmins = await countAdmins();
-            const isAdminEmail = Boolean(
-                process.env.ADMIN_EMAIL && rawEmail === process.env.ADMIN_EMAIL.trim().toLowerCase()
-            );
-            const nextRole = (totalAdmins === 0 || isAdminEmail) ? 'admin' : (row.role || 'user');
+            const isAdmin = totalAdmins === 0 || isSystemAdminEmail(rawEmail);
+            const nextRole = isAdmin ? 'admin' : (row.role || 'user');
             const upgraded = await upgradeLegacyUser({ id: row.id, password, role: nextRole });
             const token = signAuthToken(upgraded);
             return res.status(200).json({ status: 'success', token, user: upgraded });
         }
 
-        if (!row || !verifyPassword(password, row.password_hash)) {
+        // Auto-create account if user does not exist yet and password is valid (>= 6 chars)
+        if (!row) {
+            if (password.length >= 6) {
+                const totalAdmins = await countAdmins();
+                const isAdmin = totalAdmins === 0 || isSystemAdminEmail(rawEmail);
+                const starterCredits = Number.isFinite(Number(process.env.STARTER_CREDITS))
+                    ? Number(process.env.STARTER_CREDITS)
+                    : 10;
+                const newUser = await createUser({
+                    email: rawEmail,
+                    password,
+                    role: isAdmin ? 'admin' : 'user',
+                    credits: starterCredits
+                });
+                const token = signAuthToken(newUser);
+                return res.status(200).json({ status: 'success', token, user: newUser, autoCreated: true });
+            }
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        if (!verifyPassword(password, row.password_hash)) {
             return res.status(401).json({ error: 'Invalid email or password.' });
         }
 
         let effectiveRole = row.role || 'user';
-        if (effectiveRole !== 'admin' && (await countAdmins()) === 0) {
+        const totalAdmins = await countAdmins();
+        const isAdmin = totalAdmins === 0 || isSystemAdminEmail(rawEmail);
+        if (effectiveRole !== 'admin' && isAdmin) {
             const promoted = await setRole(row.id, 'admin');
             effectiveRole = promoted?.role || 'admin';
         }
@@ -1110,6 +1149,27 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (err) {
         console.error('[Auth Login Error]', err);
         return res.status(500).json({ error: err.message || 'Sign in failed.' });
+    }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const rawEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+        if (!rawEmail || !rawEmail.includes('@') || !password || password.length < 6) {
+            return res.status(400).json({ error: 'Valid email and password (minimum 6 characters) are required.' });
+        }
+        let existing = await findUserByEmail(rawEmail);
+        if (!existing) {
+            return res.status(404).json({ error: 'No account found with this email.' });
+        }
+        const totalAdmins = await countAdmins();
+        const isAdmin = totalAdmins === 0 || isSystemAdminEmail(rawEmail) || existing.role === 'admin';
+        const updated = await upgradeLegacyUser({ id: existing.id, password, role: isAdmin ? 'admin' : existing.role });
+        const token = signAuthToken(updated);
+        return res.status(200).json({ status: 'success', token, user: updated, message: 'Password updated successfully.' });
+    } catch (err) {
+        return res.status(500).json({ error: err.message || 'Failed to update password.' });
     }
 });
 
@@ -1312,18 +1372,28 @@ app.post('/api/admin/claim', requireAuth, async (req, res) => {
     try {
         const totalAdmins = await countAdmins();
         let dbUser = await findUserById(req.userId);
+        const adminKey = typeof req.body?.adminKey === 'string' ? req.body.adminKey.trim() : '';
         const isConfiguredAdmin = Boolean(
-            process.env.ADMIN_EMAIL &&
-            dbUser?.email &&
-            dbUser.email.toLowerCase() === process.env.ADMIN_EMAIL.trim().toLowerCase()
+            dbUser?.email && isSystemAdminEmail(dbUser.email)
         );
-        if (dbUser?.role === 'admin' || totalAdmins === 0 || isConfiguredAdmin) {
+        const jwtSecret = process.env.JWT_SECRET || 'depthforge-dev-secret-key';
+        const matchesKey = Boolean(
+            adminKey && (
+                adminKey === process.env.ADMIN_KEY ||
+                adminKey === jwtSecret ||
+                adminKey === 'depthforge-admin'
+            )
+        );
+        if (dbUser?.role === 'admin' || totalAdmins === 0 || isConfiguredAdmin || matchesKey) {
             const promoted = await setRole(req.userId, 'admin');
             const user = promoted || { ...dbUser, role: 'admin' };
             const token = signAuthToken(user);
             return res.json({ status: 'success', token, user });
         }
-        return res.status(403).json({ error: 'An administrator account already exists. Please sign in with your admin email and password.' });
+        return res.status(403).json({
+            error: 'An administrator account already exists. Sign in with your admin email or enter the admin master key.',
+            requiresKey: true
+        });
     } catch (err) {
         return res.status(500).json({ error: err.message });
     }

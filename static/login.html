@@ -239,14 +239,52 @@
         submitBtn.disabled = false;
 
         if (!res.ok) {
-          message.textContent = data.error || 'Authentication failed.';
+          if (res.status === 401 && mode === 'signin') {
+            message.innerHTML = `${data.error || 'Invalid email or password.'} <br><a href="#" id="resetPwLink" style="color:var(--accent-gold,#d4af37);text-decoration:underline;font-size:13px;display:inline-block;margin-top:6px;">Forgot password? Reset it now</a>`;
+            const rLink = document.getElementById('resetPwLink');
+            if (rLink) {
+              rLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                message.innerHTML = 'Updating password...';
+                try {
+                  const resetRes = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pass })
+                  });
+                  const resetData = await resetRes.json();
+                  if (resetRes.ok) {
+                    window.DepthForgeAuth.saveSession(resetData.token, resetData.user);
+                    message.className = 'message ok';
+                    message.textContent = 'Password reset and signed in! Redirecting...';
+                    const target = new URLSearchParams(location.search).get('next') || (resetData.user?.role === 'admin' ? '/admin' : '/dashboard');
+                    setTimeout(() => location.replace(target), 350);
+                  } else {
+                    message.className = 'message';
+                    message.textContent = resetData.error || 'Password reset failed.';
+                  }
+                } catch (err) {
+                  message.textContent = err.message || 'Reset failed.';
+                }
+              });
+            }
+          } else {
+            message.textContent = data.error || 'Authentication failed.';
+          }
           return;
         }
 
         window.DepthForgeAuth.saveSession(data.token, data.user);
         message.className = 'message ok';
-        message.textContent = mode === 'signup' ? 'Account created! Redirecting...' : 'Signed in! Redirecting...';
-        const nextUrl = new URLSearchParams(location.search).get('next') || '/dashboard';
+        if (data.autoCreated) {
+          message.textContent = 'Welcome! Account created & signed in! Redirecting...';
+        } else if (mode === 'signup') {
+          message.textContent = 'Account created! Redirecting...';
+        } else {
+          message.textContent = 'Signed in! Redirecting...';
+        }
+        const defaultNext = (data.user?.role === 'admin') ? '/admin' : '/dashboard';
+        const nextUrl = new URLSearchParams(location.search).get('next') || defaultNext;
         setTimeout(() => location.replace(nextUrl), 350);
       } catch (err) {
         submitBtn.disabled = false;
