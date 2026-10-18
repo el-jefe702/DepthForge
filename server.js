@@ -745,12 +745,14 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         }
 
         const imageUrls = [];
+        const { uploadGeneratedImage } = await import('./storage.js');
         for (const img of imageResult.generatedImages) {
             const filename = `${uuidv4().substring(0, 10)}.png`;
             const filepath = path.join(generatedDir, filename);
             const base64Data = img.image.imageBytes;
             await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
-            imageUrls.push(`/static/generated/${filename}`);
+            const finalUrl = await uploadGeneratedImage(filepath, filename);
+            imageUrls.push(finalUrl);
         }
 
         const memJob = jobStore.get(jobId);
@@ -1070,12 +1072,14 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
         }
 
         const imageUrls = [];
+        const { uploadGeneratedImage } = await import('./storage.js');
         for (const img of imageResult.generatedImages) {
             const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
             const filepath = path.join(generatedDir, filename);
             const base64Data = img.image.imageBytes;
             await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
-            imageUrls.push(`/static/generated/${filename}`);
+            const finalUrl = await uploadGeneratedImage(filepath, filename);
+            imageUrls.push(finalUrl);
         }
 
         await fs.promises.unlink(uploadedPath).catch(() => {});

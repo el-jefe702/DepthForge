@@ -77,25 +77,67 @@ export const creditGate = (req, res, next) => {
         return next();
     }
 
-    const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || './subscriptions.db';
-    
-    if (!fs.existsSync(dbPath)) {
-        if (process.env.NODE_ENV === 'test') {
-            req.credits_balance = 1000;
-            return next();
-        }
-        console.warn(`[CreditGate] DB not found at ${dbPath}, denying request.`);
-        return res.status(402).json({ error: 'Payment Required: Insufficient credits' });
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl && !databaseUrl.startsWith('sqlite')) {
+        import('pg').then(async ({ default: pg }) => {
+            const client = new pg.Client({ connectionString: databaseUrl });
+            try {
+                await client.connect();
+                const resUser = await client.query('SELECT credits_balance FROM users WHERE id = $1', [userId]);
+                if (resUser.rows && resUser.rows.length > 0) {
+                    const balance = resUser.rows[0].credits_balance;
+                    await client.end();
+                    if (balance <= 0) {
+                        return res.status(402).json({ error: 'Payment Required: Insufficient credits' });
+                    }
+                    req.credits_balance = balance;
+                    return next();
+                }
+
+                const resWallet = await client.query('SELECT credits_balance FROM credit_wallets WHERE user_id = $1', [userId]);
+                await client.end();
+                if (resWallet.rows && resWallet.rows.length > 0) {
+                    const balance = resWallet.rows[0].credits_balance;
+                    if (balance <= 0) {
+                        return res.status(402).json({ error: 'Payment Required: Insufficient credits' });
+                    }
+                    req.credits_balance = balance;
+                    return next();
+                }
+                return res.status(402).json({ error: 'Payment Required: Insufficient credits' });
+            } catch (pgErr) {
+                await client.end().catch(() => {});
+                console.warn('[CreditGate] Postgres query error, falling back to SQLite:', pgErr.message);
+                checkSqliteLedger();
+            }
+        }).catch(() => {
+            checkSqliteLedger();
+        });
+        return;
     }
 
-    const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-            console.error('[CreditGate] Failed to open DB:', err);
-            return res.status(500).json({ error: 'Internal server error' });
-        }
-    });
+    checkSqliteLedger();
 
-    db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, tables) => {
+    function checkSqliteLedger() {
+        const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || './subscriptions.db';
+        
+        if (!fs.existsSync(dbPath)) {
+            if (process.env.NODE_ENV === 'test') {
+                req.credits_balance = 1000;
+                return next();
+            }
+            console.warn(`[CreditGate] DB not found at ${dbPath}, denying request.`);
+            return res.status(402).json({ error: 'Payment Required: Insufficient credits' });
+        }
+
+        const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+            if (err) {
+                console.error('[CreditGate] Failed to open DB:', err);
+                return res.status(500).json({ error: 'Internal server error' });
+            }
+        });
+
+        db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, tables) => {
         if (err || !tables || tables.length === 0) {
             db.close();
             return res.status(402).json({ error: 'Payment Required: Insufficient credits' });

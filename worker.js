@@ -49,7 +49,24 @@ export function initJobsDb(database = db) {
 }
 
 export function updateJobStatus(id, status, resultUrl = null, error = null, database = db) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+        const databaseUrl = process.env.DATABASE_URL;
+        if (databaseUrl && !databaseUrl.startsWith('sqlite')) {
+            try {
+                const { default: pg } = await import('pg');
+                const client = new pg.Client({ connectionString: databaseUrl });
+                await client.connect();
+                const res = await client.query(
+                    `UPDATE jobs SET status = $1, result_url = COALESCE($2, result_url), error = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
+                    [status, resultUrl, error, id]
+                );
+                await client.end();
+                return resolve(res.rowCount);
+            } catch (pgErr) {
+                console.warn('[Worker] PostgreSQL updateJobStatus error, falling back to SQLite:', pgErr.message);
+            }
+        }
+
         database.run(
             `UPDATE jobs SET status = ?, result_url = COALESCE(?, result_url), error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
             [status, resultUrl, error, id],
@@ -215,7 +232,8 @@ export async function processJob(job) {
             }
         }
 
-        const resultUrl = `/static/generated/${id}_depth.png`;
+        const { uploadGeneratedImage } = await import('./storage.js');
+        const resultUrl = await uploadGeneratedImage(smoothedPath, `${id}_depth.png`);
         await updateJobStatus(id, 'completed', resultUrl);
         console.log(`[Worker] Completed job ${id} -> ${resultUrl}`);
         return { id, url: resultUrl, status: 'completed' };

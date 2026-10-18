@@ -59,6 +59,42 @@ export const deductCredit = (userId, prompt, imageUrl) => {
             if (process.env.NODE_ENV === 'test' && (!process.env.SUBSCRIPTIONS_DB_PATH || userId === 'test-user' || userId === 'test_user')) {
                 return resolve(999);
             }
+
+            const databaseUrl = process.env.DATABASE_URL;
+            if (databaseUrl && !databaseUrl.startsWith('sqlite')) {
+                try {
+                    const { default: pg } = await import('pg');
+                    const client = new pg.Client({ connectionString: databaseUrl });
+                    await client.connect();
+                    try {
+                        await client.query('BEGIN');
+                        const updateRes = await client.query(
+                            'UPDATE users SET credits_balance = credits_balance - 1 WHERE id = $1 AND credits_balance > 0 RETURNING credits_balance',
+                            [userId]
+                        );
+                        if (!updateRes.rows || updateRes.rows.length === 0) {
+                            await client.query('ROLLBACK');
+                            await client.end();
+                            return reject(new Error('Insufficient credits'));
+                        }
+                        await client.query(
+                            'INSERT INTO generations (id, user_id, prompt, image_url) VALUES ($1, $2, $3, $4)',
+                            [Date.now().toString(), userId, prompt, imageUrl]
+                        );
+                        await client.query('COMMIT');
+                        const balance = updateRes.rows[0].credits_balance;
+                        await client.end();
+                        return resolve(balance);
+                    } catch (txErr) {
+                        await client.query('ROLLBACK').catch(() => {});
+                        await client.end().catch(() => {});
+                        return reject(txErr);
+                    }
+                } catch (pgErr) {
+                    console.warn('[CreditBackend] Postgres deduction error, falling back to SQLite:', pgErr.message);
+                }
+            }
+
             const sqlite3 = (await import('sqlite3')).default;
             const path = await import('path');
             const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || path.join(process.cwd(), 'data', 'subscriptions.db');
@@ -91,6 +127,32 @@ export const deductCredit = (userId, prompt, imageUrl) => {
 export const addCredits = (userId, amount, prompt = '', imageUrl = '') => {
     return new Promise(async (resolve, reject) => {
         try {
+            const databaseUrl = process.env.DATABASE_URL;
+            if (databaseUrl && !databaseUrl.startsWith('sqlite')) {
+                try {
+                    const { default: pg } = await import('pg');
+                    const client = new pg.Client({ connectionString: databaseUrl });
+                    await client.connect();
+                    try {
+                        await client.query('BEGIN');
+                        const updateRes = await client.query(
+                            'UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2 RETURNING credits_balance',
+                            [amount, userId]
+                        );
+                        await client.query('COMMIT');
+                        const balance = updateRes.rows?.[0]?.credits_balance ?? 0;
+                        await client.end();
+                        return resolve(balance);
+                    } catch (txErr) {
+                        await client.query('ROLLBACK').catch(() => {});
+                        await client.end().catch(() => {});
+                        return reject(txErr);
+                    }
+                } catch (pgErr) {
+                    console.warn('[CreditBackend] Postgres addCredits error, falling back to SQLite:', pgErr.message);
+                }
+            }
+
             const sqlite3 = (await import('sqlite3')).default;
             const path = await import('path');
             const dbPath = process.env.SUBSCRIPTIONS_DB_PATH || path.join(process.cwd(), 'data', 'subscriptions.db');
