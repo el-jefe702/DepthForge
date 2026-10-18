@@ -1,12 +1,12 @@
 <div align="center">
   <h1>⚡ DepthForge v2.0</h1>
-  <p><strong>Industrial 16-Bit 3D Relief, Photo-to-Carve &amp; Spatial AI CAD/CAM Platform by SpatialOps, LLC</strong></p>
-  <p><em>Official Fabrication &amp; Creative Ecosystem Partner: <a href="https://SLCreations.llc">SLCreations.llc</a></em></p>
+  <p><strong>Industrial 16-Bit 3D Relief, Photo-to-Carve &amp; Spatial AI CAD/CAM Platform by SLCreations, LLC</strong></p>
+  <p><em>Official Fabrication &amp; Creative Studio: <a href="https://SLCreations.llc">SLCreations.llc</a></em></p>
 
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
-  <img src="https://img.shields.io/badge/License-Proprietary%20SpatialOps%20LLC-0ea5e9?style=for-the-badge" alt="Proprietary License" />
+  <img src="https://img.shields.io/badge/License-Proprietary%20SLCreations%20LLC-0ea5e9?style=for-the-badge" alt="Proprietary License" />
 </div>
 
 <hr />
@@ -15,7 +15,7 @@ This repository is deployed on a live Linux VPS via automated GitHub Actions CI/
 
 ## Overview
 
-Engineered by **SpatialOps, LLC**, **DepthForge** generates flawless 16-bit 3D grayscale height maps (`0–65535` Z-axis precision) and watertight 3D meshes (`STL` / `OBJ`) optimized for CNC routers, fiber/CO₂ laser engraving, and additive manufacturing. It combines **Google Gemini** for spatial prompt engineering and photo depth analysis, **Google Imagen 4** for heightmap synthesis, an **OpenCV 16-bit post-processing pipeline** for zero-banding surface smoothing, and direct physical fabrication integration with **[SLCreations.llc](https://SLCreations.llc)**.
+Engineered by **SLCreations, LLC**, **DepthForge** generates flawless 16-bit 3D grayscale height maps (`0–65535` Z-axis precision) and watertight 3D meshes (`STL` / `OBJ`) optimized for CNC routers, fiber/CO₂ laser engraving, and additive manufacturing. It combines **Google Gemini** for spatial prompt engineering and photo depth analysis, **Google Imagen 4** for heightmap synthesis, an **OpenCV 16-bit post-processing pipeline** for zero-banding surface smoothing, and direct physical fabrication integration with **[SLCreations.llc](https://SLCreations.llc)**.
 
 ---
 
@@ -26,17 +26,21 @@ Engineered by **SpatialOps, LLC**, **DepthForge** generates flawless 16-bit 3D g
 | **Phase 1** | **Core 16-Bit AI Relief & OpenCV Pipeline** | ✅ **Completed** | Text-to-Depth (`/api/generate`), Photo-to-Carve (`/api/photo-to-depth`), 5-stage 16-bit OpenCV smoothing (`processor.py`), `rembg` subject isolation, depth inversion, SSE live progress streaming, session gallery, side-by-side comparison slider, and full `F1`–`F20` feature suite. |
 | **Phase 2** | **3D CAD/CAM Mesh Engine & Native Mobile** | ✅ **Completed** | Interactive Three.js WebGL 3D relief inspector, client/server binary **STL** & **OBJ** watertight mesh exporter (`static/mesh-exporter.js`), Blender add-on (`blender_plugin/`), and Jetpack Compose Android app (`android_app/`). |
 | **Phase 3** | **Production Infrastructure, Queueing & Ledger** | ✅ **Completed** | BullMQ + Redis job queue (`worker.js`), `PQueue` Python process serialization, IP rate limiting, SQLite/PostgreSQL credit wallet ledger, Stripe webhook integration, and automated GitHub Actions VPS deployment (`.github/workflows/deploy.yml`). |
-| **Phase 4** | **SpatialOps Corporate Web Suite, Auth, User & Admin Consoles** | ✅ **Live (v2.0)** | Self-hosted `crypto.scrypt` + `HS256` JWT authentication (`/login`, `/signup`, `/api/auth/*`) with automatic admin promotion & `401` session self-healing; User Dashboard (`/dashboard`); Admin Console (`/admin`) with live KPIs, user search, credit grants & role management; **SpatialOps, LLC** corporate website (`/`, `/solutions`, `/pricing`, `/about`, `/terms`, `/privacy`); direct **Photo-to-Carve** (`?mode=photo`) studio entry; and **[SLCreations.llc](https://SLCreations.llc)** cross-site API (`/api/ecosystem/info`, `/api/contact`). |
+| **Phase 4** | **SLCreations Web Suite, Auth, Consoles & LightBurn API** | ✅ **Live (v2.0)** | Self-hosted `crypto.scrypt` + `HS256` JWT authentication (`/login`, `/signup`, `/api/auth/*`) with automatic admin promotion & `401` session self-healing; User Dashboard (`/dashboard`); Admin Console (`/admin`) with live KPIs, user search, credit grants, role management & laser queue; **SLCreations, LLC** corporate website (`/`, `/solutions`, `/pricing`, `/about`, `/terms`, `/privacy`); direct **Photo-to-Carve** (`?mode=photo`) studio entry; **LightBurn Laser Integration API** (`/api/laser/lightburn/*`) with `.lbrn2` project file generation; and cross-site API (`/api/ecosystem/info`, `/api/contact`). |
 | **Phase 5** | **Commercial Billing & Direct Fabrication Handoff** | 🗓️ **Next Up (v2.1)** | **T+1–2 Days**: Live Stripe production Price IDs & webhook secret activation for instant credit pack top-ups (`/api/wallet/checkout`) + production domain TLS/SSL.<br>**T+1–2 Weeks**: 1-click **"Send to SLCreations.llc for Physical Carving"** automated job ticket handoff (attaching 16-bit PNG + STL mesh directly to an SLCreations custom fabrication order) and CNC toolpath preview. |
 
 ### Latest v2.0 Platform Updates (October 2026)
 
-- **SpatialOps, LLC Corporate Web Suite (Direction A — Industrial Precision CAD/CAM)**:
+- **SLCreations, LLC Corporate Web Suite (Direction A — Industrial Precision CAD/CAM)**:
   - `/` (`static/landing.html`): Interactive Z-Relief split-screen inspector, telemetry bar, 4-stage pipeline showcase, and direct CTAs for **✏️ Text to Relief Studio** (`/app`) and **📷 Photo to Carve** (`/app?mode=photo`).
   - `/solutions` (`static/solutions.html`): Deep dive into CNC 3-axis/4-axis routing, fiber/CO₂ laser 3D relief, additive manufacturing, and physical custom fabrication via **[SLCreations.llc](https://SLCreations.llc)**.
   - `/pricing` (`static/pricing.html`): Transparent **Starter (10 Free Credits)**, **Pro Maker (\$19 / 50 Credits)**, and **Shop Floor / Enterprise (\$79 / 250 Credits)** tiers.
-  - `/about` (`static/about.html`): SpatialOps, LLC company profile, SLCreations.llc ecosystem partnership, and interactive contact/fabrication inquiry form (`POST /api/contact`).
-  - `/terms` & `/privacy` (`static/terms.html`): Proprietary software licensing, customer output ownership, and data privacy policies under **Copyright © 2026 SpatialOps, LLC. All Rights Reserved.**
+  - `/about` (`static/about.html`): SLCreations, LLC company profile, studio fabrication services, and interactive contact/fabrication inquiry form (`POST /api/contact`).
+  - `/terms` & `/privacy` (`static/terms.html`): Proprietary software licensing, customer output ownership, and data privacy policies under **Copyright © 2026 SLCreations, LLC. All Rights Reserved.**
+- **LightBurn Laser Integration API & Operator Queue**:
+  - Direct export of 16-bit relief depth maps to native LightBurn (`.lbrn2`) XML project files with embedded base64 bitmaps and calibrated grayscale power/speed cut layers (`POST /api/laser/lightburn/export`).
+  - Material presets for Hardwood (Deep 3D), Cast Acrylic, Fiber Laser / Slate / Metal, and Softwood (`GET /api/laser/lightburn/presets`).
+  - Laser operator job queue (`/api/laser/lightburn/queue`) with status tracking (`queued`, `engraving`, `completed`) in the Admin Console.
 - **Self-Hosted Authentication, User Dashboard & Admin Console**:
   - Zero external auth vendor lock-in: `crypto.scrypt` password hashing + `HS256` JWT tokens stored in dual-mode PostgreSQL (`DATABASE_URL`) or SQLite (`SUBSCRIPTIONS_DB_PATH`) via `db/store.js`.
   - First registered account (or `ADMIN_EMAIL`) is automatically granted `admin` privileges, and legacy passwordless rows are seamlessly upgraded on first sign-in.
@@ -226,7 +230,11 @@ curl --fail http://localhost:8000/api/health
 | `/api/admin/users` | GET | `?search=...&limit=100` | `{"users": [...]}` | Admin-only searchable user directory with roles and credit balances. |
 | `/api/admin/credits` | POST | `{"userId": "...", "amount": 10}` | `{"status": "success", "user": {...}}` | Admin-only credit grant or deduction (`+10`, `-1`, or custom delta). |
 | `/api/admin/role` | POST | `{"userId": "...", "role": "admin" \| "user"}` | `{"status": "success", "user": {...}}` | Admin-only role promotion or demotion. |
-| `/api/ecosystem/info` | GET | None (CORS enabled for `SLCreations.llc`) | `{"status": "ok", "company": "SpatialOps, LLC", "partner": {...}}` | Cross-site ecosystem metadata for SpatialOps, LLC and SLCreations.llc integration. |
+| `/api/laser/lightburn/presets` | GET | None | `{"status": "ok", "presets": {...}}` | Returns calibrated LightBurn material engraving presets (Hardwood, Acrylic, Fiber/Slate, Softwood). |
+| `/api/laser/lightburn/export` | POST / GET | `{"image_url": "...", "preset": "hardwood", "widthMm": 100, "heightMm": 100}` | `{"status": "success", "lbrn2_url": "..."}` or XML download | Generates native LightBurn `.lbrn2` project file with embedded 16-bit depth map and grayscale power/speed settings. |
+| `/api/laser/lightburn/queue` | GET / POST | `{"studentName": "...", "image_url": "...", "preset": "..."}` | `{"status": "success", "queue": [...]}` | Laser operator queue for CNC carving jobs from Web Studio and Android App. |
+| `/api/laser/lightburn/queue/:id/status` | POST | `{"status": "engraving" \| "completed"}` | `{"status": "success", "job": {...}}` | Updates laser job progress status for the CNC operator console. |
+| `/api/ecosystem/info` | GET | None (CORS enabled for `SLCreations.llc`) | `{"status": "ok", "company": "SLCreations, LLC", "partner": {...}}` | Cross-site ecosystem metadata for SLCreations, LLC integration. |
 | `/api/contact` | POST | `{"name": "...", "email": "...", "category": "...", "message": "..."}` | `{"status": "success", "inquiryId": "..."}` | Records enterprise, support, and SLCreations.llc physical fabrication inquiries. |
 | `/api/webhooks/stripe` | POST | Raw Stripe event payload | `{"received": true}` | Verifies Stripe webhook signatures and credits user wallets on `checkout.session.completed`. |
 
@@ -271,11 +279,13 @@ DepthForge/
 ├── cleanup.js                         # Automated TTL cleanup routine & background scheduler
 ├── credit-backend.js                  # Credit reservation, deduction, and ledger client
 ├── processor.py                       # OpenCV 16-bit post-processing pipeline & rembg integration
-├── LICENSE                            # Proprietary Copyright © 2026 SpatialOps, LLC. All Rights Reserved.
+├── LICENSE                            # Proprietary Copyright © 2026 SLCreations, LLC. All Rights Reserved.
 ├── package.json                       # Node.js project manifest & script declarations
 ├── package-lock.json                  # Deterministic Node dependency lockfile
 ├── Dockerfile                         # Container definition with Node 20, Python 3, OpenCV, and rembg
 ├── docker-compose.yaml                # Multi-container VPS deployment definition (app, worker, redis)
+├── lib/                               # Core platform modules & hardware adapters
+│   └── lightburn.js                   # LightBurn (.lbrn2) XML project generator & laser operator queue
 ├── db/                                # Dual PostgreSQL / SQLite user, credit wallet & generation store
 │   ├── init.js                        # Legacy SQLite wallet schema & helpers
 │   └── store.js                       # Phase 4 unified user auth, RBAC, credit ledger & stats store
@@ -285,16 +295,16 @@ DepthForge/
 ├── scripts/                           # VPS deployment, provisioning, and maintenance scripts
 ├── supabase/migrations/               # PostgreSQL schema and credit RPC migrations
 ├── systemd/                           # Linux systemd unit files for DepthForge service management
-├── static/                            # Web frontend & SpatialOps, LLC corporate site assets
+├── static/                            # Web frontend & SLCreations, LLC corporate site assets
 │   ├── spatialops.css                 # Direction A Industrial Precision CAD/CAM design system
-│   ├── landing.html                   # SpatialOps, LLC corporate home page (/)
-│   ├── solutions.html                 # CNC, Laser, 3D Printing & SLCreations.llc solutions (/solutions)
+│   ├── landing.html                   # SLCreations, LLC corporate home page (/)
+│   ├── solutions.html                 # CNC, Laser, 3D Printing & fabrication solutions (/solutions)
 │   ├── pricing.html                   # Starter, Pro Maker & Shop Floor credit plans (/pricing)
-│   ├── about.html                     # SpatialOps, LLC company profile & contact form (/about)
+│   ├── about.html                     # SLCreations, LLC company profile & contact form (/about)
 │   ├── terms.html                     # Proprietary terms of service & privacy policy (/terms, /privacy)
 │   ├── login.html                     # Self-hosted Sign In & Create Account UI (/login, /signup)
 │   ├── dashboard.html                 # User Dashboard: credit wallet & depth map history (/dashboard)
-│   ├── admin.html                     # Admin Console: platform KPIs, user search & credit/role controls (/admin)
+│   ├── admin.html                     # Admin Console: platform KPIs, user search, credits & laser queue (/admin)
 │   ├── auth.js                        # Client-side JWT session manager
 │   ├── mesh-exporter.js               # Binary STL & Wavefront OBJ watertight 3D mesh generator
 │   ├── index.html                     # DepthForge Studio UI (/app & /app?mode=photo)
@@ -320,7 +330,8 @@ DepthForge/
 │   ├── python_queue.test.js           # F18: Python processor concurrency queue tests
 │   ├── android_share.test.js          # F19: Android Share Intent & FileProvider tests
 │   ├── readme_verification.test.js    # F20: README documentation verification tests
-│   └── phase4_auth_dashboard.test.js  # Phase 4: SpatialOps site, Auth, Dashboard & Admin tests
+│   ├── phase4_auth_dashboard.test.js  # Phase 4: Web site, Auth, Dashboard & Admin tests
+│   └── lightburn_api.test.js          # LightBurn: .lbrn2 XML export & laser operator queue tests
 └── android_app/                       # Native Android application
     ├── README.md                      # Android app architecture & setup guide
     └── app/
@@ -352,6 +363,6 @@ DepthForge/
 
 ## License
 
-**Copyright © 2026 SpatialOps, LLC. All Rights Reserved.**
+**Copyright © 2026 SLCreations, LLC. All Rights Reserved.**
 
-This software and all associated source code, documentation, and assets are proprietary and confidential to SpatialOps, LLC. Unauthorized copying, distribution, modification, or use of any part of this repository without prior written permission is strictly prohibited. See [LICENSE](./LICENSE) for details.
+This software and all associated source code, documentation, and assets are proprietary and confidential to SLCreations, LLC. Unauthorized copying, distribution, modification, or use of any part of this repository without prior written permission is strictly prohibited. See [LICENSE](./LICENSE) for details.

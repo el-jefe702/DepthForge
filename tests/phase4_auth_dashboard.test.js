@@ -47,25 +47,25 @@ describe('Phase 4: Integrated Web Site, User Auth, User Dashboard & Admin Consol
         const rootManual = await fetch(`${baseUrl}/`, { redirect: 'manual' });
         assert.equal(rootManual.status, 200, 'Expected GET / to return 200 directly (not 302 redirect)');
         const rootHtml = await rootManual.text();
-        assert.match(rootHtml, /SpatialOps, LLC/i);
+        assert.match(rootHtml, /SLCreations, LLC|SpatialOps, LLC/i);
         assert.match(rootHtml, /\/app\?mode=photo/);
 
         for (const route of ['/', '/app', '/solutions', '/pricing', '/about', '/terms', '/privacy', '/login', '/signup', '/dashboard', '/admin']) {
             const res = await fetch(`${baseUrl}${route}`);
             assert.equal(res.status, 200, `Expected 200 for ${route}`);
             const html = await res.text();
-            assert.match(html, /DepthForge|SpatialOps/i);
+            assert.match(html, /DepthForge|SLCreations|SpatialOps/i);
         }
     });
 
-    it('exposes SpatialOps & SLCreations.llc ecosystem info and accepts contact/fabrication inquiries', async () => {
+    it('exposes SLCreations ecosystem info and accepts contact/fabrication inquiries', async () => {
         const infoRes = await fetch(`${baseUrl}/api/ecosystem/info`, {
             headers: { Origin: 'https://SLCreations.llc' }
         });
         assert.equal(infoRes.status, 200);
         assert.equal(infoRes.headers.get('access-control-allow-origin'), 'https://SLCreations.llc');
         const info = await infoRes.json();
-        assert.equal(info.company, 'SpatialOps, LLC');
+        assert.match(info.company, /SLCreations, LLC|SpatialOps, LLC/);
         assert.equal(info.partner.url, 'https://SLCreations.llc');
 
         const contactRes = await fetch(`${baseUrl}/api/contact`, {

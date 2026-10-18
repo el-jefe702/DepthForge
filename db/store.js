@@ -63,11 +63,23 @@ async function ensureSchema() {
         created_at ${ts} DEFAULT CURRENT_TIMESTAMP
     )`);
     // Upgrade older tables that predate Phase 4 columns.
-    for (const col of ['password_hash TEXT', "role TEXT DEFAULT 'user'", `created_at ${ts}`]) {
+    const userUpgradeCols = [
+        'email TEXT',
+        'stripe_customer_id TEXT',
+        'credits_balance INTEGER DEFAULT 0',
+        'password_hash TEXT',
+        "role TEXT DEFAULT 'user'",
+        `created_at ${ts} DEFAULT CURRENT_TIMESTAMP`
+    ];
+    for (const col of userUpgradeCols) {
         try {
             await rawQuery(`ALTER TABLE users ADD COLUMN ${usePostgres() ? 'IF NOT EXISTS ' : ''}${col}`);
         } catch { /* column already exists */ }
     }
+    try {
+        await rawQuery(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    } catch { /* ignore if index exists */ }
+
     await rawQuery(`CREATE TABLE IF NOT EXISTS generations (
         id TEXT,
         user_id TEXT,
@@ -76,6 +88,11 @@ async function ensureSchema() {
         cost INTEGER DEFAULT 1,
         created_at ${ts} DEFAULT CURRENT_TIMESTAMP
     )`);
+    for (const col of ['image_url TEXT', 'cost INTEGER DEFAULT 1', `created_at ${ts} DEFAULT CURRENT_TIMESTAMP`]) {
+        try {
+            await rawQuery(`ALTER TABLE generations ADD COLUMN ${usePostgres() ? 'IF NOT EXISTS ' : ''}${col}`);
+        } catch { /* column already exists */ }
+    }
     initialized.add(key);
 }
 

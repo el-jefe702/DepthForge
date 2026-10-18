@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpatialOps | DepthForge 3D Relief Generator</title>
-    <meta name="description" content="SpatialOps, LLC — Generate flawless 16-bit 3D relief depth maps for CNC laser engraving. AI-powered depth map creation and post-processing.">
+    <title>SLCreations | DepthForge 3D Relief Generator</title>
+    <meta name="description" content="SLCreations, LLC © 2026 — Generate flawless 16-bit 3D relief depth maps for CNC laser engraving. AI-powered depth map creation and post-processing.">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,8 +12,8 @@
 <body>
     <header class="app-header">
         <h1>
-            <img src="/static/logo.png" alt="SpatialOps Logo">
-            <span class="vintage-font">SpatialOps</span>
+            <img src="/static/logo.png" alt="SLCreations Logo">
+            <span class="vintage-font">SLCreations</span>
         </h1>
         <div class="header-meta">
             <div class="status-badge"><span class="pulse-dot"></span> 16-Bit CNC Precision</div>
@@ -224,10 +224,53 @@
                 <button class="btn btn-action orange" id="invertBtn" onclick="invertDepthMap()">🔄 Invert</button>
                 <button class="btn btn-action pink" id="removeBgBtn" onclick="removeBg()">✂️ Remove BG</button>
                 <button class="btn btn-action indigo" id="polishBtn" onclick="polishRelief()">✨ Polish for CNC</button>
+                <button class="btn btn-action gold" id="lightburnBtn" onclick="openLightburnModal()" title="Export directly to LightBurn .lbrn2 project file">🔥 LightBurn (.lbrn2)</button>
                 <a class="btn btn-action green" id="downloadBtn" download="depth_map.png">Download Map</a>
             </div>
         </div>
     </main>
+
+    <!-- LightBurn Laser Integration Modal -->
+    <div id="lightburnModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#0c0d14;border:1px solid #d4af37;border-radius:16px;max-width:540px;width:100%;padding:24px;box-shadow:0 25px 60px rgba(0,0,0,0.8);color:#f4f4f5;font-family:'Inter',sans-serif;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid rgba(212,175,55,0.25);padding-bottom:12px;">
+                <h3 style="margin:0;font-family:'Cinzel',serif;color:#d4af37;font-size:20px;">🔥 Export to LightBurn (.lbrn2)</h3>
+                <button type="button" onclick="closeLightburnModal()" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">✕</button>
+            </div>
+            <p style="font-size:13px;color:#a1a1aa;margin:0 0 16px;">
+                Generate a native LightBurn project with calibrated 16-bit 3D grayscale engraving, laser power, feedrate, and line interval.
+            </p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                <div style="grid-column:span 2;">
+                    <label style="display:block;font-size:12px;color:#d4af37;margin-bottom:6px;font-weight:600;">Laser Material &amp; Carving Preset</label>
+                    <select id="lbrnPresetSelect" style="width:100%;padding:10px;background:#141624;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;">
+                        <option value="hardwood">🌳 Hardwood 3D Relief (Walnut, Cherry, Maple) — 200 mm/s, 12-85% Power, 2 Passes</option>
+                        <option value="acrylic">💎 Cast Acrylic Bas-Relief — 300 mm/s, 8-65% Power, 1 Pass</option>
+                        <option value="fiber_slate">⚡ Fiber Laser / Slate / Anodized Metal — 500 mm/s, 20-95% Power, 3 Passes</option>
+                        <option value="softwood">🌲 Softwood / Pine / Basswood Fast Relief — 280 mm/s, 10-60% Power, 1 Pass</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;color:#a1a1aa;margin-bottom:6px;">Width (mm)</label>
+                    <input id="lbrnWidth" type="number" value="100" min="10" max="2000" style="width:100%;padding:9px;background:#141624;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;color:#a1a1aa;margin-bottom:6px;">Height (mm)</label>
+                    <input id="lbrnHeight" type="number" value="100" min="10" max="2000" style="width:100%;padding:9px;background:#141624;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;box-sizing:border-box;">
+                </div>
+                <div style="grid-column:span 2;">
+                    <label style="display:block;font-size:12px;color:#a1a1aa;margin-bottom:6px;">Maker / Student Name (Optional, for Laser Queue)</label>
+                    <input id="lbrnMaker" type="text" placeholder="e.g. Maker / Student Name" style="width:100%;padding:9px;background:#141624;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;box-sizing:border-box;">
+                </div>
+            </div>
+            <div id="lbrnStatus" style="font-size:12px;color:#34d399;margin-bottom:12px;display:none;"></div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+                <button type="button" class="btn btn-outline" onclick="closeLightburnModal()">Cancel</button>
+                <button type="button" class="btn" style="background:#2563eb;color:#fff;" onclick="submitLaserQueue()">📥 Send to Laser Queue</button>
+                <button type="button" class="btn" style="background:#d4af37;color:#000;font-weight:700;" onclick="downloadLightburnFile()">🔥 Download .lbrn2</button>
+            </div>
+        </div>
+    </div>
 
     <footer style="text-align: center; color: var(--text-muted); font-size: 12px; margin-bottom: 24px;">
         SLCreations, LLC &copy; 2026
@@ -238,6 +281,122 @@
         let currentMode = 'text';
         let selectedPhotoFile = null;
         let activeStylePreset = null; // Style Presets (F12)
+
+        function openLightburnModal() {
+            if (!currentImageUrl) {
+                alert('Generate or load a depth map first before exporting to LightBurn.');
+                return;
+            }
+            const modal = document.getElementById('lightburnModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeLightburnModal() {
+            const modal = document.getElementById('lightburnModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function downloadLightburnFile() {
+            if (!currentImageUrl) return;
+            const preset = document.getElementById('lbrnPresetSelect')?.value || 'hardwood';
+            const widthMm = document.getElementById('lbrnWidth')?.value || 100;
+            const heightMm = document.getElementById('lbrnHeight')?.value || 100;
+            const makerName = document.getElementById('lbrnMaker')?.value || '';
+            const statusEl = document.getElementById('lbrnStatus');
+
+            if (statusEl) {
+                statusEl.textContent = 'Generating 16-bit LightBurn project...';
+                statusEl.style.color = '#38bdf8';
+                statusEl.style.display = 'block';
+            }
+
+            try {
+                const res = await fetch('/api/laser/lightburn/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_url: currentImageUrl,
+                        preset,
+                        widthMm: Number(widthMm),
+                        heightMm: Number(heightMm),
+                        makerName
+                    })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to generate LightBurn file');
+                }
+                const data = await res.json();
+                if (statusEl) {
+                    statusEl.textContent = '✓ LightBurn .lbrn2 project ready! Downloading...';
+                    statusEl.style.color = '#34d399';
+                }
+                const link = document.createElement('a');
+                link.href = data.lbrn2_url;
+                link.download = data.filename || 'depthforge_relief.lbrn2';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                setTimeout(() => {
+                    closeLightburnModal();
+                    if (statusEl) statusEl.style.display = 'none';
+                }, 1600);
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.textContent = 'Error: ' + err.message;
+                    statusEl.style.color = '#f87171';
+                }
+            }
+        }
+
+        async function submitLaserQueue() {
+            if (!currentImageUrl) return;
+            const preset = document.getElementById('lbrnPresetSelect')?.value || 'hardwood';
+            const widthMm = document.getElementById('lbrnWidth')?.value || 100;
+            const heightMm = document.getElementById('lbrnHeight')?.value || 100;
+            const makerName = document.getElementById('lbrnMaker')?.value || '';
+            const statusEl = document.getElementById('lbrnStatus');
+
+            if (statusEl) {
+                statusEl.textContent = 'Sending to Laser Operator Queue...';
+                statusEl.style.color = '#38bdf8';
+                statusEl.style.display = 'block';
+            }
+
+            try {
+                const res = await fetch('/api/laser/lightburn/queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentName: makerName || 'Studio Maker',
+                        prompt: document.getElementById('promptInput')?.value || '3D Depth Relief',
+                        image_url: currentImageUrl,
+                        preset,
+                        widthMm: Number(widthMm),
+                        heightMm: Number(heightMm)
+                    })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to submit to laser queue');
+                }
+                const data = await res.json();
+                if (statusEl) {
+                    statusEl.textContent = `✓ Job #${data.job.id} enqueued for CNC Laser carving!`;
+                    statusEl.style.color = '#34d399';
+                }
+                setTimeout(() => {
+                    closeLightburnModal();
+                    if (statusEl) statusEl.style.display = 'none';
+                }, 2000);
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.textContent = 'Error: ' + err.message;
+                    statusEl.style.color = '#f87171';
+                }
+            }
+        }
         let batchCandidates = []; // Batch Generation (F13)
         let comparisonBeforeUrl = '';
         let comparisonAfterUrl = '';
@@ -1846,6 +2005,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCredits();
 });
 </script>
+
+<footer style="text-align: center; padding: 24px 12px; color: var(--text-muted, #71717a); font-size: 13px; font-family: 'Inter', sans-serif;">
+    SLCreations, LLC © 2026. All Rights Reserved. DepthForge™ v2.0
+</footer>
 
 </body>
 </html>

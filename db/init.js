@@ -100,6 +100,18 @@ export async function initDb() {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_balance INTEGER DEFAULT 0;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+                ALTER TABLE generations ADD COLUMN IF NOT EXISTS image_url TEXT;
+                ALTER TABLE generations ADD COLUMN IF NOT EXISTS cost INTEGER DEFAULT 1;
+                ALTER TABLE generations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            `).catch(() => {});
             console.log('[DB] Connected and initialized PostgreSQL database tables.');
             return pool;
         } catch (err) {
@@ -156,12 +168,36 @@ export async function initDb() {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            `, (err) => {
+            `);
+
+            // Migration for existing databases that predate Phase 4 columns
+            const userMigrations = [
+                'ALTER TABLE users ADD COLUMN email TEXT',
+                'ALTER TABLE users ADD COLUMN stripe_customer_id TEXT',
+                'ALTER TABLE users ADD COLUMN credits_balance INTEGER DEFAULT 0',
+                'ALTER TABLE users ADD COLUMN password_hash TEXT',
+                "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'",
+                'ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP'
+            ];
+            for (const m of userMigrations) {
+                db.run(m, () => {});
+            }
+            db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)', () => {});
+
+            for (const m of [
+                'ALTER TABLE generations ADD COLUMN image_url TEXT',
+                'ALTER TABLE generations ADD COLUMN cost INTEGER DEFAULT 1',
+                'ALTER TABLE generations ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP'
+            ]) {
+                db.run(m, () => {});
+            }
+
+            db.run('SELECT 1', (err) => {
                 if (err) {
-                    console.error('[DB] Error creating tables:', err);
+                    console.error('[DB] Error initializing tables:', err);
                     reject(err);
                 } else {
-                    console.log('[DB] SQLite tables initialized successfully.');
+                    console.log('[DB] SQLite tables and migrations initialized successfully.');
                     resolve(db);
                 }
             });

@@ -29,6 +29,7 @@ import {
 } from './db/store.js';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
+import { LIGHTBURN_PRESETS, buildLbrn2Xml, laserQueue } from './lib/lightburn.js';
 
 dotenv.config();
 
@@ -680,7 +681,7 @@ const signAuthToken = (user) => {
     );
 };
 
-// Integrated Web Site Pages (Phase 4) — Root '/' serves the classic Forge UI with SpatialOps branding
+// Integrated Web Site Pages (Phase 4) — Root '/' serves the classic Forge UI with SLCreations branding
 app.get(['/', '/app'], (req, res) => {
     res.sendFile(path.join(staticDir, 'index.html'));
 });
@@ -721,7 +722,7 @@ app.get(['/terms', '/privacy'], (req, res) => {
     res.sendFile(path.join(staticDir, 'terms.html'));
 });
 
-// Cross-Site Ecosystem & Partner Integration (SpatialOps, LLC <-> SLCreations.llc)
+// Cross-Site Ecosystem & Platform Integration (SLCreations, LLC)
 const setPartnerCors = (req, res) => {
     const origin = req.headers.origin || '';
     if (/^https?:\/\/(www\.)?slcreations\.llc$/i.test(origin) || /^https?:\/\/([^.]+\.)?spatialops\.llc$/i.test(origin)) {
@@ -742,14 +743,14 @@ app.get('/api/ecosystem/info', (req, res) => {
     setPartnerCors(req, res);
     res.json({
         status: 'ok',
-        company: 'SpatialOps, LLC',
+        company: 'SLCreations, LLC',
         product: 'DepthForge',
         version: getPackageVersion(),
-        copyright: 'Copyright © 2026 SpatialOps, LLC. All Rights Reserved.',
+        copyright: 'Copyright © 2026 SLCreations, LLC. All Rights Reserved.',
         partner: {
             name: 'SLCreations, LLC',
             url: 'https://SLCreations.llc',
-            role: 'Official Custom Fabrication & Creative Partner',
+            role: 'Official Custom Fabrication & Creative Studio',
             studioDeepLink: '/app?ref=slcreations&partner=SLCreations',
             fabricationRequestUrl: '/about#fabrication'
         }
@@ -768,13 +769,234 @@ app.post('/api/contact', (req, res) => {
     }
 
     const inquiryId = uuidv4();
-    console.log(`[SpatialOps Inquiry #${inquiryId}] (${category}) from ${name} <${email}>: ${message.slice(0, 120)}`);
+    console.log(`[SLCreations Inquiry #${inquiryId}] (${category}) from ${name} <${email}>: ${message.slice(0, 120)}`);
     return res.status(201).json({
         status: 'success',
         inquiryId,
-        company: 'SpatialOps, LLC',
+        company: 'SLCreations, LLC',
         partner: 'https://SLCreations.llc'
     });
+});
+
+// ==========================================
+// LightBurn Laser API & Integration Suite
+// ==========================================
+
+async function resolveImageBuffer(rawUrl, base64Data) {
+    if (base64Data) {
+        const cleanBase64 = String(base64Data).replace(/^data:image\/[a-z]+;base64,/, '');
+        return Buffer.from(cleanBase64, 'base64');
+    }
+    if (!rawUrl || typeof rawUrl !== 'string') {
+        throw new Error('Image URL or base64 data is required.');
+    }
+    const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+    const filename = path.basename(cleanUrl);
+    const localCandidate = path.join(generatedDir, filename);
+
+    if (fs.existsSync(localCandidate) && fs.statSync(localCandidate).isFile()) {
+        return fs.promises.readFile(localCandidate);
+    }
+
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+        const response = await fetch(rawUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image from URL: ${response.status} ${response.statusText}`);
+        }
+        const arrayBuf = await response.arrayBuffer();
+        return Buffer.from(arrayBuf);
+    }
+
+    throw new Error('Image file not found on server.');
+}
+
+app.get('/api/laser/lightburn/presets', (req, res) => {
+    res.json({
+        status: 'ok',
+        presets: LIGHTBURN_PRESETS
+    });
+});
+
+app.post(['/api/laser/lightburn/export', '/api/laser/lightburn'], async (req, res) => {
+    try {
+        const {
+            image_url,
+            imageUrl,
+            base64Data,
+            preset = 'hardwood',
+            widthMm = 100,
+            heightMm = 100,
+            customSettings = {},
+            jobName = 'DepthForge 3D Relief',
+            makerName,
+            studentName,
+            notes
+        } = req.body || {};
+
+        const effectiveUrl = image_url || imageUrl;
+        const effectiveMaker = makerName || studentName || 'DepthForge Maker';
+        const imageBuffer = await resolveImageBuffer(effectiveUrl, base64Data);
+
+        const xmlString = buildLbrn2Xml({
+            imageBuffer,
+            widthMm,
+            heightMm,
+            presetKey: preset,
+            customSettings,
+            jobName,
+            makerName: effectiveMaker,
+            notes
+        });
+
+        const lbrnFilename = `lightburn_${uuidv4().substring(0, 8)}.lbrn2`;
+        const lbrnPath = path.join(generatedDir, lbrnFilename);
+        await fs.promises.writeFile(lbrnPath, xmlString, 'utf8');
+
+        const lbrn2Url = `/static/generated/${lbrnFilename}`;
+
+        let queuedJob = null;
+        if (req.body?.enqueue !== false && (studentName || makerName || req.body?.enqueue)) {
+            queuedJob = laserQueue.addJob({
+                makerName: effectiveMaker,
+                makerEmail: req.body?.makerEmail || req.user?.email || '',
+                prompt: req.body?.prompt || jobName,
+                imageUrl: effectiveUrl || '',
+                lbrn2Url,
+                preset,
+                material: LIGHTBURN_PRESETS[preset]?.material || 'Laser Material',
+                widthMm,
+                heightMm,
+                notes: notes || ''
+            });
+        }
+
+        res.status(201).json({
+            status: 'success',
+            filename: lbrnFilename,
+            lbrn2_url: lbrn2Url,
+            download_url: lbrn2Url,
+            preset,
+            widthMm: Number(widthMm) || 100,
+            heightMm: Number(heightMm) || 100,
+            job: queuedJob
+        });
+    } catch (err) {
+        console.error('[LightBurn Export Error]:', err.message);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/api/laser/lightburn/export', async (req, res) => {
+    try {
+        const {
+            image_url,
+            imageUrl,
+            preset = 'hardwood',
+            widthMm = 100,
+            heightMm = 100,
+            studentName,
+            makerName
+        } = req.query;
+
+        const effectiveUrl = image_url || imageUrl;
+        const effectiveMaker = makerName || studentName || 'DepthForge Maker';
+        const imageBuffer = await resolveImageBuffer(effectiveUrl);
+
+        const xmlString = buildLbrn2Xml({
+            imageBuffer,
+            widthMm,
+            heightMm,
+            presetKey: preset,
+            makerName: effectiveMaker
+        });
+
+        res.set({
+            'Content-Type': 'application/xml',
+            'Content-Disposition': `attachment; filename="depthforge_relief_${preset}.lbrn2"`
+        });
+        res.send(xmlString);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/api/laser/lightburn/queue', (req, res) => {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    res.json({
+        status: 'success',
+        queue: laserQueue.listJobs(limit)
+    });
+});
+
+app.post('/api/laser/lightburn/queue', async (req, res) => {
+    try {
+        const {
+            makerName,
+            studentName,
+            makerEmail,
+            prompt,
+            imageUrl,
+            image_url,
+            lbrn2Url,
+            preset = 'hardwood',
+            widthMm = 100,
+            heightMm = 100,
+            notes
+        } = req.body || {};
+
+        const effectiveUrl = imageUrl || image_url;
+        let finalLbrn2Url = lbrn2Url;
+
+        if (!finalLbrn2Url && effectiveUrl) {
+            const imageBuffer = await resolveImageBuffer(effectiveUrl);
+            const xmlString = buildLbrn2Xml({
+                imageBuffer,
+                widthMm,
+                heightMm,
+                presetKey: preset,
+                makerName: makerName || studentName,
+                notes
+            });
+            const lbrnFilename = `lightburn_${uuidv4().substring(0, 8)}.lbrn2`;
+            const lbrnPath = path.join(generatedDir, lbrnFilename);
+            await fs.promises.writeFile(lbrnPath, xmlString, 'utf8');
+            finalLbrn2Url = `/static/generated/${lbrnFilename}`;
+        }
+
+        const job = laserQueue.addJob({
+            makerName: makerName || studentName || 'Anonymous Maker',
+            makerEmail,
+            prompt,
+            imageUrl: effectiveUrl,
+            lbrn2Url: finalLbrn2Url,
+            preset,
+            material: LIGHTBURN_PRESETS[preset]?.material || 'Laser Material',
+            widthMm,
+            heightMm,
+            notes
+        });
+
+        res.status(201).json({
+            status: 'success',
+            job
+        });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/api/laser/lightburn/queue/:id/status', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body || {};
+        const updated = laserQueue.updateStatus(id, status);
+        if (!updated) {
+            return res.status(404).json({ error: 'Laser queue job not found.' });
+        }
+        res.json({ status: 'success', job: updated });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Phase 4: User Sign Up & Authorization API

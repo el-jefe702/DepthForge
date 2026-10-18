@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin Console · SpatialOps DepthForge</title>
+  <title>Admin Console · SLCreations DepthForge</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
   <style>
@@ -223,8 +223,8 @@
 <body>
   <header>
     <a href="/" class="brand-wrap">
-      <img src="/static/logo.png" alt="SpatialOps Logo">
-      <span class="brand">SPATIAL<span>OPS</span> · DEPTHFORGE ADMIN</span>
+      <img src="/static/logo.png" alt="SLCreations Logo">
+      <span class="brand">SL<span>CREATIONS</span> · DEPTHFORGE ADMIN</span>
     </a>
     <nav>
       <a href="/" class="btn btn-gold">⚡ Forge Studio</a>
@@ -246,7 +246,7 @@
       <form id="adminLoginForm">
         <div class="form-row">
           <label for="adminEmailInput">Admin Email</label>
-          <input id="adminEmailInput" type="email" placeholder="founder@spatialops.llc" required>
+          <input id="adminEmailInput" type="email" placeholder="founder@slcreations.llc" required>
         </div>
         <div class="form-row">
           <label for="adminPasswordInput">Password</label>
@@ -264,7 +264,7 @@
     <div id="adminConsoleContent">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:22px;">
         <div>
-          <h1 style="margin:0 0 6px;font-family:'Cinzel',serif;font-size:28px;">SpatialOps Admin Console</h1>
+          <h1 style="margin:0 0 6px;font-family:'Cinzel',serif;font-size:28px;">SLCreations Admin Console</h1>
           <p style="margin:0;color:var(--text-secondary);font-size:14px;">
             Real-time platform telemetry, user role authorization, and credit wallet administration.
           </p>
@@ -335,6 +335,38 @@
             </thead>
             <tbody id="usersTableBody">
               <tr><td colspan="5" style="color:var(--text-secondary);">Loading users...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Laser & LightBurn Operator Queue -->
+      <section class="card" style="margin-bottom:28px;">
+        <div class="toolbar">
+          <div>
+            <h2 style="margin:0;font-size:18px;font-family:'Cinzel',serif;color:var(--accent-gold);">
+              🔥 LightBurn &amp; Laser Operator Queue
+            </h2>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">
+              Live jobs submitted from DepthForge Studio &amp; Android App ready for LightBurn CNC laser carving.
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="loadLaserQueue()">↻ Refresh Queue</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Job ID</th>
+                <th>Maker / Student</th>
+                <th>Material &amp; Preset</th>
+                <th>Dimensions</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="laserQueueTableBody">
+              <tr><td colspan="6" style="color:var(--text-secondary);">Loading laser queue...</td></tr>
             </tbody>
           </table>
         </div>
@@ -596,8 +628,64 @@
       loadUsers(e.target.value.trim());
     });
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function loadLaserQueue() {
+      const tbody = document.getElementById('laserQueueTableBody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/laser/lightburn/queue');
+        if (!res.ok) return;
+        const data = await res.json();
+        const queue = data.queue || [];
+        if (queue.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-secondary);text-align:center;padding:18px;">No laser jobs currently queued.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = queue.map(job => `
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:12px;color:var(--accent-gold);">${job.id}</td>
+            <td><strong>${escapeHtml(job.makerName)}</strong><br><span style="font-size:11px;color:var(--text-secondary);">${escapeHtml(job.prompt || '')}</span></td>
+            <td><span class="badge" style="background:rgba(212,175,55,0.15);color:var(--accent-gold);border:1px solid rgba(212,175,55,0.3);">${escapeHtml(job.material)}</span></td>
+            <td style="font-size:12px;">${job.widthMm} × ${job.heightMm} mm</td>
+            <td>
+              <span class="badge ${job.status === 'completed' ? 'badge-admin' : (job.status === 'engraving' ? 'badge-user' : '')}" style="${job.status === 'queued' ? 'background:rgba(245,158,11,0.2);color:#f59e0b;' : ''}">
+                ${job.status.toUpperCase()}
+              </span>
+            </td>
+            <td>
+              <div class="actions">
+                ${job.lbrn2Url ? `<a href="${job.lbrn2Url}" download class="btn btn-gold" style="padding:4px 8px;font-size:11px;text-decoration:none;">⬇ .lbrn2</a>` : ''}
+                ${job.status !== 'completed' ? `<button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="updateLaserStatus('${job.id}', 'completed')">✓ Done</button>` : ''}
+                ${job.status === 'queued' ? `<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="updateLaserStatus('${job.id}', 'engraving')">▶ Burn</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:#f87171;">Failed to load laser queue: ${err.message}</td></tr>`;
+      }
+    }
+
+    window.updateLaserStatus = async (id, status) => {
+      try {
+        await fetch(`/api/laser/lightburn/queue/${id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        await loadLaserQueue();
+      } catch (err) {
+        alert('Failed to update status: ' + err.message);
+      }
+    };
+
     (async () => {
       await loadHealth();
+      await loadLaserQueue();
       if (!token) {
         showAuthGate();
         return;
