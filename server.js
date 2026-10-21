@@ -189,36 +189,43 @@ async function generateImagesWithFallback(params) {
     const numImages = params?.config?.numberOfImages || 1;
     const aspectRatio = params?.config?.aspectRatio || '1:1';
 
-    const tasks = Array.from({ length: numImages }, () =>
-        ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
-            contents: prompt,
-            config: {
-                imageConfig: {
-                    aspectRatio: aspectRatio
+    const fallbackImageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image'];
+    for (const modelName of fallbackImageModels) {
+        try {
+            const tasks = Array.from({ length: numImages }, () =>
+                ai.models.generateContent({
+                    model: modelName,
+                    contents: prompt,
+                    config: {
+                        responseFormat: {
+                            image: {
+                                aspectRatio: aspectRatio
+                            }
+                        }
+                    }
+                })
+            );
+            const responses = await Promise.all(tasks);
+            const generatedImages = [];
+            for (const r of responses) {
+                const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                if (part?.inlineData?.data) {
+                    generatedImages.push({
+                        image: {
+                            imageBytes: part.inlineData.data
+                        }
+                    });
                 }
             }
-        })
-    );
-
-    const responses = await Promise.all(tasks);
-    const generatedImages = [];
-    for (const r of responses) {
-        const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        if (part?.inlineData?.data) {
-            generatedImages.push({
-                image: {
-                    imageBytes: part.inlineData.data
-                }
-            });
+            if (generatedImages.length > 0) {
+                return { generatedImages };
+            }
+        } catch (modelErr) {
+            console.warn(`[ImageGen] ${modelName} failed (${modelErr?.message || modelErr})`);
         }
     }
 
-    if (!generatedImages.length) {
-        throw new Error('No image returned from the AI model.');
-    }
-
-    return { generatedImages };
+    throw new Error('No image returned from the AI model. Check API key or region permissions.');
 }
 
 // ----------------------------------------------------------------------
@@ -1551,6 +1558,58 @@ app.route('/api/health')
         });
     });
 
+
+app.get('/api/debug/gemini-check', async (req, res) => {
+    const results = {
+        hasApiKey: !!process.env.GEMINI_API_KEY,
+        apiKeyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 8) + '...' : null,
+        models: {}
+    };
+
+    const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.8-flash', 'gemini-3.6-flash'];
+    for (const m of textModels) {
+        try {
+            const out = await ai.models.generateContent({
+                model: m,
+                contents: 'Respond with OK'
+            });
+            results.models[m] = { success: true, text: out?.text };
+        } catch (e) {
+            results.models[m] = { success: false, error: e.message };
+        }
+    }
+
+    const imageModels = ['imagen-4.0-fast-generate-001', 'imagen-3.0-generate-002'];
+    for (const m of imageModels) {
+        try {
+            const imgOut = await ai.models.generateImages({
+                model: m,
+                prompt: 'a stone coin',
+                config: { numberOfImages: 1, outputMimeType: 'image/png' }
+            });
+            results.models[m] = { success: true, count: imgOut?.generatedImages?.length };
+        } catch (e) {
+            results.models[m] = { success: false, error: e.message };
+        }
+    }
+
+    const flashImageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image'];
+    for (const m of flashImageModels) {
+        try {
+            const flashImg = await ai.models.generateContent({
+                model: m,
+                contents: 'a stone coin',
+                config: { responseFormat: { image: { aspectRatio: '1:1' } } }
+            });
+            results.models[m] = { success: true, text: flashImg?.text };
+        } catch (e) {
+            results.models[m] = { success: false, error: e.message };
+        }
+    }
+
+    res.json(results);
+});
+
 app.post('/api/generate', generateLimiter, async (req, res) => {
     console.log(`[${new Date().toLocaleTimeString()}] 🚀 POST /api/generate - Starting generation...`);
     const jobId = uuidv4();
@@ -1573,19 +1632,22 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             userId: req.userId || null
         }, { jobId });
 
-        const improveResponse = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: buildImprovePrompt(studentPrompt, stylePreset),
-            config: { responseMimeType: "application/json" }
-        });
-        const rawImproveText = improveResponse?.text || "";
-        const responseJson = safeJsonParse(rawImproveText, {});
-        const effectivePrompt = (typeof responseJson?.improved_prompt === 'string' && responseJson.improved_prompt.trim())
-            ? responseJson.improved_prompt.trim()
-            : (studentPrompt || "3D relief sculpture");
-
-        if (!responseJson?.improved_prompt) {
-            console.warn(`[Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: ${rawImproveText}`);
+        let effectivePrompt = (studentPrompt || "3D relief sculpture").trim();
+        try {
+            const improveResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: buildImprovePrompt(studentPrompt, stylePreset),
+                config: { responseMimeType: "application/json" }
+            });
+            const rawImproveText = improveResponse?.text || "";
+            const responseJson = safeJsonParse(rawImproveText, {});
+            if (typeof responseJson?.improved_prompt === 'string' && responseJson.improved_prompt.trim()) {
+                effectivePrompt = responseJson.improved_prompt.trim();
+            } else {
+                console.warn(`[Gemini Improve Warning] Falling back to user prompt due to non-JSON or missing improved_prompt from Gemini. Raw response: ${rawImproveText}`);
+            }
+        } catch (improveErr) {
+            console.warn(`[Gemini Improve Warning] Falling back to user prompt due to error: ${improveErr?.message || improveErr}`);
         }
 
         const finalPrompt = buildFinalPrompt(effectivePrompt, depthIntensity);
@@ -1878,19 +1940,24 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
         const photoBase64 = photoBytes.toString('base64');
         const mimeType = req.file.mimetype || 'image/jpeg';
 
-        const analysisResponse = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: [{
-                parts: [
-                    { inlineData: { mimeType: mimeType, data: photoBase64 } },
-                    { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
-                ]
-            }],
-            config: { responseMimeType: 'application/json' }
-        });
-
-        const rawAnalysisText = analysisResponse?.text || "";
-        const analysisJson = safeJsonParse(rawAnalysisText, {});
+        let rawAnalysisText = "";
+        let analysisJson = {};
+        try {
+            const analysisResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [{
+                    parts: [
+                        { inlineData: { mimeType: mimeType, data: photoBase64 } },
+                        { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
+                    ]
+                }],
+                config: { responseMimeType: 'application/json' }
+            });
+            rawAnalysisText = analysisResponse?.text || "";
+            analysisJson = safeJsonParse(rawAnalysisText, {});
+        } catch (visionErr) {
+            console.warn(`[Gemini Vision Warning] Vision analysis fallback: ${visionErr?.message || visionErr}`);
+        }
 
         let depthPrompt = (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim())
             ? analysisJson.depth_prompt.trim()
