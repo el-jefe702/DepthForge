@@ -176,8 +176,19 @@ if (process.env.GEMINI_BASE_URL) {
 }
 if (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true') {
     aiOptions.vertexai = true;
-    aiOptions.project = process.env.GOOGLE_CLOUD_PROJECT;
+    if (process.env.GOOGLE_CLOUD_PROJECT) {
+        aiOptions.project = process.env.GOOGLE_CLOUD_PROJECT;
+    }
     aiOptions.location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+        try {
+            aiOptions.googleAuthOptions = { credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) };
+        } catch (e) {
+            console.warn('[VertexAI] JSON parse error on GOOGLE_APPLICATION_CREDENTIALS_JSON:', e.message);
+        }
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        aiOptions.googleAuthOptions = { keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS };
+    }
 }
 const ai = new GoogleGenAI(aiOptions);
 if (!process.env.GEMINI_API_KEY) {
@@ -1616,6 +1627,20 @@ app.get('/api/debug/gemini-check', async (req, res) => {
         } catch (e) {
             results.models[m] = { success: false, error: e.message };
         }
+    }
+
+    try {
+        const vertexAi = new GoogleGenAI({
+            vertexai: true,
+            apiKey: process.env.GEMINI_API_KEY
+        });
+        const vOut = await vertexAi.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: 'Respond with OK'
+        });
+        results.models['vertex-express-gemini-2.0-flash'] = { success: true, text: vOut?.text };
+    } catch (e) {
+        results.models['vertex-express-gemini-2.0-flash'] = { success: false, error: e.message };
     }
 
     res.json(results);
