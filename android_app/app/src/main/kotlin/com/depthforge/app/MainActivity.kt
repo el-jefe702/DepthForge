@@ -99,7 +99,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("depthforge_prefs", Context.MODE_PRIVATE)
-        ApiClient.baseUrl = prefs.getString("server_url", "http://4.3.2.122:8000/") ?: "http://4.3.2.122:8000/"
+        val defaultUrl = "https://depthforge.spatialops.llc/"
+        var savedUrl = prefs.getString("server_url", defaultUrl) ?: defaultUrl
+        if (savedUrl.contains("4.3.2.122")) {
+            savedUrl = defaultUrl
+            prefs.edit().putString("server_url", defaultUrl).apply()
+        }
+        ApiClient.baseUrl = savedUrl
         setContent {
             DepthForgeTheme {
                 ForgeApp(prefs)

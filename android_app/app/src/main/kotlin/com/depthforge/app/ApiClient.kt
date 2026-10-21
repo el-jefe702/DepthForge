@@ -17,17 +17,38 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    var baseUrl = "http://4.3.2.122:8000/"
+    var baseUrl = "https://depthforge.spatialops.llc/"
+    var authToken: String? = null
 
     private fun apiUrl(path: String): String {
         return baseUrl.trim().removeSuffix("/") + path
     }
 
+    private fun ensureAuthToken(forceRefresh: Boolean = false) {
+        if (!forceRefresh && !authToken.isNullOrBlank()) return
+        try {
+            val conn = URL(apiUrl("/api/auth/guest")).openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.connectTimeout = 15000
+            conn.readTimeout = 15000
+            OutputStreamWriter(conn.outputStream).use { it.write("{}") }
+            if (conn.responseCode in 200..299) {
+                val resp = conn.inputStream?.bufferedReader()?.use { it.readText() } ?: "{}"
+                val tok = JSONObject(resp).optString("token", "")
+                if (tok.isNotBlank()) authToken = tok
+            }
+        } catch (_: Exception) {}
+    }
+
     // POST JSON, return parsed JSONObject
     private suspend fun postJson(path: String, body: JSONObject): JSONObject = withContext(Dispatchers.IO) {
+        ensureAuthToken()
         val conn = URL(apiUrl(path)).openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/json")
+        authToken?.takeIf { it.isNotBlank() }?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         conn.doOutput = true
         conn.connectTimeout = 60000
         conn.readTimeout = 120000
@@ -75,10 +96,12 @@ object ApiClient {
 
         val requestBody = builder.build()
 
-        val request = Request.Builder()
+        ensureAuthToken()
+        val reqBuilder = Request.Builder()
             .url(apiUrl(path))
             .post(requestBody)
-            .build()
+        authToken?.takeIf { it.isNotBlank() }?.let { reqBuilder.header("Authorization", "Bearer $it") }
+        val request = reqBuilder.build()
 
         val response = client.newCall(request).execute()
         val statusCode = response.code
