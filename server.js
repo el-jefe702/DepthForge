@@ -166,9 +166,20 @@ app.use((req, res, next) => {
 
 // Root route '/' is handled below by the Phase 4 Integrated Web Site handler (serves static/landing.html)
 
-const ai = new GoogleGenAI({
+const aiOptions = {
     apiKey: process.env.GEMINI_API_KEY
-});
+};
+if (process.env.GEMINI_BASE_URL) {
+    aiOptions.httpOptions = {
+        baseUrl: process.env.GEMINI_BASE_URL.trim()
+    };
+}
+if (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true') {
+    aiOptions.vertexai = true;
+    aiOptions.project = process.env.GOOGLE_CLOUD_PROJECT;
+    aiOptions.location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+}
+const ai = new GoogleGenAI(aiOptions);
 if (!process.env.GEMINI_API_KEY) {
     console.warn("WARNING: GEMINI_API_KEY is missing from .env! Image generation will fail.");
 }
