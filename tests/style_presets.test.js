@@ -27,10 +27,15 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
     const apiClient = fs.readFileSync(path.join(rootDir, 'android_app', 'app', 'src', 'main', 'kotlin', 'com', 'depthforge', 'app', 'ApiClient.kt'), 'utf-8');
 
     describe('1. Server Architecture & Style Presets Definition', () => {
-        test('STYLE_PRESETS contains all 6 required presets', () => {
+        test('STYLE_PRESETS contains all 15 required presets', () => {
             const keys = Object.keys(STYLE_PRESETS);
-            assert.deepEqual(keys.sort(), ['abstract', 'architecture', 'floral', 'ornamental', 'portrait', 'wildlife'].sort());
-            assert.equal(keys.length, 6);
+            const expected = [
+                'portrait', 'wildlife', 'ornamental', 'floral', 'architecture', 'abstract',
+                'coin_medallion', 'heraldic_crest', 'celtic_knot', 'western_scroll',
+                'signs_plaques', 'address_plaque', 'rustic_sign', 'tavern_sign', 'commercial_sign'
+            ];
+            assert.deepEqual(keys.sort(), expected.sort());
+            assert.equal(keys.length, 15);
         });
 
         test('each preset defines id, label, icon, and specific CNC guidance', () => {
@@ -50,6 +55,15 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
             assert.equal(sanitizeStylePreset('floral'), 'floral');
             assert.equal(sanitizeStylePreset('architecture'), 'architecture');
             assert.equal(sanitizeStylePreset('abstract'), 'abstract');
+            assert.equal(sanitizeStylePreset('coin_medallion'), 'coin_medallion');
+            assert.equal(sanitizeStylePreset('heraldic_crest'), 'heraldic_crest');
+            assert.equal(sanitizeStylePreset('celtic_knot'), 'celtic_knot');
+            assert.equal(sanitizeStylePreset('western_scroll'), 'western_scroll');
+            assert.equal(sanitizeStylePreset('signs_plaques'), 'signs_plaques');
+            assert.equal(sanitizeStylePreset('address_plaque'), 'address_plaque');
+            assert.equal(sanitizeStylePreset('rustic_sign'), 'rustic_sign');
+            assert.equal(sanitizeStylePreset('tavern_sign'), 'tavern_sign');
+            assert.equal(sanitizeStylePreset('commercial_sign'), 'commercial_sign');
         });
 
         test('sanitizeStylePreset rejects invalid or empty presets cleanly', () => {
@@ -91,7 +105,7 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
             assert.equal(webCss, androidStaticCss);
         });
 
-        test('HTML contains style presets container and 6 preset buttons in textPanel', () => {
+        test('HTML contains style presets container and all 15 preset buttons across primary and subpreset rows', () => {
             assert.ok(webHtml.includes('id="textStylePresets"'));
             assert.ok(webHtml.includes('data-preset="portrait"'));
             assert.ok(webHtml.includes('data-preset="wildlife"'));
@@ -99,17 +113,30 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
             assert.ok(webHtml.includes('data-preset="floral"'));
             assert.ok(webHtml.includes('data-preset="architecture"'));
             assert.ok(webHtml.includes('data-preset="abstract"'));
+            assert.ok(webHtml.includes('data-preset="coin_medallion"'));
+            assert.ok(webHtml.includes('data-preset="heraldic_crest"'));
+            assert.ok(webHtml.includes('data-preset="celtic_knot"'));
+            assert.ok(webHtml.includes('data-preset="western_scroll"'));
+            assert.ok(webHtml.includes('data-preset="signs_plaques"'));
+            assert.ok(webHtml.includes('data-preset="address_plaque"'));
+            assert.ok(webHtml.includes('data-preset="rustic_sign"'));
+            assert.ok(webHtml.includes('data-preset="tavern_sign"'));
+            assert.ok(webHtml.includes('data-preset="commercial_sign"'));
         });
 
         test('HTML contains style presets container in photoPanel', () => {
             assert.ok(webHtml.includes('id="photoStylePresets"'));
+            assert.ok(webHtml.includes('id="photoSignsParentChip"'));
+            assert.ok(webHtml.includes('id="photoSignSubpresets"'));
         });
 
-        test('CSS defines .style-presets-row, .preset-chip, and .preset-chip.active', () => {
+        test('CSS defines .style-presets-row, .preset-chip, .style-subpresets-row, and .subpreset-chip', () => {
             assert.ok(webCss.includes('.style-presets-container'));
             assert.ok(webCss.includes('.style-presets-row'));
             assert.ok(webCss.includes('.preset-chip'));
             assert.ok(webCss.includes('.preset-chip.active'));
+            assert.ok(webCss.includes('.style-subpresets-row'));
+            assert.ok(webCss.includes('.subpreset-chip'));
         });
     });
 
@@ -205,7 +232,7 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
             assert.ok(apiClient.includes('params["style_preset"] = stylePreset'));
         });
 
-        test('MainActivity.kt defines StylePresetSelector composable with 6 presets', () => {
+        test('MainActivity.kt defines StylePresetSelector composable with presets and subpresets', () => {
             assert.ok(mainActivity.includes('fun StylePresetSelector('));
             assert.ok(mainActivity.includes('"portrait" to "👤 Portrait"'));
             assert.ok(mainActivity.includes('"wildlife" to "🦁 Wildlife"'));
@@ -213,6 +240,15 @@ describe('Style Presets (F12) - Unit & Integration Tests', () => {
             assert.ok(mainActivity.includes('"floral" to "🌸 Floral"'));
             assert.ok(mainActivity.includes('"architecture" to "🏛️ Architecture"'));
             assert.ok(mainActivity.includes('"abstract" to "🌀 Abstract"'));
+            assert.ok(mainActivity.includes('"coin_medallion" to "🪙 Coin & Medallion"'));
+            assert.ok(mainActivity.includes('"heraldic_crest" to "🛡️ Heraldic Crest"'));
+            assert.ok(mainActivity.includes('"celtic_knot" to "🪢 Celtic Knot"'));
+            assert.ok(mainActivity.includes('"western_scroll" to "🤠 Western Scroll"'));
+            assert.ok(mainActivity.includes('"signs_plaques" to "🪧 Signs & Plaques ▾"'));
+            assert.ok(mainActivity.includes('"address_plaque" to "🏠 Address Plaque"'));
+            assert.ok(mainActivity.includes('"rustic_sign" to "🪵 Cabin / Blank Banner"'));
+            assert.ok(mainActivity.includes('"tavern_sign" to "🍺 Tavern & Shield"'));
+            assert.ok(mainActivity.includes('"commercial_sign" to "🏢 Commercial 2.5D"'));
         });
 
         test('MainActivity.kt tracks selectedStylePreset state and renders selector in text and photo modes', () => {

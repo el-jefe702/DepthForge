@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SLCreations, LLC · DepthForge 16-Bit CAD/CAM Platform</title>
+  <title>SpatialOps, LLC · Applied Spatial AI &amp; DepthForge™ CAD/CAM Studio</title>
   <link rel="stylesheet" href="/static/spatialops.css">
   <style>
     .hero-split {
@@ -17,11 +17,11 @@
       .hero-split { grid-template-columns: 1fr; }
     }
     .cad-frame {
-      background: #090e1a;
-      border: 1px solid rgba(56, 189, 248, 0.32);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.65);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
     }
     .cad-topbar {
       display: flex;
@@ -40,31 +40,31 @@
       border-radius: 12px;
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 45%, #ffffff 0%, #cbd5e1 26%, #475569 58%, #020617 100%);
+        radial-gradient(circle at 50% 45%, #ffffff 0%, #d4d4d8 24%, #52525b 58%, #0b0b0d 100%);
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
       padding: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      border: 1px solid var(--ds-border);
     }
     .demo-overlay {
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 50% 45%, #38bdf8 0%, #4f46e5 36%, #1e1b4b 68%, #030712 100%);
+        radial-gradient(circle at 50% 45%, #ffd58a 0%, #f5a524 30%, #6b4410 64%, #0b0b0d 100%);
       clip-path: inset(0 50% 0 0);
     }
     .demo-badge {
       position: relative;
       z-index: 2;
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: 6px;
       font-family: var(--font-mono);
       font-size: 11px;
-      font-weight: 600;
-      background: rgba(2, 6, 23, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      color: #e2e8f0;
+      font-weight: 500;
+      background: rgba(11, 11, 13, 0.85);
+      border: 1px solid var(--ds-border-strong);
+      color: var(--ds-text);
     }
     .slider-wrap {
       margin-top: 14px;
@@ -89,16 +89,15 @@
       .metrics-strip { grid-template-columns: 1fr 1fr; }
     }
     .metric-box {
-      background: rgba(11, 17, 32, 0.85);
-      border: 1px solid var(--border-subtle);
-      border-left: 3px solid var(--accent-cyan);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-border);
       border-radius: 12px;
-      padding: 18px 20px;
+      padding: 20px;
     }
     .metric-val {
-      font-family: var(--font-mono);
       font-size: 24px;
-      font-weight: 800;
+      font-weight: 700;
+      letter-spacing: -0.02em;
       color: var(--text-main);
     }
     .metric-lbl {
@@ -111,20 +110,20 @@
 <body>
   <header class="so-header">
     <div class="so-brand-wrap">
-      <a href="/" class="so-brand">
+      <a href="/home" class="so-brand">
         <span class="so-brand-mark">SO</span>
-        SPATIAL<span>OPS</span>
+        SPATIAL<span>OPS</span>, LLC
       </a>
-      <span class="so-brand-sub">// DEPTHFORGE v2.0</span>
+      <span class="so-brand-sub">// APPLIED SPATIAL AI &amp; CAD/CAM LAB</span>
     </div>
     <nav class="so-nav">
-      <a href="/" class="active">Home</a>
+      <a href="/home" class="active">Lab Hub</a>
+      <a href="/app">DepthForge™ Studio</a>
       <a href="/solutions">Solutions</a>
       <a href="/pricing">Pricing</a>
       <a href="/about">About &amp; Contact</a>
-      <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="partner-link">SLCreations.llc ↗</a>
-      <a href="/app">Forge Studio</a>
-      <a href="/app?mode=photo">📷 Photo to Carve</a>
+      <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="partner-link">Partner: SLCreations.llc ↗</a>
+      <a href="/DepthForge.apk" class="so-btn so-btn-outline">📲 Android APK</a>
       <a href="/dashboard" id="navDashboard" style="display:none;">Dashboard</a>
       <a href="/admin" id="adminNavLink" style="display:none;">Admin</a>
       <a href="/login" id="navSignIn" class="so-btn so-btn-outline">Sign In</a>
@@ -136,31 +135,32 @@
     <section class="hero-split">
       <div>
         <div class="so-telemetry-bar">
-          <span class="so-telemetry-pill"><span class="dot"></span> SLCREATIONS CAD/CAM ENGINE</span>
-          <span class="so-telemetry-pill">Z-AXIS: 16-BIT PNG (65,536 STEPS)</span>
-          <span class="so-telemetry-pill">STL / OBJ MESH READY</span>
+          <span class="so-telemetry-pill"><span class="dot"></span> SPATIALOPS, LLC · AI &amp; SPATIAL COMPUTING LAB</span>
+          <span class="so-telemetry-pill">FLAGSHIP: DEPTHFORGE™ v2.0 (16-BIT)</span>
+          <span class="so-telemetry-pill">PARTNER: SLCREATIONS, LLC</span>
         </div>
         <h1 class="so-h1">
-          Industrial Spatial AI for <span>Precision 3D Relief &amp; CAM</span>
+          Applied Spatial AI, 3D Vision &amp; <span>CAD/CAM Automation</span>
         </h1>
         <p class="so-lead">
-          Engineered by <strong>SLCreations, LLC</strong>, <strong>DepthForge</strong> transforms text prompts and reference photography into continuous, zero-banding 16-bit heightmaps and watertight 3D meshes for CNC routers, fiber lasers, and additive manufacturing.
+          <strong>SpatialOps, LLC</strong> is an applied spatial AI and 3D vision lab. Our flagship platform, <strong>DepthForge™</strong>, transforms text prompts and reference photography into continuous, zero-banding 16-bit heightmaps and watertight 3D meshes—paired with physical CNC &amp; laser fulfillment through our official manufacturing partner, <strong><a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);">SLCreations, LLC</a></strong>.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:14px;">
-          <a href="/app" class="so-btn so-btn-cyan">✏️ Text to Relief Studio →</a>
-          <a href="/app?mode=photo" class="so-btn so-btn-primary">📷 Photo to Carve (Upload Photo) →</a>
-          <a href="/signup" class="so-btn so-btn-outline">Create Account (10 Free Credits)</a>
+          <a href="/app" class="so-btn so-btn-cyan">🚀 Launch DepthForge™ Studio →</a>
+          <a href="/app?mode=photo" class="so-btn so-btn-primary">📷 Photo to Carve Studio →</a>
+          <a href="/DepthForge.apk" class="so-btn so-btn-outline">📲 Download Android APK</a>
+          <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="so-btn so-btn-outline">🛠️ Custom Carving: SLCreations.llc ↗</a>
         </div>
       </div>
 
       <div class="cad-frame">
         <div class="cad-topbar">
-          <span>VIEWPORT // Z-RELIEF INSPECTOR</span>
+          <span>DEPTHFORGE™ // Z-RELIEF INSPECTOR</span>
           <span id="telemetryReadout">SPLIT: 50% | BIT-DEPTH: 16-BIT</span>
         </div>
         <div class="demo-stage">
           <div class="demo-overlay" id="demoOverlay"></div>
-          <span class="demo-badge">AI SPATIAL CONTOUR</span>
+          <span class="demo-badge">SPATIALOPS AI CONTOUR</span>
           <span class="demo-badge">16-BIT HEIGHTMAP OUTPUT</span>
         </div>
         <div class="slider-wrap">
@@ -177,12 +177,12 @@
         <div class="metric-lbl">Discrete Z-Elevation Levels (16-Bit PNG)</div>
       </div>
       <div class="metric-box">
-        <div class="metric-val">5-Stage</div>
-        <div class="metric-lbl">OpenCV Bilateral &amp; Telea Inpaint Pipeline</div>
+        <div class="metric-val">15 Presets</div>
+        <div class="metric-lbl">Coins, Crests, Knots, Scrolls &amp; Custom Signs</div>
       </div>
       <div class="metric-box">
-        <div class="metric-val">STL + OBJ</div>
-        <div class="metric-lbl">Real-Time WebGL Displacement Mesh Export</div>
+        <div class="metric-val">STL + .lbrn2</div>
+        <div class="metric-lbl">3D Mesh &amp; Native LightBurn Laser Export</div>
       </div>
       <div class="metric-box">
         <div class="metric-val">×4 Batch</div>
@@ -191,53 +191,53 @@
     </section>
 
     <section style="margin-bottom:56px;">
-      <h2 class="so-section-title">The SLCreations Software &amp; Manufacturing Stack</h2>
+      <h2 class="so-section-title">SpatialOps, LLC — Products &amp; Spatial Computing Lab</h2>
       <p class="so-section-sub">
-        Built from the ground up for CNC machinists, laser engravers, coin &amp; medallion designers, and 3D digital sculptors.
+        Created by <strong>SpatialOps, LLC</strong> for CNC machinists, laser engravers, sign makers, medallion designers, and 3D digital sculptors.
       </p>
       <div class="so-grid-4">
         <div class="so-card">
-          <span class="so-card-tag">01 // SPATIAL PROMPT &amp; VISION</span>
-          <h3>Gemini 3.6 + Imagen 4</h3>
-          <p>Domain-tuned style presets (Portrait, Wildlife, Ornamental, Medallion, Architectural) convert ideas or photos into occlusion-free Z-depth maps.</p>
+          <span class="so-card-tag">01 // FLAGSHIP PRODUCT (LIVE)</span>
+          <h3>DepthForge™ 16-Bit Studio</h3>
+          <p>Domain-tuned CNC &amp; Sign presets (Portrait, Wildlife, Coin &amp; Medallion, Heraldic Crest, Celtic Knot, Western Scroll, and Signs &amp; Plaques) with 5-stage OpenCV 16-bit surface smoothing.</p>
         </div>
         <div class="so-card">
-          <span class="so-card-tag">02 // 16-BIT OPENCV PIPELINE</span>
-          <h3>Zero-Stepping Surface Polish</h3>
-          <p>Eliminates 8-bit terracing artifacts via 32-bit float conversion, morphological hole filling, bilateral edge-preserving smoothing, and 16-bit quantization.</p>
+          <span class="so-card-tag">02 // LASER CAM ENGINE (LIVE)</span>
+          <h3>LightBurn .lbrn2 Integration</h3>
+          <p>Direct export to native LightBurn project files with calibrated 3D grayscale engraving power, speed, line interval, and shop-floor operator queue dispatch.</p>
         </div>
         <div class="so-card">
-          <span class="so-card-tag">03 // LIVE 3D CAD PREVIEW</span>
-          <h3>Three.js + STL/OBJ Export</h3>
-          <p>Inspect relief topology under dynamic directional lighting, adjust Z-scale in real time, and export binary STL or Wavefront OBJ meshes directly.</p>
+          <span class="so-card-tag">03 // MOBILE &amp; CAD ECOSYSTEM (LIVE)</span>
+          <h3>Android App &amp; Blender Add-On</h3>
+          <p>Work seamlessly across the DepthForge™ Web Studio, the native Jetpack Compose Android APK, and the Blender 3D displacement mesh add-on.</p>
         </div>
         <div class="so-card">
-          <span class="so-card-tag">04 // MULTI-PLATFORM ECOSYSTEM</span>
-          <h3>Web, Blender &amp; Android</h3>
-          <p>Work seamlessly across the DepthForge Web Studio, our native Blender displacement add-on, and the Jetpack Compose Android app.</p>
+          <span class="so-card-tag">04 // SPATIALOPS R&amp;D LAB</span>
+          <h3>Next-Gen Spatial Tooling</h3>
+          <p>Upcoming SpatialOps, LLC modules for automated V-carve vector tracing, multi-axis toolpath optimization, and shop-floor camera depth reconstruction.</p>
         </div>
       </div>
     </section>
 
     <section class="so-partner-banner">
       <div>
-        <span class="so-telemetry-pill" style="margin-bottom:12px;">OFFICIAL PLATFORM &amp; FABRICATION // SLCREATIONS, LLC</span>
-        <h2 style="margin:0 0 10px;font-size:28px;">From Digital 16-Bit Heightmap to Physical Masterpiece with <span style="color:var(--accent-cyan);">SLCreations.llc</span></h2>
+        <span class="so-telemetry-pill" style="margin-bottom:12px;">OFFICIAL MANUFACTURING &amp; FABRICATION PARTNER // SLCREATIONS, LLC</span>
+        <h2 style="margin:0 0 10px;font-size:28px;">From Digital DepthForge™ Heightmap to Physical Masterpiece with <span style="color:var(--accent-cyan);">SLCreations.llc</span></h2>
         <p style="margin:0 0 18px;color:var(--text-muted);font-size:15px;">
-          <strong>SLCreations, LLC</strong> develops the DepthForge AI depth-generation engine and brings your relief designs into the physical world—offering custom CNC carving, deep-relief laser engraving, bespoke signage, and artisan production.
+          While <strong>SpatialOps, LLC</strong> engineers the <strong>DepthForge™</strong> AI software platform, our official manufacturing partner <strong>SLCreations, LLC</strong> brings your relief designs into the physical world—offering custom CNC wood carving, deep-relief brass &amp; slate laser engraving, bespoke estate signage, and artisan production.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:12px;">
-          <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="so-btn so-btn-cyan">Visit SLCreations.llc ↗</a>
+          <a href="https://SLCreations.llc" target="_blank" rel="noopener" class="so-btn so-btn-cyan">Visit Manufacturing Partner: SLCreations.llc ↗</a>
           <a href="/about#fabrication" class="so-btn so-btn-outline">Request Custom Fabrication</a>
-          <a href="/solutions#slcreations-integration" class="so-btn so-btn-outline">Cross-Site Integration Guide</a>
+          <a href="/solutions#slcreations-integration" class="so-btn so-btn-outline">Partner Integration Guide</a>
         </div>
       </div>
-      <div class="so-card" style="background:#060a14;border-color:rgba(56,189,248,0.3);">
-        <span class="so-card-tag">UNIFIED WORKFLOW</span>
+      <div class="so-card" style="background:var(--ds-surface-2);">
+        <span class="so-card-tag">3-TIER ECOSYSTEM WORKFLOW</span>
         <ol style="margin:0;padding-left:18px;color:var(--text-muted);font-size:13px;line-height:1.8;">
-          <li><strong style="color:#f8fafc;">Design in DepthForge</strong>: Generate &amp; polish your 16-bit PNG or STL mesh at <a href="/app" style="color:var(--accent-cyan);">/app</a>.</li>
-          <li><strong style="color:#f8fafc;">Export or Send</strong>: Download your CNC-ready file or submit a fabrication request.</li>
-          <li><strong style="color:#f8fafc;">Fabricate at SLCreations.llc</strong>: Precision-machined in hardwood, brass, acrylic, or stone by <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);">SLCreations.llc</a>.</li>
+          <li><strong style="color:#f8fafc;">Engineered by SpatialOps, LLC</strong>: Spatial AI &amp; 16-bit OpenCV CAD/CAM architecture (<a href="https://spatialops.llc" style="color:var(--accent-cyan);">spatialops.llc</a>).</li>
+          <li><strong style="color:#f8fafc;">Design in DepthForge™</strong>: Generate &amp; polish 16-bit PNGs, STL meshes, or LightBurn <code>.lbrn2</code> files at <a href="/app" style="color:var(--accent-cyan);">/app</a>.</li>
+          <li><strong style="color:#f8fafc;">Manufactured by SLCreations, LLC</strong>: Precision-machined in hardwood, brass, acrylic, or stone at <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);">SLCreations.llc</a>.</li>
         </ol>
       </div>
     </section>
@@ -247,38 +247,39 @@
     <div class="so-footer-grid">
       <div class="so-footer-col">
         <div class="so-brand" style="margin-bottom:10px;">
-          <span class="so-brand-mark">SLC</span>
-          SL<span>CREATIONS</span>, LLC
+          <span class="so-brand-mark">SO</span>
+          SPATIAL<span>OPS</span>, LLC
         </div>
         <p style="margin:0 0 12px;color:var(--text-muted);">
-          Industrial spatial AI, 16-bit heightmap synthesis, and precision 3D CAD/CAM tooling.
+          Creator of <strong>DepthForge™</strong> — Industrial spatial AI, 16-bit heightmap synthesis, and precision 3D CAD/CAM tooling.
         </p>
-        <span class="so-brand-sub">PROPRIETARY · ALL RIGHTS RESERVED</span>
+        <span class="so-brand-sub">SPATIALOPS, LLC · ALL RIGHTS RESERVED</span>
       </div>
       <div class="so-footer-col">
-        <h4>Platform</h4>
-        <a href="/app">DepthForge Studio (/app)</a>
+        <h4>Product (DepthForge™)</h4>
+        <a href="/app">DepthForge™ Web Studio (/app)</a>
+        <a href="/DepthForge.apk">Download Android App (.APK)</a>
         <a href="/solutions">Solutions &amp; Plugins</a>
         <a href="/pricing">Pricing &amp; Credit Packs</a>
         <a href="/dashboard">User Dashboard</a>
       </div>
       <div class="so-footer-col">
-        <h4>Ecosystem</h4>
-        <a href="https://SLCreations.llc" target="_blank" rel="noopener">SLCreations.llc (Fabrication Studio) ↗</a>
+        <h4>Manufacturing Partner</h4>
+        <a href="https://SLCreations.llc" target="_blank" rel="noopener">SLCreations, LLC (SLCreations.llc) ↗</a>
         <a href="/solutions#slcreations-integration">Partner Site Integration</a>
         <a href="/about#fabrication">Custom CNC &amp; Laser Orders</a>
       </div>
       <div class="so-footer-col">
         <h4>Company &amp; Legal</h4>
-        <a href="/about">About SLCreations, LLC</a>
+        <a href="/about">About SpatialOps, LLC</a>
         <a href="/about#contact">Contact &amp; Enterprise</a>
         <a href="/terms">Terms, Privacy &amp; Copyright</a>
         <a href="/admin">Admin Console</a>
       </div>
     </div>
     <div class="so-footer-bottom">
-      <div>© 2026 SLCreations, LLC. All Rights Reserved. DepthForge™ is proprietary software of SLCreations, LLC.</div>
-      <div>Official Fabrication &amp; Creative Studio: <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);text-decoration:none;font-weight:600;">SLCreations.llc ↗</a></div>
+      <div>© 2026 SpatialOps, LLC. All Rights Reserved. DepthForge™ is a proprietary product created by SpatialOps, LLC.</div>
+      <div>Official Manufacturing &amp; Fabrication Partner: <a href="https://SLCreations.llc" target="_blank" rel="noopener" style="color:var(--accent-cyan);text-decoration:none;font-weight:600;">SLCreations, LLC (SLCreations.llc) ↗</a></div>
     </div>
   </footer>
 

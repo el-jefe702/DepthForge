@@ -1,23 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #07070b;
-  --bg-dark: #0a0a0f;
-  --bg-card: rgba(18, 18, 26, 0.75);
-  --bg-card-hover: rgba(26, 26, 38, 0.85);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(212, 175, 55, 0.35);
-  --border-glow: rgba(99, 102, 241, 0.25);
-  --text-primary: #f0f0f8;
-  --text-secondary: #9aa0b4;
-  --text-muted: #5e6478;
-  --accent-gold: #d4af37;
-  --accent-gold-glow: rgba(212, 175, 55, 0.45);
+  --bg-primary: #0b0b0d;
+  --bg-dark: #070708;
+  --bg-card: #131316;
+  --bg-card-hover: #19191e;
+  --border: #26262c;
+  --border-hover: #3a3a44;
+  --border-glow: rgba(245, 165, 36, 0.25);
+  --text-primary: #f4f4f6;
+  --text-secondary: #9e9ea8;
+  --text-muted: #5e5e6a;
+  --accent-gold: #f5a524;
+  --accent-gold-glow: rgba(245, 165, 36, 0.35);
   --accent-indigo: #6366f1;
   --accent-cyan: #06b6d4;
   --accent-emerald: #10b981;
   --accent-pink: #ec4899;
-  --accent-orange: #ff6b35;
+  --accent-orange: #f5a524;
   --accent-purple: #8b5cf6;
 }
 
@@ -73,9 +73,77 @@ body {
 .app-header h1 {
   margin: 0;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: baseline;
+  gap: 12px;
   font-size: 22px;
+}
+
+.df-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-primary);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+}
+
+.df-brand:hover {
+  color: var(--accent-gold);
+}
+
+.df-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f5a524 0%, #b87308 100%);
+  color: #0b0b0d;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 6px rgba(245, 165, 36, 0.3);
+}
+
+.df-brand-text sup {
+  font-size: 11px;
+  color: var(--accent-gold);
+}
+
+.df-brand-by {
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+}
+
+.partner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(245, 165, 36, 0.08);
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  color: var(--accent-gold);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.partner-pill:hover {
+  background: rgba(245, 165, 36, 0.16);
+  border-color: var(--accent-gold);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .app-header img {
@@ -1307,7 +1375,7 @@ textarea:focus, input[type=text]:focus {
 .preset-chip:hover:not(:disabled) {
   border-color: var(--accent-gold);
   color: var(--text-primary);
-  background: rgba(212, 175, 55, 0.08);
+  background: rgba(245, 165, 36, 0.1);
 }
 
 .preset-chip.active {
@@ -1315,12 +1383,59 @@ textarea:focus, input[type=text]:focus {
   background: var(--accent-gold);
   color: var(--bg-dark);
   font-weight: 600;
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 0 12px rgba(245, 165, 36, 0.35);
+}
+
+.preset-chip.parent-active {
+  border-color: var(--accent-gold);
+  background: rgba(245, 165, 36, 0.16);
+  color: var(--accent-gold);
+  font-weight: 600;
 }
 
 .preset-chip:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.style-subpresets-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(245, 165, 36, 0.05);
+  border: 1px dashed rgba(245, 165, 36, 0.3);
+  border-radius: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.style-subpresets-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.preset-chip.subpreset-chip {
+  background: var(--bg-card);
+  border-color: rgba(245, 165, 36, 0.35);
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.preset-chip.subpreset-chip:hover:not(:disabled) {
+  border-color: var(--accent-gold);
+  background: rgba(245, 165, 36, 0.15);
+}
+
+.preset-chip.subpreset-chip.active {
+  background: var(--accent-gold);
+  color: #0b0b0d;
+  font-weight: 600;
 }
 
 /* ==========================================

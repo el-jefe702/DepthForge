@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>User Dashboard · SLCreations DepthForge</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+  <title>User Dashboard · DepthForge™ by SpatialOps, LLC</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background-color: #07070b;
+      background-color: #0b0b0d;
       background-image:
         radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.08) 0px, transparent 50%);
-      color: #f0f0f8;
+      color: #ededef;
       font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
     }
     header {
@@ -27,17 +27,17 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .brand {
-      font-family: 'Cinzel', serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-weight: 700;
       font-size: 21px;
-      color: #f0f0f8;
+      color: #ededef;
       text-decoration: none;
       letter-spacing: 0.5px;
     }
-    .brand span { color: #d4af37; }
+    .brand span { color: #f5a524; }
     nav { display: flex; align-items: center; gap: 16px; }
     nav a, nav button {
-      color: #cbd5e1;
+      color: #d4d4d8;
       text-decoration: none;
       font-size: 14px;
       background: none;
@@ -49,16 +49,16 @@
       border-radius: 10px;
       font-weight: 600;
       font-size: 14px;
-      background: #4f46e5;
+      background: #f5a524;
       color: #fff;
       text-decoration: none;
       border: 0;
       cursor: pointer;
     }
     .btn-secondary {
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
+      background: #1a1a1f;
+      color: #ededef;
+      border: 1px solid #34343c;
     }
     .container {
       max-width: 1120px;
@@ -72,14 +72,14 @@
       margin-bottom: 32px;
     }
     .card {
-      background: #111827;
-      border: 1px solid #1f2937;
+      background: #131316;
+      border: 1px solid #26262c;
       border-radius: 16px;
       padding: 24px;
     }
     .card-label {
       font-size: 13px;
-      color: #94a3b8;
+      color: #a1a1aa;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -87,7 +87,7 @@
       font-size: 32px;
       font-weight: 800;
       margin-top: 6px;
-      color: #f8fafc;
+      color: #ededef;
     }
     .role-badge {
       display: inline-block;
@@ -95,8 +95,8 @@
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
-      background: rgba(99, 102, 241, 0.2);
-      color: #a5b4fc;
+      background: rgba(245, 165, 36, 0.14);
+      color: #f5a524;
       text-transform: uppercase;
     }
     .gallery-grid {
@@ -105,8 +105,8 @@
       gap: 18px;
     }
     .gen-item {
-      background: #0f172a;
-      border: 1px solid #1e293b;
+      background: #131316;
+      border: 1px solid #1a1a1f;
       border-radius: 14px;
       overflow: hidden;
       display: flex;
@@ -116,31 +116,40 @@
       width: 100%;
       height: 180px;
       object-fit: cover;
-      background: #020617;
+      background: #0b0b0d;
     }
     .gen-meta {
       padding: 14px;
       font-size: 13px;
-      color: #cbd5e1;
+      color: #d4d4d8;
     }
     .gen-date {
       font-size: 11px;
-      color: #64748b;
+      color: #71717a;
       margin-top: 6px;
     }
     .empty {
-      color: #94a3b8;
+      color: #a1a1aa;
       padding: 32px;
       text-align: center;
-      background: #111827;
-      border: 1px dashed #334155;
+      background: #131316;
+      border: 1px dashed #34343c;
       border-radius: 14px;
     }
+  /* ---- SpatialOps Design System v3 (Graphite) overrides ---- */
+    body { background-image: none !important; background-color: #0b0b0d !important; }
+    .brand { font-weight: 700 !important; letter-spacing: -0.01em !important; font-size: 17px !important; }
+    .brand span { color: #a1a1aa !important; font-weight: 500; }
+    header, .topbar { box-shadow: none !important; border-radius: 0 !important; backdrop-filter: none !important; background: #0b0b0d !important; border-bottom: 1px solid #26262c !important; }
+    .btn:not(.btn-secondary), button.primary, .tab-btn.active { color: #0b0b0d !important; box-shadow: none !important; }
+    .btn:hover { transform: none !important; filter: brightness(1.08); }
+    .card { box-shadow: none !important; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #f5a524 !important; outline-offset: 0; }
   </style>
 </head>
 <body>
   <header>
-    <a href="/" class="brand">SL<span>CREATIONS</span> · DEPTHFORGE</a>
+    <a href="/" class="brand">DepthForge™ <span>by SpatialOps</span></a>
     <nav>
       <a href="/">Home</a>
       <a href="/app" class="btn">✏️ Text to Relief</a>
@@ -152,7 +161,7 @@
 
   <main class="container">
     <h1 style="margin:0 0 6px;">User Dashboard</h1>
-    <p style="margin:0 0 24px;color:#94a3b8;">Manage your account, credit wallet, and generated 3D heightmaps.</p>
+    <p style="margin:0 0 24px;color:#a1a1aa;">Manage your account, credit wallet, and generated 3D heightmaps.</p>
 
     <section class="stats-grid">
       <div class="card">
@@ -166,21 +175,21 @@
         <div id="creditsBalance" class="card-value">—</div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <a href="/pricing" class="btn" style="padding:6px 12px;font-size:12px;text-decoration:none;">💳 Buy Credits</a>
-          <span style="font-size:12px;color:#94a3b8;">1 credit / generation</span>
+          <span style="font-size:12px;color:#a1a1aa;">1 credit / generation</span>
         </div>
       </div>
 
       <div class="card">
         <div class="card-label">Total Generations</div>
         <div id="generationsCount" class="card-value">0</div>
-        <div style="margin-top:8px;"><a href="/app" style="color:#818cf8;font-size:13px;text-decoration:none;">Create new heightmap →</a></div>
+        <div style="margin-top:8px;"><a href="/app" style="color:#f5a524;font-size:13px;text-decoration:none;">Create new heightmap →</a></div>
       </div>
     </section>
 
     <h2 style="margin:0 0 16px;font-size:20px;">Recent Generations</h2>
     <div id="generationsGrid" class="gallery-grid"></div>
     <div id="emptyState" class="empty" style="display:none;">
-      No depth maps generated yet. <a href="/app" style="color:#818cf8;">Open Forge Studio</a> to create your first 16-bit heightmap!
+      No depth maps generated yet. <a href="/app" style="color:#f5a524;">Open Forge Studio</a> to create your first 16-bit heightmap!
     </div>
   </main>
 

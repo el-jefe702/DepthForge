@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin Console · SLCreations DepthForge</title>
+  <title>Admin Console · DepthForge™ by SpatialOps, LLC</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <style>
     :root {
       color-scheme: dark;
-      --bg-primary: #07070b;
-      --bg-card: rgba(18, 18, 26, 0.78);
+      --bg-primary: #0b0b0d;
+      --bg-card: #131316;
       --border: rgba(255, 255, 255, 0.08);
-      --border-gold: rgba(212, 175, 55, 0.35);
-      --text-primary: #f0f0f8;
-      --text-secondary: #9aa0b4;
-      --text-muted: #5e6478;
-      --accent-gold: #d4af37;
-      --accent-indigo: #6366f1;
-      --accent-emerald: #10b981;
+      --border-gold: rgba(245, 165, 36, 0.4);
+      --text-primary: #ededef;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-gold: #f5a524;
+      --accent-indigo: #f5a524;
+      --accent-emerald: #22c55e;
     }
     * { box-sizing: border-box; }
     body {
@@ -62,7 +62,7 @@
       box-shadow: 0 0 16px rgba(212, 175, 55, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
     }
     .brand {
-      font-family: 'Cinzel', serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-weight: 700;
       font-size: 21px;
       color: var(--text-primary);
@@ -76,7 +76,7 @@
       border-radius: 9px;
       font-weight: 600;
       font-size: 13px;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      background: #f5a524;
       color: #fff;
       text-decoration: none;
       border: 0;
@@ -85,13 +85,13 @@
     }
     .btn:hover { transform: translateY(-1px); }
     .btn-gold {
-      background: linear-gradient(135deg, #d4af37, #f59e0b);
-      color: #07070b;
+      background: #f5a524;
+      color: #0b0b0d;
       font-weight: 700;
     }
     .btn-secondary {
       background: rgba(26, 26, 38, 0.85);
-      color: #e2e8f0;
+      color: #ededef;
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .container {
@@ -144,7 +144,7 @@
       border-radius: 10px;
       border: 1px solid rgba(255, 255, 255, 0.14);
       background: #0a0a0f;
-      color: #f8fafc;
+      color: #ededef;
       font-size: 14px;
     }
     input.search { min-width: 260px; }
@@ -185,11 +185,11 @@
     .badge-admin {
       background: rgba(212, 175, 55, 0.18);
       color: #fbbf24;
-      border: 1px solid rgba(212, 175, 55, 0.35);
+      border: 1px solid rgba(245, 165, 36, 0.4);
     }
     .badge-user {
       background: rgba(99, 102, 241, 0.18);
-      color: #a5b4fc;
+      color: #f5a524;
       border: 1px solid rgba(99, 102, 241, 0.35);
     }
     .actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -218,13 +218,22 @@
       font-weight: 600;
     }
     .form-row input { width: 100%; }
+  /* ---- SpatialOps Design System v3 (Graphite) overrides ---- */
+    body { background-image: none !important; background-color: #0b0b0d !important; }
+    .brand { font-weight: 700 !important; letter-spacing: -0.01em !important; font-size: 17px !important; }
+    .brand span { color: #a1a1aa !important; font-weight: 500; }
+    header, .topbar { box-shadow: none !important; border-radius: 0 !important; backdrop-filter: none !important; background: #0b0b0d !important; border-bottom: 1px solid #26262c !important; }
+    .btn:not(.btn-secondary), button.primary, .tab-btn.active { color: #0b0b0d !important; box-shadow: none !important; }
+    .btn:hover { transform: none !important; filter: brightness(1.08); }
+    .card { box-shadow: none !important; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #f5a524 !important; outline-offset: 0; }
   </style>
 </head>
 <body>
   <header>
     <a href="/" class="brand-wrap">
       <img src="/static/logo.png" alt="SLCreations Logo">
-      <span class="brand">SL<span>CREATIONS</span> · DEPTHFORGE ADMIN</span>
+      <span class="brand">DepthForge™ <span>Admin</span></span>
     </a>
     <nav>
       <a href="/" class="btn btn-gold">⚡ Forge Studio</a>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SLCreations | DepthForge 3D Relief Generator</title>
-    <meta name="description" content="SLCreations, LLC © 2026 — Generate flawless 16-bit 3D relief depth maps for CNC laser engraving. AI-powered depth map creation and post-processing.">
+    <title>DepthForge™ Studio · by SpatialOps, LLC</title>
+    <meta name="description" content="DepthForge™ by SpatialOps, LLC — Generate flawless 16-bit 3D relief depth maps for CNC and laser engraving. Official manufacturing partner: SLCreations, LLC.">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,12 +12,15 @@
 <body>
     <header class="app-header">
         <h1>
-            <img src="/static/logo.png" alt="SLCreations Logo">
-            <span class="vintage-font">SLCreations</span>
+            <a href="/home" class="df-brand" title="SpatialOps, LLC Lab Hub">
+                <span class="df-brand-mark">DF</span>
+                <span class="df-brand-text">DepthForge<sup>™</sup></span>
+            </a>
+            <span class="df-brand-by">by SpatialOps, LLC</span>
         </h1>
         <div class="header-meta">
             <div class="status-badge"><span class="pulse-dot"></span> 16-Bit CNC Precision</div>
-            <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">DepthForge v2.0</span>
+            <a class="partner-pill" href="https://SLCreations.llc" target="_blank" rel="noopener" title="Official Manufacturing Partner">🛠️ Need it carved? SLCreations.llc ↗</a>
         </div>
       <div class="credit-display" id="credit-display" title="Remaining Credits"><span class="credit-icon">🪙</span><span id="credit-balance">...</span></div>
 </header>
@@ -43,6 +46,18 @@
                         <button type="button" class="preset-chip" data-preset="floral" onclick="selectStylePreset('floral')">🌸 Floral</button>
                         <button type="button" class="preset-chip" data-preset="architecture" onclick="selectStylePreset('architecture')">🏛️ Architecture</button>
                         <button type="button" class="preset-chip" data-preset="abstract" onclick="selectStylePreset('abstract')">🌀 Abstract</button>
+                        <button type="button" class="preset-chip" data-preset="coin_medallion" onclick="selectStylePreset('coin_medallion')">🪙 Coin &amp; Medallion</button>
+                        <button type="button" class="preset-chip" data-preset="heraldic_crest" onclick="selectStylePreset('heraldic_crest')">🛡️ Heraldic Crest</button>
+                        <button type="button" class="preset-chip" data-preset="celtic_knot" onclick="selectStylePreset('celtic_knot')">🪢 Celtic Knot</button>
+                        <button type="button" class="preset-chip" data-preset="western_scroll" onclick="selectStylePreset('western_scroll')">🤠 Western Scroll</button>
+                        <button type="button" class="preset-chip" data-preset="signs_plaques" onclick="selectStylePreset('signs_plaques')" id="textSignsParentChip">🪧 Signs &amp; Plaques ▾</button>
+                    </div>
+                    <div class="style-subpresets-row" id="textSignSubpresets" style="display: none;">
+                        <span class="style-subpresets-label">🪧 Sign Sub-Style:</span>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="address_plaque" onclick="selectStylePreset('address_plaque')">🏠 Address Plaque</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="rustic_sign" onclick="selectStylePreset('rustic_sign')">🪵 Cabin / Blank Banner</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="tavern_sign" onclick="selectStylePreset('tavern_sign')">🍺 Tavern &amp; Shield</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="commercial_sign" onclick="selectStylePreset('commercial_sign')">🏢 Commercial 2.5D</button>
                     </div>
                 </div>
 
@@ -93,6 +108,18 @@
                         <button type="button" class="preset-chip" data-preset="floral" onclick="selectStylePreset('floral')">🌸 Floral</button>
                         <button type="button" class="preset-chip" data-preset="architecture" onclick="selectStylePreset('architecture')">🏛️ Architecture</button>
                         <button type="button" class="preset-chip" data-preset="abstract" onclick="selectStylePreset('abstract')">🌀 Abstract</button>
+                        <button type="button" class="preset-chip" data-preset="coin_medallion" onclick="selectStylePreset('coin_medallion')">🪙 Coin &amp; Medallion</button>
+                        <button type="button" class="preset-chip" data-preset="heraldic_crest" onclick="selectStylePreset('heraldic_crest')">🛡️ Heraldic Crest</button>
+                        <button type="button" class="preset-chip" data-preset="celtic_knot" onclick="selectStylePreset('celtic_knot')">🪢 Celtic Knot</button>
+                        <button type="button" class="preset-chip" data-preset="western_scroll" onclick="selectStylePreset('western_scroll')">🤠 Western Scroll</button>
+                        <button type="button" class="preset-chip" data-preset="signs_plaques" onclick="selectStylePreset('signs_plaques')" id="photoSignsParentChip">🪧 Signs &amp; Plaques ▾</button>
+                    </div>
+                    <div class="style-subpresets-row" id="photoSignSubpresets" style="display: none;">
+                        <span class="style-subpresets-label">🪧 Sign Sub-Style:</span>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="address_plaque" onclick="selectStylePreset('address_plaque')">🏠 Address Plaque</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="rustic_sign" onclick="selectStylePreset('rustic_sign')">🪵 Cabin / Blank Banner</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="tavern_sign" onclick="selectStylePreset('tavern_sign')">🍺 Tavern &amp; Shield</button>
+                        <button type="button" class="preset-chip subpreset-chip" data-preset="commercial_sign" onclick="selectStylePreset('commercial_sign')">🏢 Commercial 2.5D</button>
                     </div>
                 </div>
 
@@ -455,17 +482,54 @@
         }
 
         // Style Presets (F12) Logic
+        const SIGN_SUBPRESETS = ['address_plaque', 'rustic_sign', 'tavern_sign', 'commercial_sign'];
+        let signsSubpresetsOpen = false;
+
         function selectStylePreset(presetName) {
             if (isProcessing()) return;
-            if (activeStylePreset === presetName) {
-                activeStylePreset = null;
+            if (presetName === 'signs_plaques') {
+                if (activeStylePreset === 'signs_plaques' || SIGN_SUBPRESETS.includes(activeStylePreset)) {
+                    activeStylePreset = null;
+                    signsSubpresetsOpen = false;
+                } else {
+                    activeStylePreset = 'signs_plaques';
+                    signsSubpresetsOpen = true;
+                }
+            } else if (SIGN_SUBPRESETS.includes(presetName)) {
+                if (activeStylePreset === presetName) {
+                    activeStylePreset = 'signs_plaques';
+                } else {
+                    activeStylePreset = presetName;
+                    signsSubpresetsOpen = true;
+                }
             } else {
-                activeStylePreset = presetName;
+                if (activeStylePreset === presetName) {
+                    activeStylePreset = null;
+                } else {
+                    activeStylePreset = presetName;
+                }
+                signsSubpresetsOpen = false;
             }
             updateStylePresetUI();
         }
 
         function updateStylePresetUI() {
+            const isSignActive = activeStylePreset === 'signs_plaques' || SIGN_SUBPRESETS.includes(activeStylePreset);
+            const showDrawer = signsSubpresetsOpen || isSignActive;
+
+            ['textSignSubpresets', 'photoSignSubpresets'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = showDrawer ? 'flex' : 'none';
+            });
+
+            ['textSignsParentChip', 'photoSignsParentChip'].forEach(id => {
+                const chip = document.getElementById(id);
+                if (chip) {
+                    chip.textContent = showDrawer ? '🪧 Signs & Plaques ▴' : '🪧 Signs & Plaques ▾';
+                    chip.classList.toggle('parent-active', isSignActive);
+                }
+            });
+
             const chips = document.querySelectorAll('.preset-chip');
             chips.forEach(chip => {
                 const preset = chip.getAttribute('data-preset');

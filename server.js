@@ -427,6 +427,60 @@ const STYLE_PRESETS = {
         label: 'Abstract',
         icon: '🌀',
         guidance: 'STYLE: Dynamic modern abstract relief sculpture. Emphasize flowing topographic waves, ribbon curves, mathematical surface transitions, dramatic geometric intersections, and clean curvilinear elevation variations.'
+    },
+    coin_medallion: {
+        id: 'coin_medallion',
+        label: 'Coin & Medallion',
+        icon: '🪙',
+        guidance: 'STYLE: Numismatic challenge coin and commemorative medallion relief. Emphasize a crisp raised circular rim bezel, recessed smooth field, bold high-relief central emblem, and sharp chamfered border geometry suitable for brass, bronze, or hardwood coin engraving.'
+    },
+    heraldic_crest: {
+        id: 'heraldic_crest',
+        label: 'Heraldic Crest',
+        icon: '🛡️',
+        guidance: 'STYLE: Regal heraldic coat of arms and shield crest relief. Emphasize a prominent contoured shield boss, symmetric acanthus mantling, crisp helm and crown elevation, bold supporter silhouettes, and a clean scrolled ribbon banner at the base.'
+    },
+    celtic_knot: {
+        id: 'celtic_knot',
+        label: 'Celtic Knot',
+        icon: '🪢',
+        guidance: 'STYLE: Interwoven Celtic knotwork and Norse weave relief. Emphasize continuous over-and-under ribbon elevation where over-crossing strands rise smoothly to white and under-passing strands dip cleanly into shadow, with crisp braided borders and no broken loops.'
+    },
+    western_scroll: {
+        id: 'western_scroll',
+        label: 'Western Scroll',
+        icon: '🤠',
+        guidance: 'STYLE: American Western Sheridan leather tooling and engraver scrollwork relief. Emphasize bold spiraling acanthus vines, blooming flower centers, deeply undercut background pockets, and crisp beveled leaf ridges.'
+    },
+    signs_plaques: {
+        id: 'signs_plaques',
+        label: 'Signs & Plaques',
+        icon: '🪧',
+        guidance: 'STYLE: Custom CNC carved dimensional sign and decorative plaque relief. Emphasize a well-defined outer moulded frame border, a recessed flat pocket floor, and a bold raised central motif and banner geometry with clean ball-nose clearance.'
+    },
+    address_plaque: {
+        id: 'address_plaque',
+        label: 'Address Plaque',
+        icon: '🏠',
+        guidance: 'STYLE: Estate address plaque and house number sign relief. Emphasize a classic arched or oval stepped border frame, a recessed smooth pocket background, and a clean raised central number/text reserve flanked by symmetrical botanical or scrollwork accents.'
+    },
+    rustic_sign: {
+        id: 'rustic_sign',
+        label: 'Cabin / Blank Banner',
+        icon: '🪵',
+        guidance: 'STYLE: Rustic lodge, cabin, and ranch sign relief with a blank text banner. Emphasize an organic hand-hewn timber or bark-edge frame, sculpted pine trees or mountain wildlife motif, and a prominent smooth raised blank ribbon banner ready for custom lettering.'
+    },
+    tavern_sign: {
+        id: 'tavern_sign',
+        label: 'Tavern & Shield',
+        icon: '🍺',
+        guidance: 'STYLE: Vintage pub, home bar, and tavern sign plaque relief. Emphasize a scalloped baroque or shield plaque perimeter, ornate corner flourishes, a raised barrel or hop crest, and a recessed central sign panel with high-contrast bevels.'
+    },
+    commercial_sign: {
+        id: 'commercial_sign',
+        label: 'Commercial 2.5D',
+        icon: '🏢',
+        guidance: 'STYLE: Precision commercial 2.5D routed sign and badge relief. Emphasize crisp prismatic chamfered borders, flat planar recessed pockets, bold architectural moulding profiles, and high-visibility geometric elevation.'
     }
 };
 
@@ -717,17 +771,36 @@ export const isSystemAdminEmail = (email) => {
     const clean = email.trim().toLowerCase();
     const adminEmails = getAdminEmails();
     return adminEmails.includes(clean) ||
+        clean.endsWith('@spatialops.llc') ||
         clean.endsWith('@slcreations.llc') ||
         clean.startsWith('founder@') ||
         clean.startsWith('admin@');
 };
 
-// Integrated Web Site Pages (Phase 4) — Root '/' serves the classic Forge UI with SLCreations branding
+// Direct APK download route
+app.get(['/DepthForge.apk', '/download/DepthForge.apk'], (req, res) => {
+    const localApk = path.join(__dirname, 'DepthForge.apk');
+    if (fs.existsSync(localApk)) {
+        return res.download(localApk, 'DepthForge.apk');
+    }
+    res.redirect('https://github.com/el-jefe702/DepthForge/releases/download/v2.0.0/DepthForge.apk');
+});
+
+// Integrated Web Site Pages (Phase 4)
+// Option A: Root domain spatialops.llc serves the SpatialOps Lab Hub (landing.html).
+// depthforge.spatialops.llc (and default test requests) serve DepthForge Studio (index.html).
 app.get(['/', '/app'], (req, res) => {
+    const host = (req.headers.host || '').toLowerCase();
+    if (req.path === '/' && /^(www\.)?spatialops\.llc(:\d+)?$/.test(host)) {
+        const landingFile = path.join(staticDir, 'landing.html');
+        if (fs.existsSync(landingFile)) {
+            return res.sendFile(landingFile);
+        }
+    }
     res.sendFile(path.join(staticDir, 'index.html'));
 });
 
-app.get('/home', (req, res) => {
+app.get(['/home', '/lab'], (req, res) => {
     const landingFile = path.join(staticDir, 'landing.html');
     if (fs.existsSync(landingFile)) {
         return res.sendFile(landingFile);
@@ -784,14 +857,20 @@ app.get('/api/ecosystem/info', (req, res) => {
     setPartnerCors(req, res);
     res.json({
         status: 'ok',
-        company: 'SLCreations, LLC',
-        product: 'DepthForge',
+        company: 'SpatialOps, LLC',
+        creator: {
+            name: 'SpatialOps, LLC',
+            url: 'https://spatialops.llc',
+            role: 'Creator & Software Developer'
+        },
+        product: 'DepthForge™',
+        productUrl: 'https://depthforge.spatialops.llc',
         version: getPackageVersion(),
-        copyright: 'Copyright © 2026 SLCreations, LLC. All Rights Reserved.',
+        copyright: 'Copyright © 2026 SpatialOps, LLC. All Rights Reserved.',
         partner: {
             name: 'SLCreations, LLC',
             url: 'https://SLCreations.llc',
-            role: 'Official Custom Fabrication & Creative Studio',
+            role: 'Official Manufacturing & Fabrication Partner',
             studioDeepLink: '/app?ref=slcreations&partner=SLCreations',
             fabricationRequestUrl: '/about#fabrication'
         }
@@ -814,7 +893,7 @@ app.post('/api/contact', (req, res) => {
     return res.status(201).json({
         status: 'success',
         inquiryId,
-        company: 'SLCreations, LLC',
+        company: 'SpatialOps, LLC',
         partner: 'https://SLCreations.llc'
     });
 });

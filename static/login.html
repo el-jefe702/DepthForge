@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign in · SLCreations DepthForge</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+  <title>Sign in · DepthForge™ by SpatialOps, LLC</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -13,11 +13,11 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      background-color: #07070b;
+      background-color: #0b0b0d;
       background-image:
         radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.08) 0px, transparent 50%);
-      color: #f0f0f8;
+      color: #ededef;
       font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
     }
     .topbar {
@@ -28,21 +28,21 @@
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .brand {
-      color: #f0f0f8;
+      color: #ededef;
       text-decoration: none;
-      font-family: 'Cinzel', serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-weight: 700;
       font-size: 21px;
       letter-spacing: 0.5px;
     }
-    .brand span { color: #d4af37; }
+    .brand span { color: #f5a524; }
     .nav-links a {
-      color: #94a3b8;
+      color: #a1a1aa;
       text-decoration: none;
       margin-left: 20px;
       font-size: 14px;
     }
-    .nav-links a:hover { color: #f8fafc; }
+    .nav-links a:hover { color: #ededef; }
     .center-wrap {
       flex: 1;
       display: grid;
@@ -60,11 +60,11 @@
     .tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      background: #0b1120;
+      background: #0b0b0d;
       padding: 4px;
       border-radius: 10px;
       margin-bottom: 22px;
-      border: 1px solid #1e293b;
+      border: 1px solid #1a1a1f;
     }
     .tab-btn {
       margin: 0;
@@ -72,29 +72,29 @@
       border: 0;
       border-radius: 8px;
       background: transparent;
-      color: #94a3b8;
+      color: #a1a1aa;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
     }
     .tab-btn.active {
-      background: #4f46e5;
+      background: #f5a524;
       color: #fff;
     }
     h1 { margin: 0 0 6px; font-size: 24px; }
-    p { margin: 0 0 20px; color: #94a3b8; font-size: 14px; line-height: 1.5; }
-    label { display: block; font-size: 13px; margin: 14px 0 6px; color: #cbd5e1; font-weight: 500; }
+    p { margin: 0 0 20px; color: #a1a1aa; font-size: 14px; line-height: 1.5; }
+    label { display: block; font-size: 13px; margin: 14px 0 6px; color: #d4d4d8; font-weight: 500; }
     input {
       width: 100%;
       padding: 12px 14px;
       border-radius: 10px;
-      border: 1px solid #334155;
-      background: #0b1120;
-      color: #e2e8f0;
+      border: 1px solid #34343c;
+      background: #0b0b0d;
+      color: #ededef;
       font-size: 15px;
     }
     input:focus {
-      outline: 2px solid #6366f1;
+      outline: 2px solid #f5a524;
       border-color: transparent;
     }
     button.primary {
@@ -103,7 +103,7 @@
       padding: 13px;
       border: 0;
       border-radius: 10px;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      background: #f5a524;
       color: white;
       font-size: 15px;
       font-weight: 600;
@@ -112,8 +112,8 @@
     button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
     .message { min-height: 20px; margin-top: 14px; font-size: 14px; color: #f87171; }
     .message.ok { color: #4ade80; }
-    .toggle { margin-top: 16px; font-size: 14px; color: #94a3b8; text-align: center; }
-    .toggle a { color: #818cf8; text-decoration: none; font-weight: 600; }
+    .toggle { margin-top: 16px; font-size: 14px; color: #a1a1aa; text-align: center; }
+    .toggle a { color: #f5a524; text-decoration: none; font-weight: 600; }
     .starter-badge {
       display: inline-block;
       margin-bottom: 12px;
@@ -122,14 +122,23 @@
       font-size: 12px;
       font-weight: 600;
       background: rgba(79, 70, 229, 0.18);
-      color: #a5b4fc;
+      color: #f5a524;
       border: 1px solid rgba(99, 102, 241, 0.35);
     }
+  /* ---- SpatialOps Design System v3 (Graphite) overrides ---- */
+    body { background-image: none !important; background-color: #0b0b0d !important; }
+    .brand { font-weight: 700 !important; letter-spacing: -0.01em !important; font-size: 17px !important; }
+    .brand span { color: #a1a1aa !important; font-weight: 500; }
+    header, .topbar { box-shadow: none !important; border-radius: 0 !important; backdrop-filter: none !important; background: #0b0b0d !important; border-bottom: 1px solid #26262c !important; }
+    .btn:not(.btn-secondary), button.primary, .tab-btn.active { color: #0b0b0d !important; box-shadow: none !important; }
+    .btn:hover { transform: none !important; filter: brightness(1.08); }
+    .card { box-shadow: none !important; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #f5a524 !important; outline-offset: 0; }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <a href="/" class="brand">SL<span>CREATIONS</span> · DEPTHFORGE</a>
+    <a href="/" class="brand">DepthForge™ <span>by SpatialOps</span></a>
     <nav class="nav-links">
       <a href="/">Home</a>
       <a href="/app">Forge Studio</a>
@@ -240,7 +249,7 @@
 
         if (!res.ok) {
           if (res.status === 401 && mode === 'signin') {
-            message.innerHTML = `${data.error || 'Invalid email or password.'} <br><a href="#" id="resetPwLink" style="color:var(--accent-gold,#d4af37);text-decoration:underline;font-size:13px;display:inline-block;margin-top:6px;">Forgot password? Reset it now</a>`;
+            message.innerHTML = `${data.error || 'Invalid email or password.'} <br><a href="#" id="resetPwLink" style="color:var(--accent-gold,#f5a524);text-decoration:underline;font-size:13px;display:inline-block;margin-top:6px;">Forgot password? Reset it now</a>`;
             const rLink = document.getElementById('resetPwLink');
             if (rLink) {
               rLink.addEventListener('click', async (e) => {

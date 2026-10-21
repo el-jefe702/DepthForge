@@ -17,7 +17,21 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    var baseUrl = "https://depthforge.spatialops.llc/"
+    var baseUrl: String = "https://depthforge.spatialops.llc/"
+        set(value) {
+            var clean = value.trim()
+            if (clean.contains(":8000")) {
+                clean = clean.replace(":8000", "")
+            }
+            if (clean.contains("4.3.2.122")) {
+                clean = "https://depthforge.spatialops.llc/"
+            }
+            if (clean.startsWith("http://depthforge.spatialops.llc")) {
+                clean = clean.replace("http://", "https://")
+            }
+            if (!clean.endsWith("/")) clean += "/"
+            field = clean
+        }
     var authToken: String? = null
 
     private fun apiUrl(path: String): String {

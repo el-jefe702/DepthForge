@@ -63,18 +63,18 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 
-val DarkBackground = Color(0xFF0A0A0F)
-val CardBackground = Color(0xFF14141C)
-val TextPrimary = Color(0xFFE8E8F0)
-val TextSecondary = Color(0xFF8888A0)
-val GoldAccent = Color(0xFFD4AF37)
-val IndigoAccent = Color(0xFF6366F1)
-val EmeraldAccent = Color(0xFF10B981)
+val DarkBackground = Color(0xFF0B0B0D)
+val CardBackground = Color(0xFF131316)
+val TextPrimary = Color(0xFFEDEDEF)
+val TextSecondary = Color(0xFFA1A1AA)
+val GoldAccent = Color(0xFFF5A524)
+val IndigoAccent = Color(0xFFF5A524)
+val EmeraldAccent = Color(0xFF22C55E)
 val PinkAccent = Color(0xFFEC4899)
-val OrangeAccent = Color(0xFFFF6B35)
-val CyanAccent = Color(0xFF0891B2)
+val OrangeAccent = Color(0xFFF5A524)
+val CyanAccent = Color(0xFFF5A524)
 val PurpleAccent = Color(0xFF8B5CF6)
-val GrayBorder = Color(0xFF2A2A3A)
+val GrayBorder = Color(0xFF26262C)
 
 @Composable
 fun DepthForgeTheme(content: @Composable () -> Unit) {
@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("depthforge_prefs", Context.MODE_PRIVATE)
         val defaultUrl = "https://depthforge.spatialops.llc/"
         var savedUrl = prefs.getString("server_url", defaultUrl) ?: defaultUrl
-        if (savedUrl.contains("4.3.2.122")) {
+        if (savedUrl.contains("4.3.2.122") || savedUrl.contains(":8000") || savedUrl.startsWith("http://depthforge.spatialops.llc")) {
             savedUrl = defaultUrl
             prefs.edit().putString("server_url", defaultUrl).apply()
         }
@@ -194,22 +194,29 @@ fun ForgeApp(prefs: SharedPreferences) {
 
         if (showSettings) {
             var serverUrlInput by remember { mutableStateOf(ApiClient.baseUrl) }
+            var connectionStatus by remember { mutableStateOf<String?>(null) }
+            var isTesting by remember { mutableStateOf(false) }
+            val coroutineScope = rememberCoroutineScope()
             Dialog(onDismissRequest = { showSettings = false }) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = CardBackground,
+                    border = BorderStroke(1.dp, GrayBorder),
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Server Configuration", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(14.dp))
                         OutlinedTextField(
                             value = serverUrlInput,
-                            onValueChange = { serverUrlInput = it },
-                            label = { Text("Server URL", color = TextSecondary) },
+                            onValueChange = {
+                                serverUrlInput = it
+                                connectionStatus = null
+                            },
+                            label = { Text("Server Base URL", color = TextSecondary) },
                             colors = TextFieldDefaults.outlinedTextFieldColors(
                                 textColor = TextPrimary,
                                 cursorColor = GoldAccent,
@@ -218,6 +225,62 @@ fun ForgeApp(prefs: SharedPreferences) {
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    serverUrlInput = "https://depthforge.spatialops.llc/"
+                                    connectionStatus = null
+                                }
+                            ) {
+                                Text("Reset Default", color = GoldAccent, fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    isTesting = true
+                                    connectionStatus = "Connecting..."
+                                    coroutineScope.launch {
+                                        try {
+                                            ApiClient.baseUrl = serverUrlInput
+                                            val health = ApiClient.checkHealth()
+                                            if (health.optString("status") == "ok") {
+                                                connectionStatus = "✓ Connected (v${health.optString("version", "2.0.0")})"
+                                            } else {
+                                                val err = health.optString("error", "")
+                                                val errMsg = if (err.isNotBlank()) err else "Status: ${health.optInt("statusCode")}"
+                                                connectionStatus = "✕ $errMsg"
+                                            }
+                                        } catch (e: Exception) {
+                                            connectionStatus = "✕ ${e.message}"
+                                        } finally {
+                                            isTesting = false
+                                        }
+                                    }
+                                },
+                                enabled = !isTesting,
+                                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1A1A24)),
+                                border = BorderStroke(1.dp, GrayBorder),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Text("Test Connection", color = TextPrimary, fontSize = 12.sp)
+                            }
+                        }
+                        if (connectionStatus != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val isOk = connectionStatus!!.startsWith("✓")
+                            Text(
+                                text = connectionStatus!!,
+                                color = if (isOk) EmeraldAccent else Color.Red,
+                                fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -232,9 +295,10 @@ fun ForgeApp(prefs: SharedPreferences) {
                                     prefs.edit().putString("server_url", serverUrlInput).apply()
                                     showSettings = false
                                 },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = GoldAccent)
+                                colors = ButtonDefaults.buttonColors(backgroundColor = GoldAccent),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Save")
+                                Text("Save", color = DarkBackground, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -293,8 +357,30 @@ fun StylePresetSelector(
         "ornamental" to "⚜️ Ornamental",
         "floral" to "🌸 Floral",
         "architecture" to "🏛️ Architecture",
-        "abstract" to "🌀 Abstract"
+        "abstract" to "🌀 Abstract",
+        "coin_medallion" to "🪙 Coin & Medallion",
+        "heraldic_crest" to "🛡️ Heraldic Crest",
+        "celtic_knot" to "🪢 Celtic Knot",
+        "western_scroll" to "🤠 Western Scroll",
+        "signs_plaques" to "🪧 Signs & Plaques ▾"
     )
+
+    val signSubPresets = listOf(
+        "signs_plaques" to "🪧 General Sign",
+        "address_plaque" to "🏠 Address Plaque",
+        "rustic_sign" to "🪵 Cabin / Blank Banner",
+        "tavern_sign" to "🍺 Tavern & Shield",
+        "commercial_sign" to "🏢 Commercial 2.5D"
+    )
+    val signIds = setOf("signs_plaques", "address_plaque", "rustic_sign", "tavern_sign", "commercial_sign")
+    val isSignActive = selectedPreset != null && signIds.contains(selectedPreset)
+    var signsExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedPreset) {
+        if (selectedPreset != null && signIds.contains(selectedPreset)) {
+            signsExpanded = true
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Style Preset (Optional)", color = TextSecondary, fontSize = 14.sp)
@@ -304,15 +390,27 @@ fun StylePresetSelector(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(presets) { (id, label) ->
-                val isSelected = id == selectedPreset
+                val isSignsParent = id == "signs_plaques"
+                val isSelected = if (isSignsParent) isSignActive else (id == selectedPreset)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (isSelected) GoldAccent else CardBackground)
-                        .border(1.dp, if (isSelected) GoldAccent else GrayBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, if (isSelected || (isSignsParent && signsExpanded)) GoldAccent else GrayBorder, RoundedCornerShape(20.dp))
                         .clickable(enabled = enabled) {
-                            if (isSelected) onPresetSelected(null)
-                            else onPresetSelected(id)
+                            if (isSignsParent) {
+                                if (signsExpanded && isSignActive) {
+                                    signsExpanded = false
+                                    onPresetSelected(null)
+                                } else {
+                                    signsExpanded = true
+                                    if (!isSignActive) onPresetSelected("signs_plaques")
+                                }
+                            } else {
+                                signsExpanded = false
+                                if (isSelected) onPresetSelected(null)
+                                else onPresetSelected(id)
+                            }
                         }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -323,6 +421,45 @@ fun StylePresetSelector(
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = signsExpanded || isSignActive) {
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(
+                    text = "🪧 Sign & Plaque Sub-Style:",
+                    color = GoldAccent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(signSubPresets) { (subId, subLabel) ->
+                        val isSubSelected = subId == selectedPreset
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isSubSelected) GoldAccent else Color(0xFF0D0D15))
+                                .border(1.dp, if (isSubSelected) GoldAccent else GrayBorder, RoundedCornerShape(16.dp))
+                                .clickable(enabled = enabled) {
+                                    if (isSubSelected) onPresetSelected(null)
+                                    else onPresetSelected(subId)
+                                }
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = subLabel,
+                                color = if (isSubSelected) DarkBackground else TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSubSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -428,18 +565,44 @@ fun ForgeScreen(prefs: SharedPreferences? = null, onOpenSettings: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "DepthForge",
-                    color = TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif
-                )
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(GoldAccent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "DF",
+                                color = DarkBackground,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "DepthForge™",
+                            color = TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.SansSerif
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "by SpatialOps, LLC · Partner: SLCreations.llc",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextPrimary)
+                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextSecondary)
                 }
             }
-            Divider(color = GrayBorder, modifier = Modifier.padding(vertical = 16.dp))
+            Divider(color = GrayBorder, modifier = Modifier.padding(vertical = 14.dp))
 
             // Input Card
             Card(
