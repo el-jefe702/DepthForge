@@ -1624,11 +1624,19 @@
                         threeDMesh = new THREE.Mesh(geometry, material);
                         threeDScene.add(threeDMesh);
                     } else {
+                        // Dispose previous GPU textures to prevent WebGL memory leak
+                        if (threeDCurrentTexture && threeDCurrentTexture !== texture) {
+                            try { threeDCurrentTexture.dispose(); } catch (_) {}
+                        }
+                        if (threeDMesh.material && threeDMesh.material.map && threeDMesh.material.map !== texture) {
+                            try { threeDMesh.material.map.dispose(); } catch (_) {}
+                        }
                         threeDMesh.material.map = texture;
                         threeDMesh.material.displacementMap = texture;
                         threeDMesh.material.displacementScale = scale;
                         threeDMesh.material.needsUpdate = true;
                     }
+                    threeDCurrentTexture = texture;
                 },
                 undefined,
                 (err) => {

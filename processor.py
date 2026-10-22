@@ -3,6 +3,14 @@ import os
 import cv2
 import numpy as np
 
+def safe_imwrite(output_path, img, params=None):
+    """Ensures destination directory exists and validates write status."""
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    success = cv2.imwrite(output_path, img, params) if params is not None else cv2.imwrite(output_path, img)
+    if not success:
+        print(f"Error: Failed to write image to {output_path}", file=sys.stderr, flush=True)
+        sys.exit(1)
+
 def smooth_image(input_path, output_path):
     # ==========================================
     # STEP 1: LOAD & CONVERT TO FLOAT32 GRAYSCALE
@@ -109,8 +117,8 @@ def smooth_image(input_path, output_path):
     # Quantize float32 [0, 1] to uint16 [0, 65535]
     final_16bit = (normalized_float * 65535.0).astype(np.uint16)
     
-    # Explicitly use compression parameters for maximum file safety
-    cv2.imwrite(output_path, final_16bit, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+    # Explicitly use compression parameters for maximum file safety and write via safe_imwrite
+    safe_imwrite(output_path, final_16bit, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
 def remove_bg(input_path, output_path):
     print(f"Removing background from {input_path}...", flush=True)
@@ -141,7 +149,7 @@ def remove_bg(input_path, output_path):
         black_bg[:, :, c] = (isolated_rgba[:, :, c].astype(np.float32) * alpha_float).astype(np.uint8)
         
     print(f"Exporting background-removed PNG to {output_path}...", flush=True)
-    cv2.imwrite(output_path, black_bg)
+    safe_imwrite(output_path, black_bg)
 
 def invert_image(input_path, output_path):
     print(f"Inverting depth map from {input_path}...", flush=True)
@@ -158,7 +166,7 @@ def invert_image(input_path, output_path):
             inverted[:, :, :3] = (65535 - img[:, :, :3].astype(np.uint32)).astype(np.uint16)
         else:
             inverted = (65535 - img.astype(np.uint32)).astype(np.uint16)
-        cv2.imwrite(output_path, inverted, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+        safe_imwrite(output_path, inverted, [cv2.IMWRITE_PNG_COMPRESSION, 9])
     elif img.dtype == np.uint8:
         # Invert 8-bit depth map: 255 - pixel
         if len(img.shape) == 3 and img.shape[2] == 4:
@@ -166,7 +174,7 @@ def invert_image(input_path, output_path):
             inverted[:, :, :3] = (255 - img[:, :, :3].astype(np.uint16)).astype(np.uint8)
         else:
             inverted = (255 - img.astype(np.uint16)).astype(np.uint8)
-        cv2.imwrite(output_path, inverted)
+        safe_imwrite(output_path, inverted)
     else:
         # Fallback for other dtypes
         max_val = np.iinfo(img.dtype).max if np.issubdtype(img.dtype, np.integer) else 1.0
@@ -175,7 +183,7 @@ def invert_image(input_path, output_path):
             inverted[:, :, :3] = (max_val - img[:, :, :3]).astype(img.dtype)
         else:
             inverted = (max_val - img).astype(img.dtype)
-        cv2.imwrite(output_path, inverted)
+        safe_imwrite(output_path, inverted)
         
     print(f"Exporting inverted depth map to {output_path}...", flush=True)
 

@@ -49,6 +49,11 @@ jobs:
             git checkout -B "${TARGET_REF}" "origin/${TARGET_REF}"
             git reset --hard "origin/${TARGET_REF}"
 
+            # Prioritize IPv4 over IPv6 to prevent Google AI Studio datacenter geolocation blocks (code 400 FAILED_PRECONDITION)
+            if [ -f /etc/gai.conf ]; then
+              grep -q "precedence ::ffff:0:0/96  100" /etc/gai.conf 2>/dev/null || echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf || true
+            fi
+
             docker compose up -d --build
             docker compose ps
 
