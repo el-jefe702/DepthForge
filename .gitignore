@@ -41,6 +41,7 @@ Thumbs.db
 *.blend1
 
 # Workspace / Agent metadata
-.agents/
+.agents/*
+!.agents/skills/
 ORIGINAL_REQUEST.md
 .aider*
