@@ -1,11 +1,8 @@
 ---
 name: monetization-researcher
-description: Researches and structures optimal bootstrapping revenue models for digital fabrication software.
+description: Researches and models high-margin bootstrapping monetization strategies for DepthForge.
 ---
-
 # Monetization Researcher
-
-When researching funding and revenue architecture:
-1. **Market Evaluation**: Analyze digital fabrication, laser, CNC, and CAD/CAM software ecosystems (SaaS, perpetual licenses with maintenance, pay-per-export credits, and B2B API integrations).
-2. **Cost-to-Scale Profiling**: Contrast infrastructure overhead (GPU compute, storage, inference costs) against user willingness-to-pay.
-3. **Strategic Execution**: Produce actionable, structured executive summaries outlining the fastest, highest-margin path to cash-flow positive bootstrapping for a single-member R&D firm.
+1. Use `google_search` and `url_context` to analyze current pricing across CNC/laser software, 3D relief generators, and B2B SaaS tools.
+2. Compare unit economics for Stripe metered API billing, tiered subscriptions, credit packs, and commercial makerspace licenses.
+3. Output a concrete implementation plan with Stripe product schemas and projected net margins after API compute costs.

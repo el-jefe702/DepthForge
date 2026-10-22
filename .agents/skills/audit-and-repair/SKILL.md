@@ -1,11 +1,9 @@
 ---
 name: audit-and-repair
-description: Deep-scans the codebase for vulnerabilities, performance bottlenecks in image processing, and structural flaws, then implements automated fixes.
+description: Performs deep multi-file codebase audits, writes verification benchmarks, patches bugs or bottlenecks, and opens a GitHub PR.
 ---
-
 # Audit and Repair
-
-When invoked to audit and repair:
-1. **Analyze**: Inspect the specified directory, file, or pipeline component.
-2. **Identify Bottlenecks & Vulnerabilities**: Detect memory leaks (especially in OpenCV or Three.js 3D displacement pipelines), unoptimized loops, missing validation, or logic errors.
-3. **Patch & Verify**: Generate a clean, minimal, backward-compatible patch, execute verification tests, and push the repair via an automated GitHub Pull Request or branch.
+1. Scan `/workspace/depthforge` for security vulnerabilities, OpenCV memory leaks, Three.js WebGL context issues, or Stripe webhook edge cases.
+2. Write and run a baseline verification test script to reproduce the issue or measure performance.
+3. Implement the fix across affected files and re-run the verification script in a loop until all checks pass.
+4. Create a tracking GitHub Issue on `el-jefe702/DepthForge`, push a clean branch, and open a Pull Request linking the issue and benchmark results.

@@ -43,5 +43,6 @@ Thumbs.db
 # Workspace / Agent metadata
 .agents/*
 !.agents/skills/
+!.agents/AGENTS.md
 ORIGINAL_REQUEST.md
 .aider*
