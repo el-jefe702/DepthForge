@@ -87,6 +87,9 @@ function sanitizeBaseUrl(raw) {
     while ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
         clean = clean.slice(1, -1).trim();
     }
+    if (clean.includes('depthforge-geminiy')) {
+        clean = clean.replace('depthforge-geminiy', 'depthforge-gemini');
+    }
     return clean;
 }
 
@@ -237,8 +240,96 @@ export function buildFinalPrompt(improvedPrompt, depthIntensity = 70) {
         "OUTPUT: Pure black and white height map ONLY. No color, no text, no borders.\n";
 }
 
+async function generateImagesViaRestPredict({ baseUrl, apiKey, prompt, numImages = 1, aspectRatio = '1:1', cfToken = null }) {
+    if (!apiKey) return null;
+    const candidateModels = ['imagen-3.0-generate-002', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001'];
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+    };
+    if (cfToken) {
+        headers['cf-aig-authorization'] = cfToken.startsWith('Bearer ') ? cfToken : `Bearer ${cfToken}`;
+    }
+
+    const host = baseUrl || 'https://generativelanguage.googleapis.com';
+    for (const model of candidateModels) {
+        try {
+            const url = `${host}/v1beta/models/${model}:predict?key=${apiKey}`;
+            const body = {
+                instances: [{ prompt: prompt }],
+                parameters: {
+                    sampleCount: numImages,
+                    aspectRatio: aspectRatio
+                }
+            };
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+                const errText = await resp.text();
+                console.warn(`[Worker ImageGen REST] ${model} returned ${resp.status}: ${errText}`);
+                continue;
+            }
+            const data = await resp.json();
+            const generatedImages = [];
+            if (Array.isArray(data?.predictions)) {
+                for (const pred of data.predictions) {
+                    const b64 = pred?.bytesBase64Encoded || pred?.image?.imageBytes;
+                    if (b64) {
+                        generatedImages.push({
+                            image: { imageBytes: b64 }
+                        });
+                    }
+                }
+            }
+            if (generatedImages.length > 0) {
+                return { generatedImages };
+            }
+        } catch (e) {
+            console.warn(`[Worker ImageGen REST] ${model} fetch error:`, e.message);
+        }
+    }
+    return null;
+}
+
 async function generateImagesWithFallback(params) {
+    const prompt = params.prompt || '';
+    const numImages = params?.config?.numberOfImages || 1;
+    const aspectRatio = params?.config?.aspectRatio || '1:1';
+    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
+
+    // 1. Try native Google AI Studio Imagen predict via Cloudflare Gateway / Base URL
+    const gatewayUrls = [
+        sanitizedBaseUrl,
+        'https://gateway.ai.cloudflare.com/v1/6719c1f96fb5d0cacd2969483878e1f6/depthforge-gemini/google-ai-studio'
+    ].filter(Boolean);
+
+    const seenUrls = new Set();
+    for (const gUrl of gatewayUrls) {
+        if (seenUrls.has(gUrl)) continue;
+        seenUrls.add(gUrl);
+        try {
+            const restResult = await generateImagesViaRestPredict({
+                baseUrl: gUrl,
+                apiKey,
+                prompt,
+                numImages,
+                aspectRatio,
+                cfToken: sanitizedCfToken
+            });
+            if (restResult?.generatedImages?.length) {
+                return restResult;
+            }
+        } catch (restErr) {
+            console.warn(`[Worker ImageGen REST] Gateway ${gUrl} attempt failed:`, restErr?.message || restErr);
+        }
+    }
+
+    // 2. Try SDK models via runWithAiFallback
     return await runWithAiFallback(async (activeAi) => {
+        let lastModelErr = null;
         const candidateModels = [params?.model, 'imagen-4.0-fast-generate-001', 'imagen-4.0-generate-001', 'imagen-3.0-generate-002'].filter(Boolean);
         const seen = new Set();
         for (const modelName of candidateModels) {
@@ -251,16 +342,13 @@ async function generateImagesWithFallback(params) {
                 });
                 if (res?.generatedImages?.length) return res;
             } catch (err) {
+                lastModelErr = err;
                 if (process.env.NODE_ENV === 'test') {
                     throw err;
                 }
                 console.warn(`[Worker ImageGen] generateImages unavailable for ${modelName} (${err?.message || err}), trying next candidate...`);
             }
         }
-
-        const prompt = params.prompt || '';
-        const numImages = params?.config?.numberOfImages || 1;
-        const aspectRatio = params?.config?.aspectRatio || '1:1';
 
         const imageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image-preview'];
         for (const imgModel of imageModels) {
@@ -295,10 +383,14 @@ async function generateImagesWithFallback(params) {
                     return { generatedImages };
                 }
             } catch (modelErr) {
+                lastModelErr = modelErr;
                 console.warn(`[Worker ImageGen] ${imgModel} fallback failed (${modelErr?.message || modelErr}), trying next candidate...`);
             }
         }
 
+        if (lastModelErr) {
+            throw lastModelErr;
+        }
         throw new Error('No image returned from the AI model.');
     });
 }
