@@ -172,9 +172,22 @@ app.use((req, res, next) => {
 const aiOptions = {
     apiKey: process.env.GEMINI_API_KEY
 };
-if (process.env.GEMINI_BASE_URL) {
+function sanitizeBaseUrl(raw) {
+    if (!raw) return null;
+    let clean = raw.trim();
+    while (clean.startsWith('GEMINI_BASE_URL=')) {
+        clean = clean.slice('GEMINI_BASE_URL='.length).trim();
+    }
+    while ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.slice(1, -1).trim();
+    }
+    return clean;
+}
+
+const sanitizedBaseUrl = sanitizeBaseUrl(process.env.GEMINI_BASE_URL);
+if (sanitizedBaseUrl) {
     aiOptions.httpOptions = {
-        baseUrl: process.env.GEMINI_BASE_URL.trim()
+        baseUrl: sanitizedBaseUrl
     };
     const customHeaders = {};
     if (process.env.GEMINI_API_KEY) {
@@ -1611,7 +1624,8 @@ app.get('/api/debug/gemini-check', async (req, res) => {
     const results = {
         hasApiKey: !!process.env.GEMINI_API_KEY,
         apiKeyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 8) + '...' : null,
-        geminiBaseUrl: process.env.GEMINI_BASE_URL || null,
+        geminiBaseUrl: sanitizedBaseUrl || null,
+        rawGeminiBaseUrl: process.env.GEMINI_BASE_URL || null,
         hasCfToken: !!(process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN),
         models: {}
     };
