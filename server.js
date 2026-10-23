@@ -2004,10 +2004,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     try {
         const studentPrompt = req.body.prompt || "";
         const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
-        const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
-        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
         const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const numImages = isBatch ? 4 : 1;
+        const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
+        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
 
         await generationJobQueue.add('generate', {
             jobId,
@@ -2324,6 +2324,8 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
     try {
         if (!req.file) return res.status(400).json({ error: 'No photo uploaded.' });
 
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
+        const numImages = isBatch ? 4 : 1;
         const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
         const isolateBg = req.body.isolate_bg !== false && req.body.isolate_bg !== 'false';
         const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
@@ -2402,7 +2404,7 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
                 model: 'imagen-4.0-fast-generate-001',
                 prompt: finalDepthPrompt,
                 config: {
-                    numberOfImages: 1,
+                    numberOfImages: numImages,
                     outputMimeType: 'image/png',
                     aspectRatio: aspectRatio
                 }
@@ -2441,7 +2443,6 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
             }
         }
 
-        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const payload = {
             status: 'success',
             image_url: imageUrls[0],
