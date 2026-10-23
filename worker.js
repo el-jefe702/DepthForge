@@ -187,6 +187,9 @@ if (process.env.GEMINI_API_KEY) {
 }
 
 async function runWithAiFallback(operation) {
+    if (process.env.NODE_ENV === 'test') {
+        return await operation(ai);
+    }
     const clients = [
         { name: 'primary-ai', client: ai },
         { name: 'no-auth-gateway-ai', client: noAuthGatewayAi },
