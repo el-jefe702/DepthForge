@@ -78,9 +78,141 @@ export function updateJobStatus(id, status, resultUrl = null, error = null, data
     });
 }
 
-const ai = new GoogleGenAI({
+function sanitizeBaseUrl(raw) {
+    if (!raw) return null;
+    let clean = raw.trim();
+    while (clean.startsWith('GEMINI_BASE_URL=')) {
+        clean = clean.slice('GEMINI_BASE_URL='.length).trim();
+    }
+    while ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.slice(1, -1).trim();
+    }
+    return clean;
+}
+
+function sanitizeToken(raw) {
+    if (!raw) return null;
+    let clean = raw.trim();
+    while (clean.startsWith('CF_AIG_TOKEN=') || clean.startsWith('CLOUDFLARE_AIG_TOKEN=')) {
+        clean = clean.split('=')[1].trim();
+    }
+    while ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.slice(1, -1).trim();
+    }
+    return clean;
+}
+
+const sanitizedBaseUrl = sanitizeBaseUrl(process.env.GEMINI_BASE_URL);
+const sanitizedCfToken = sanitizeToken(process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN);
+
+const aiOptions = {
     apiKey: process.env.GEMINI_API_KEY
-});
+};
+
+if (sanitizedBaseUrl) {
+    aiOptions.httpOptions = {
+        baseUrl: sanitizedBaseUrl
+    };
+    const customHeaders = {};
+    if (process.env.GEMINI_API_KEY) {
+        customHeaders['x-goog-api-key'] = process.env.GEMINI_API_KEY.trim();
+    }
+    if (sanitizedCfToken) {
+        customHeaders['cf-aig-authorization'] = sanitizedCfToken.startsWith('Bearer ') ? sanitizedCfToken : `Bearer ${sanitizedCfToken}`;
+    }
+    if (Object.keys(customHeaders).length > 0) {
+        aiOptions.httpOptions.headers = customHeaders;
+    }
+}
+
+let ai;
+try {
+    ai = new GoogleGenAI(aiOptions);
+} catch (aiInitErr) {
+    console.error('[Worker AI Init Error] Failed to initialize GoogleGenAI with custom options:', aiInitErr?.message || aiInitErr);
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+
+let noAuthGatewayAi = null;
+if (sanitizedBaseUrl && process.env.GEMINI_API_KEY && sanitizedCfToken) {
+    try {
+        noAuthGatewayAi = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY.trim(),
+            httpOptions: {
+                baseUrl: sanitizedBaseUrl,
+                headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() }
+            }
+        });
+    } catch (e) {
+        console.warn('[Worker NoAuthGateway AI Init Error]:', e.message);
+    }
+}
+
+let altAi = null;
+if (sanitizedBaseUrl && process.env.GEMINI_API_KEY) {
+    const altUrl = sanitizedBaseUrl.includes('depthforge-geminiy')
+        ? sanitizedBaseUrl.replace('depthforge-geminiy', 'depthforge-gemini')
+        : (sanitizedBaseUrl.includes('depthforge-gemini')
+            ? sanitizedBaseUrl.replace('depthforge-gemini', 'depthforge-geminiy')
+            : null);
+    if (altUrl && altUrl !== sanitizedBaseUrl) {
+        try {
+            const altHeaders = { 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() };
+            if (sanitizedCfToken) {
+                altHeaders['cf-aig-authorization'] = sanitizedCfToken.startsWith('Bearer ') ? sanitizedCfToken : `Bearer ${sanitizedCfToken}`;
+            }
+            altAi = new GoogleGenAI({
+                apiKey: process.env.GEMINI_API_KEY.trim(),
+                httpOptions: {
+                    baseUrl: altUrl,
+                    headers: altHeaders
+                }
+            });
+        } catch (e) {
+            console.warn('[Worker Alt AI Init Error]:', e.message);
+        }
+    }
+}
+
+let directAi = null;
+if (process.env.GEMINI_API_KEY) {
+    try {
+        directAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
+    } catch (e) {
+        console.warn('[Worker Direct AI Init Error]:', e.message);
+    }
+}
+
+async function runWithAiFallback(operation) {
+    const clients = [
+        { name: 'primary-ai', client: ai },
+        { name: 'no-auth-gateway-ai', client: noAuthGatewayAi },
+        { name: 'alt-gateway-ai', client: altAi },
+        { name: 'direct-google-ai', client: directAi }
+    ].filter(item => !!item.client);
+
+    let lastError = null;
+    for (const { name, client } of clients) {
+        try {
+            return await operation(client);
+        } catch (err) {
+            lastError = err;
+            const errMsg = String(err?.message || err || '');
+            const isRetryable = errMsg.includes('AiGatewayError') ||
+                                errMsg.includes('2009') ||
+                                errMsg.includes('Unauthorized') ||
+                                errMsg.includes('FAILED_PRECONDITION') ||
+                                errMsg.includes('location is not supported') ||
+                                errMsg.includes('fetch failed');
+            if (isRetryable && clients.length > 1) {
+                console.warn(`[Worker AI Fallback] ${name} failed (${errMsg}), trying next client...`);
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError;
+}
 
 export function getDepthModifier(intensity = 70) {
     const num = Number(intensity);
@@ -106,50 +238,69 @@ export function buildFinalPrompt(improvedPrompt, depthIntensity = 70) {
 }
 
 async function generateImagesWithFallback(params) {
-    try {
-        const res = await ai.models.generateImages(params);
-        if (res?.generatedImages?.length) return res;
-    } catch (err) {
-        if (process.env.NODE_ENV === 'test') {
-            throw err;
-        }
-        console.warn(`[Worker ImageGen] generateImages unavailable (${err?.message || err}), falling back to gemini-3.1-flash-image`);
-    }
-
-    const prompt = params.prompt || '';
-    const numImages = params?.config?.numberOfImages || 1;
-    const aspectRatio = params?.config?.aspectRatio || '1:1';
-
-    const tasks = Array.from({ length: numImages }, () =>
-        ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
-            contents: prompt,
-            config: {
-                imageConfig: {
-                    aspectRatio: aspectRatio
+    return await runWithAiFallback(async (activeAi) => {
+        const candidateModels = [params?.model, 'imagen-4.0-fast-generate-001', 'imagen-4.0-generate-001', 'imagen-3.0-generate-002'].filter(Boolean);
+        const seen = new Set();
+        for (const modelName of candidateModels) {
+            if (seen.has(modelName)) continue;
+            seen.add(modelName);
+            try {
+                const res = await activeAi.models.generateImages({
+                    ...params,
+                    model: modelName
+                });
+                if (res?.generatedImages?.length) return res;
+            } catch (err) {
+                if (process.env.NODE_ENV === 'test') {
+                    throw err;
                 }
+                console.warn(`[Worker ImageGen] generateImages unavailable for ${modelName} (${err?.message || err}), trying next candidate...`);
             }
-        })
-    );
-
-    const responses = await Promise.all(tasks);
-    const generatedImages = [];
-    for (const r of responses) {
-        const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        if (part?.inlineData?.data) {
-            generatedImages.push({
-                image: {
-                    imageBytes: part.inlineData.data
-                }
-            });
         }
-    }
 
-    if (!generatedImages.length) {
+        const prompt = params.prompt || '';
+        const numImages = params?.config?.numberOfImages || 1;
+        const aspectRatio = params?.config?.aspectRatio || '1:1';
+
+        const imageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image-preview'];
+        for (const imgModel of imageModels) {
+            try {
+                const tasks = Array.from({ length: numImages }, () =>
+                    activeAi.models.generateContent({
+                        model: imgModel,
+                        contents: prompt,
+                        config: {
+                            responseModalities: ['TEXT', 'IMAGE'],
+                            imageConfig: {
+                                aspectRatio: aspectRatio
+                            }
+                        }
+                    })
+                );
+
+                const responses = await Promise.all(tasks);
+                const generatedImages = [];
+                for (const r of responses) {
+                    const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                    if (part?.inlineData?.data) {
+                        generatedImages.push({
+                            image: {
+                                imageBytes: part.inlineData.data
+                            }
+                        });
+                    }
+                }
+
+                if (generatedImages.length > 0) {
+                    return { generatedImages };
+                }
+            } catch (modelErr) {
+                console.warn(`[Worker ImageGen] ${imgModel} fallback failed (${modelErr?.message || modelErr}), trying next candidate...`);
+            }
+        }
+
         throw new Error('No image returned from the AI model.');
-    }
-
-    return { generatedImages };
+    });
 }
 
 export function runProcessor(command, inputPath, outputPath) {

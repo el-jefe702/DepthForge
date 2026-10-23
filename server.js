@@ -184,7 +184,21 @@ function sanitizeBaseUrl(raw) {
     return clean;
 }
 
+function sanitizeToken(raw) {
+    if (!raw) return null;
+    let clean = raw.trim();
+    while (clean.startsWith('CF_AIG_TOKEN=') || clean.startsWith('CLOUDFLARE_AIG_TOKEN=')) {
+        clean = clean.split('=')[1].trim();
+    }
+    while ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.slice(1, -1).trim();
+    }
+    return clean;
+}
+
 const sanitizedBaseUrl = sanitizeBaseUrl(process.env.GEMINI_BASE_URL);
+const sanitizedCfToken = sanitizeToken(process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN);
+
 if (sanitizedBaseUrl) {
     aiOptions.httpOptions = {
         baseUrl: sanitizedBaseUrl
@@ -193,10 +207,8 @@ if (sanitizedBaseUrl) {
     if (process.env.GEMINI_API_KEY) {
         customHeaders['x-goog-api-key'] = process.env.GEMINI_API_KEY.trim();
     }
-    const cfToken = process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN;
-    if (cfToken) {
-        const cleanToken = cfToken.trim();
-        customHeaders['cf-aig-authorization'] = cleanToken.startsWith('Bearer ') ? cleanToken : `Bearer ${cleanToken}`;
+    if (sanitizedCfToken) {
+        customHeaders['cf-aig-authorization'] = sanitizedCfToken.startsWith('Bearer ') ? sanitizedCfToken : `Bearer ${sanitizedCfToken}`;
     }
     if (Object.keys(customHeaders).length > 0) {
         aiOptions.httpOptions.headers = customHeaders;
@@ -218,6 +230,12 @@ if (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true') {
         aiOptions.googleAuthOptions = { keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS };
     }
 }
+
+// Multi-tiered AI client pool:
+// 1. Primary AI client (configured via GEMINI_BASE_URL and/or Vertex AI)
+// 2. No-auth Gateway client (same gateway baseUrl, but without cf-aig-authorization header in case Authenticated Gateway is off)
+// 3. Alternate Gateway client (swapping depthforge-geminiy <-> depthforge-gemini slug)
+// 4. Direct Google AI Studio client (no proxy, direct to generativelanguage.googleapis.com)
 let ai;
 try {
     ai = new GoogleGenAI(aiOptions);
@@ -225,68 +243,154 @@ try {
     console.error('[AI Init Error] Failed to initialize GoogleGenAI with custom options:', aiInitErr?.message || aiInitErr);
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
+
+let noAuthGatewayAi = null;
+if (sanitizedBaseUrl && process.env.GEMINI_API_KEY && sanitizedCfToken) {
+    try {
+        noAuthGatewayAi = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY.trim(),
+            httpOptions: {
+                baseUrl: sanitizedBaseUrl,
+                headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() }
+            }
+        });
+    } catch (e) {
+        console.warn('[NoAuthGateway AI Init Error]:', e.message);
+    }
+}
+
+let altAi = null;
+if (sanitizedBaseUrl && process.env.GEMINI_API_KEY) {
+    const altUrl = sanitizedBaseUrl.includes('depthforge-geminiy')
+        ? sanitizedBaseUrl.replace('depthforge-geminiy', 'depthforge-gemini')
+        : (sanitizedBaseUrl.includes('depthforge-gemini')
+            ? sanitizedBaseUrl.replace('depthforge-gemini', 'depthforge-geminiy')
+            : null);
+    if (altUrl && altUrl !== sanitizedBaseUrl) {
+        try {
+            const altHeaders = { 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() };
+            if (sanitizedCfToken) {
+                altHeaders['cf-aig-authorization'] = sanitizedCfToken.startsWith('Bearer ') ? sanitizedCfToken : `Bearer ${sanitizedCfToken}`;
+            }
+            altAi = new GoogleGenAI({
+                apiKey: process.env.GEMINI_API_KEY.trim(),
+                httpOptions: {
+                    baseUrl: altUrl,
+                    headers: altHeaders
+                }
+            });
+        } catch (e) {
+            console.warn('[Alt AI Init Error]:', e.message);
+        }
+    }
+}
+
+let directAi = null;
+if (process.env.GEMINI_API_KEY) {
+    try {
+        directAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
+    } catch (e) {
+        console.warn('[Direct AI Init Error]:', e.message);
+    }
+}
+
+async function runWithAiFallback(operation) {
+    const clients = [
+        { name: 'primary-ai', client: ai },
+        { name: 'no-auth-gateway-ai', client: noAuthGatewayAi },
+        { name: 'alt-gateway-ai', client: altAi },
+        { name: 'direct-google-ai', client: directAi }
+    ].filter(item => !!item.client);
+
+    let lastError = null;
+    for (const { name, client } of clients) {
+        try {
+            return await operation(client);
+        } catch (err) {
+            lastError = err;
+            const errMsg = String(err?.message || err || '');
+            const isRetryable = errMsg.includes('AiGatewayError') ||
+                                errMsg.includes('2009') ||
+                                errMsg.includes('Unauthorized') ||
+                                errMsg.includes('FAILED_PRECONDITION') ||
+                                errMsg.includes('location is not supported') ||
+                                errMsg.includes('fetch failed');
+            if (isRetryable && clients.length > 1) {
+                console.warn(`[AI Client Fallback] ${name} failed (${errMsg}), trying next candidate...`);
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError;
+}
+
 if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     console.warn("WARNING: GEMINI_API_KEY and Google credentials are missing from .env! AI generation will fail.");
 }
 
 async function generateImagesWithFallback(params) {
-    const candidateModels = [params?.model, 'imagen-4.0-generate-001', 'imagen-3.0-generate-002'].filter(Boolean);
-    const seen = new Set();
-    for (const modelName of candidateModels) {
-        if (seen.has(modelName)) continue;
-        seen.add(modelName);
-        try {
-            const res = await ai.models.generateImages({
-                ...params,
-                model: modelName
-            });
-            if (res?.generatedImages?.length) return res;
-        } catch (err) {
-            // If running in test mode or if error was an explicit test rejection, rethrow so tests can verify 500 error handling
-            if (process.env.NODE_ENV === 'test') {
-                throw err;
+    return await runWithAiFallback(async (activeAi) => {
+        const candidateModels = [params?.model, 'imagen-4.0-generate-001', 'imagen-3.0-generate-002'].filter(Boolean);
+        const seen = new Set();
+        for (const modelName of candidateModels) {
+            if (seen.has(modelName)) continue;
+            seen.add(modelName);
+            try {
+                const res = await activeAi.models.generateImages({
+                    ...params,
+                    model: modelName
+                });
+                if (res?.generatedImages?.length) return res;
+            } catch (err) {
+                if (process.env.NODE_ENV === 'test') {
+                    throw err;
+                }
+                console.warn(`[ImageGen] generateImages unavailable for ${modelName} (${err?.message || err}), trying next candidate...`);
             }
-            console.warn(`[ImageGen] generateImages unavailable for ${modelName} (${err?.message || err}), trying next candidate...`);
         }
-    }
 
-    const prompt = params.prompt || '';
-    const numImages = params?.config?.numberOfImages || 1;
-    const aspectRatio = params?.config?.aspectRatio || '1:1';
+        const prompt = params.prompt || '';
+        const numImages = params?.config?.numberOfImages || 1;
+        const aspectRatio = params?.config?.aspectRatio || '1:1';
 
-    try {
-        const tasks = Array.from({ length: numImages }, () =>
-            ai.models.generateContent({
-                model: 'gemini-3.1-flash-image',
-                contents: prompt,
-                config: {
-                    responseModalities: ['TEXT', 'IMAGE'],
-                    imageConfig: {
-                        aspectRatio: aspectRatio
+        const imageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image-preview'];
+        for (const imgModel of imageModels) {
+            try {
+                const tasks = Array.from({ length: numImages }, () =>
+                    activeAi.models.generateContent({
+                        model: imgModel,
+                        contents: prompt,
+                        config: {
+                            responseModalities: ['TEXT', 'IMAGE'],
+                            imageConfig: {
+                                aspectRatio: aspectRatio
+                            }
+                        }
+                    })
+                );
+                const responses = await Promise.all(tasks);
+                const generatedImages = [];
+                for (const r of responses) {
+                    const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                    if (part?.inlineData?.data) {
+                        generatedImages.push({
+                            image: {
+                                imageBytes: part.inlineData.data
+                            }
+                        });
                     }
                 }
-            })
-        );
-        const responses = await Promise.all(tasks);
-        const generatedImages = [];
-        for (const r of responses) {
-            const part = r?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-            if (part?.inlineData?.data) {
-                generatedImages.push({
-                    image: {
-                        imageBytes: part.inlineData.data
-                    }
-                });
+                if (generatedImages.length > 0) {
+                    return { generatedImages };
+                }
+            } catch (modelErr) {
+                console.warn(`[ImageGen] ${imgModel} fallback failed (${modelErr?.message || modelErr}), trying next candidate...`);
             }
         }
-        if (generatedImages.length > 0) {
-            return { generatedImages };
-        }
-    } catch (modelErr) {
-        console.warn(`[ImageGen] gemini-3.1-flash-image fallback failed (${modelErr?.message || modelErr})`);
-    }
 
-    throw new Error('No image returned from the AI model. Check API key or region permissions.');
+        throw new Error('No image returned from the AI model. Check API key or region permissions.');
+    });
 }
 
 // ----------------------------------------------------------------------
@@ -1621,21 +1725,128 @@ app.route('/api/health')
 
 
 app.get('/api/debug/gemini-check', async (req, res) => {
+    const rawBaseUrl = process.env.GEMINI_BASE_URL || null;
+    const rawCfToken = process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN || null;
+    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
+
     const results = {
-        hasApiKey: !!process.env.GEMINI_API_KEY,
-        apiKeyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 8) + '...' : null,
+        hasApiKey: !!apiKey,
+        apiKeyPrefix: apiKey ? apiKey.slice(0, 8) + '...' : null,
         geminiBaseUrl: sanitizedBaseUrl || null,
-        rawGeminiBaseUrl: process.env.GEMINI_BASE_URL || null,
-        hasCfToken: !!(process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN),
+        rawGeminiBaseUrl: rawBaseUrl,
+        hasCfToken: !!sanitizedCfToken,
+        cfTokenPrefix: sanitizedCfToken ? sanitizedCfToken.slice(0, 6) + '...' : null,
+        cfTokenLength: sanitizedCfToken ? sanitizedCfToken.length : 0,
+        availableClients: {
+            hasPrimary: !!ai,
+            hasNoAuthGateway: !!noAuthGatewayAi,
+            hasAltGateway: !!altAi,
+            hasDirectGoogle: !!directAi
+        },
+        directProbes: {},
         models: {}
     };
+
+    // Probe 1: Direct Google AI Studio REST
+    if (apiKey) {
+        try {
+            const directRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const directJson = await directRes.json();
+            results.directProbes['direct-google'] = {
+                status: directRes.status,
+                ok: directRes.ok,
+                sampleModel: directJson?.models?.[0]?.name || null,
+                error: directRes.ok ? null : (directJson?.error?.message || directJson)
+            };
+        } catch (e) {
+            results.directProbes['direct-google'] = { error: e.message };
+        }
+    }
+
+    // Probe 2: Configured Cloudflare Gateway (with token)
+    if (sanitizedBaseUrl && apiKey) {
+        const probeHeaders = { 'x-goog-api-key': apiKey };
+        if (sanitizedCfToken) {
+            probeHeaders['cf-aig-authorization'] = sanitizedCfToken.startsWith('Bearer ') ? sanitizedCfToken : `Bearer ${sanitizedCfToken}`;
+        }
+        try {
+            const cfRes = await fetch(`${sanitizedBaseUrl}/v1beta/models?key=${apiKey}`, { headers: probeHeaders });
+            const cfJson = await cfRes.json();
+            results.directProbes['configured-gateway-with-token'] = {
+                url: sanitizedBaseUrl,
+                status: cfRes.status,
+                ok: cfRes.ok,
+                sampleModel: cfJson?.models?.[0]?.name || null,
+                error: cfRes.ok ? null : (cfJson?.error || cfJson)
+            };
+        } catch (e) {
+            results.directProbes['configured-gateway-with-token'] = { error: e.message };
+        }
+
+        // Probe 3: Configured Cloudflare Gateway (WITHOUT token)
+        try {
+            const noAuthRes = await fetch(`${sanitizedBaseUrl}/v1beta/models?key=${apiKey}`, {
+                headers: { 'x-goog-api-key': apiKey }
+            });
+            const noAuthJson = await noAuthRes.json();
+            results.directProbes['configured-gateway-no-token'] = {
+                url: sanitizedBaseUrl,
+                status: noAuthRes.status,
+                ok: noAuthRes.ok,
+                sampleModel: noAuthJson?.models?.[0]?.name || null,
+                error: noAuthRes.ok ? null : (noAuthJson?.error || noAuthJson)
+            };
+        } catch (e) {
+            results.directProbes['configured-gateway-no-token'] = { error: e.message };
+        }
+
+        // Probe 4: Alternate slug (depthforge-geminiy <-> depthforge-gemini)
+        const altUrl = sanitizedBaseUrl.includes('depthforge-geminiy')
+            ? sanitizedBaseUrl.replace('depthforge-geminiy', 'depthforge-gemini')
+            : (sanitizedBaseUrl.includes('depthforge-gemini')
+                ? sanitizedBaseUrl.replace('depthforge-gemini', 'depthforge-geminiy')
+                : null);
+        if (altUrl && altUrl !== sanitizedBaseUrl) {
+            try {
+                const altRes = await fetch(`${altUrl}/v1beta/models?key=${apiKey}`, { headers: probeHeaders });
+                const altJson = await altRes.json();
+                results.directProbes['alternate-gateway-with-token'] = {
+                    url: altUrl,
+                    status: altRes.status,
+                    ok: altRes.ok,
+                    sampleModel: altJson?.models?.[0]?.name || null,
+                    error: altRes.ok ? null : (altJson?.error || altJson)
+                };
+            } catch (e) {
+                results.directProbes['alternate-gateway-with-token'] = { error: e.message };
+            }
+
+            try {
+                const altNoAuthRes = await fetch(`${altUrl}/v1beta/models?key=${apiKey}`, {
+                    headers: { 'x-goog-api-key': apiKey }
+                });
+                const altNoAuthJson = await altNoAuthRes.json();
+                results.directProbes['alternate-gateway-no-token'] = {
+                    url: altUrl,
+                    status: altNoAuthRes.status,
+                    ok: altNoAuthRes.ok,
+                    sampleModel: altNoAuthJson?.models?.[0]?.name || null,
+                    error: altNoAuthRes.ok ? null : (altNoAuthJson?.error || altNoAuthJson)
+                };
+            } catch (e) {
+                results.directProbes['alternate-gateway-no-token'] = { error: e.message };
+            }
+        }
+    }
 
     const textModels = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'];
     for (const m of textModels) {
         try {
-            const out = await ai.models.generateContent({
-                model: m,
-                contents: 'Respond with OK'
+            const out = await runWithAiFallback(async (activeAi) => {
+                return await activeAi.models.generateContent({
+                    model: m,
+                    contents: 'Respond with OK'
+                });
             });
             results.models[m] = { success: true, text: out?.text };
         } catch (e) {
@@ -1643,32 +1854,15 @@ app.get('/api/debug/gemini-check', async (req, res) => {
         }
     }
 
-    const imageModels = ['imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'imagen-3.0-generate-002'];
-    for (const m of imageModels) {
-        try {
-            const imgOut = await ai.models.generateImages({
-                model: m,
-                prompt: 'a stone coin',
-                config: { numberOfImages: 1, outputMimeType: 'image/png' }
-            });
-            results.models[m] = { success: true, count: imgOut?.generatedImages?.length };
-        } catch (e) {
-            results.models[m] = { success: false, error: e.message };
-        }
-    }
-
-    const flashImageModels = ['gemini-3.1-flash-image'];
-    for (const m of flashImageModels) {
-        try {
-            const flashImg = await ai.models.generateContent({
-                model: m,
-                contents: 'a stone coin',
-                config: { responseModalities: ['TEXT', 'IMAGE'] }
-            });
-            results.models[m] = { success: true, text: flashImg?.text };
-        } catch (e) {
-            results.models[m] = { success: false, error: e.message };
-        }
+    try {
+        const imgOut = await generateImagesWithFallback({
+            model: 'imagen-4.0-fast-generate-001',
+            prompt: 'a stone coin medallion',
+            config: { numberOfImages: 1, outputMimeType: 'image/png' }
+        });
+        results.models['image-generation-fallback'] = { success: true, count: imgOut?.generatedImages?.length };
+    } catch (e) {
+        results.models['image-generation-fallback'] = { success: false, error: e.message };
     }
 
     try {
@@ -1714,10 +1908,12 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         const improveModels = ['gemini-3.6-flash', 'gemini-3.8-flash'];
         for (const m of improveModels) {
             try {
-                const improveResponse = await ai.models.generateContent({
-                    model: m,
-                    contents: buildImprovePrompt(studentPrompt, stylePreset),
-                    config: { responseMimeType: "application/json" }
+                const improveResponse = await runWithAiFallback(async (activeAi) => {
+                    return await activeAi.models.generateContent({
+                        model: m,
+                        contents: buildImprovePrompt(studentPrompt, stylePreset),
+                        config: { responseMimeType: "application/json" }
+                    });
                 });
                 const rawImproveText = improveResponse?.text || "";
                 const responseJson = safeJsonParse(rawImproveText, {});
@@ -2027,15 +2223,17 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
         const visionModels = ['gemini-3.6-flash', 'gemini-3.8-flash'];
         for (const m of visionModels) {
             try {
-                const analysisResponse = await ai.models.generateContent({
-                    model: m,
-                    contents: [{
-                        parts: [
-                            { inlineData: { mimeType: mimeType, data: photoBase64 } },
-                            { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
-                        ]
-                    }],
-                    config: { responseMimeType: 'application/json' }
+                const analysisResponse = await runWithAiFallback(async (activeAi) => {
+                    return await activeAi.models.generateContent({
+                        model: m,
+                        contents: [{
+                            parts: [
+                                { inlineData: { mimeType: mimeType, data: photoBase64 } },
+                                { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
+                            ]
+                        }],
+                        config: { responseMimeType: 'application/json' }
+                    });
                 });
                 rawAnalysisText = analysisResponse?.text || "";
                 analysisJson = safeJsonParse(rawAnalysisText, {});
