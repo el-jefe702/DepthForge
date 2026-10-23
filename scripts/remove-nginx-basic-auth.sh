@@ -19,6 +19,11 @@ for conf in "${NGINX_FILES[@]}"; do
       sed -i -E 's/^([[:space:]]*)(auth_basic)/\1# \2/g' "$conf"
       FOUND=1
     fi
+    # Ensure proxy_read_timeout and client_max_body_size are configured for photo-to-depth
+    if ! grep -q 'proxy_read_timeout' "$conf"; then
+      sed -i -E 's/(proxy_pass http:\/\/127.0.0.1:8001;)/\1\n        proxy_read_timeout 300s;\n        proxy_connect_timeout 300s;\n        client_max_body_size 50M;/g' "$conf" || true
+      FOUND=1
+    fi
   fi
 done
 

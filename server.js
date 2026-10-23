@@ -945,17 +945,34 @@ const pythonProcessorQueue = new PQueue({ concurrency: 1 });
 
 const runPythonProcessorDirect = (command, args) => {
     return new Promise((resolve, reject) => {
+        let isDone = false;
         const pyProg = spawnPythonProcessor(command, args);
+
+        const timer = setTimeout(() => {
+            if (!isDone) {
+                isDone = true;
+                try { pyProg.kill('SIGKILL'); } catch (e) {}
+                reject(new Error(`Python script timed out after 40s for '${command}'`));
+            }
+        }, 40000);
 
         pyProg.stdout.on('data', (data) => console.log(`[Python] ${data.toString().trim()}`));
         let errorOutput = '';
         pyProg.stderr.on('data', (data) => errorOutput += data.toString());
 
         pyProg.on('close', (code) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
             if (code === 0) resolve();
             else reject(new Error(`Python script failed (${code}): ${errorOutput}`));
         });
-        pyProg.on('error', (err) => reject(new Error(`Could not start Python: ${err.message}`)));
+        pyProg.on('error', (err) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            reject(new Error(`Could not start Python: ${err.message}`));
+        });
     });
 };
 

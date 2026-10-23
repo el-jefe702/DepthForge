@@ -197,32 +197,71 @@ def get_model_path():
     """Locates or prepares destination path for Depth Anything V2 ONNX model."""
     search_dirs = [
         os.environ.get("DEPTH_MODEL_DIR"),
+        "/app/models",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "models"),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "models"),
-        "/app/data/models",
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+        "/app/data/models"
     ]
     for d in search_dirs:
         if d and os.path.exists(os.path.join(d, MODEL_FILENAME)):
             return os.path.join(d, MODEL_FILENAME)
 
-    dest_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "models")
+    dest_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
     os.makedirs(dest_dir, exist_ok=True)
     return os.path.join(dest_dir, MODEL_FILENAME)
 
 def ensure_model_downloaded(model_path):
-    """Downloads model if missing, with safety fallback."""
+    """Downloads model if missing, with safety fallback and strict timeout."""
     if os.path.exists(model_path) and os.path.getsize(model_path) > 1000000:
         return True
     print(f"Downloading Depth Anything V2 Small ONNX model (~27MB) to {model_path}...", flush=True)
     try:
         import urllib.request
-        urllib.request.urlretrieve(MODEL_URL, model_path)
-        if os.path.exists(model_path) and os.path.getsize(model_path) > 1000000:
-            print("Model download complete.", flush=True)
-            return True
+        req = urllib.request.Request(MODEL_URL, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = resp.read()
+            if len(data) > 1000000:
+                with open(model_path, "wb") as f:
+                    f.write(data)
+                print("Model download complete.", flush=True)
+                return True
     except Exception as e:
-        print(f"Warning: Model download failed ({e}), using photometric shape-from-shading fallback.", file=sys.stderr, flush=True)
+        print(f"Warning: Model download failed or timed out ({e}), using photometric shape-from-shading fallback.", file=sys.stderr, flush=True)
     return False
+
+def get_foreground_mask(img_bgr):
+    """Isolates foreground subject on black CNC bed. Uses rembg if fast/available, else fast GrabCut."""
+    h, w = img_bgr.shape[:2]
+    # Check if rembg is available and u2net is already downloaded
+    u2net_home = os.path.expanduser("~/.u2net/u2net.onnx")
+    if os.path.exists(u2net_home):
+        try:
+            import rembg
+            rgba = rembg.remove(img_bgr)
+            alpha = rgba[:, :, 3]
+            return (alpha > 20).astype(np.uint8)
+        except Exception:
+            pass
+
+    # Fast GrabCut segmentation (100ms, zero download)
+    try:
+        margin_h = max(2, int(h * 0.04))
+        margin_w = max(2, int(w * 0.04))
+        rect = (margin_w, margin_h, w - 2 * margin_w, h - 2 * margin_h)
+        mask = np.zeros((h, w), np.uint8)
+        bgd_model = np.zeros((1, 65), np.float64)
+        fgd_model = np.zeros((1, 65), np.float64)
+        cv2.grabCut(img_bgr, mask, rect, bgd_model, fgd_model, 2, cv2.GC_INIT_WITH_RECT)
+        fg_mask = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
+        if np.any(fg_mask > 0):
+            return fg_mask
+    except Exception:
+        pass
+
+    # Luminance threshold fallback
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 20, 255, cv2.THRESH_BINARY)
+    return (thresh > 0).astype(np.uint8)
 
 def run_depth_anything_inference(img_bgr, model_path):
     """Executes Depth Anything V2 inference on input image."""
@@ -295,10 +334,7 @@ def photo_to_depth(input_path, output_path, depth_intensity=70, isolate_bg="true
     if should_isolate:
         print("[STEP 2/5] Isolating subject on pure black CNC background...", flush=True)
         try:
-            import rembg
-            rgba = rembg.remove(img_bgr)
-            alpha = rgba[:, :, 3]
-            fg_mask = (alpha > 20).astype(np.uint8)
+            fg_mask = get_foreground_mask(img_bgr)
         except Exception as e:
             print(f"Background isolation skipped or failed: {e}", flush=True)
             fg_mask = np.ones((orig_h, orig_w), dtype=np.uint8)
