@@ -176,6 +176,18 @@ if (process.env.GEMINI_BASE_URL) {
     aiOptions.httpOptions = {
         baseUrl: process.env.GEMINI_BASE_URL.trim()
     };
+    const customHeaders = {};
+    if (process.env.GEMINI_API_KEY) {
+        customHeaders['x-goog-api-key'] = process.env.GEMINI_API_KEY.trim();
+    }
+    const cfToken = process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN;
+    if (cfToken) {
+        const cleanToken = cfToken.trim();
+        customHeaders['cf-aig-authorization'] = cleanToken.startsWith('Bearer ') ? cleanToken : `Bearer ${cleanToken}`;
+    }
+    if (Object.keys(customHeaders).length > 0) {
+        aiOptions.httpOptions.headers = customHeaders;
+    }
 }
 if (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true') {
     aiOptions.vertexai = true;
