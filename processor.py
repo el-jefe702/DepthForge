@@ -408,18 +408,19 @@ def main():
         print("Usage: python processor.py <command> <input_path> <output_path> [depth_intensity] [isolate_bg]", file=sys.stderr, flush=True)
         sys.exit(1)
 
-    command = sys.argv[1]
+    mode = sys.argv[1]
+    command = mode
     input_path = sys.argv[2]
     output_path = sys.argv[3]
     depth_intensity = sys.argv[4] if len(sys.argv) > 4 else 70
     isolate_bg = sys.argv[5] if len(sys.argv) > 5 else "true"
 
-    if command == "smooth":
-        smooth_image(input_path, output_path)
-    elif command == "photo_to_depth":
-        photo_to_depth(input_path, output_path, depth_intensity, isolate_bg)
-    elif command == "remove_bg":
+    if mode == "remove_bg":
         remove_bg(input_path, output_path)
+    elif mode == "smooth":
+        smooth_image(input_path, output_path)
+    elif mode == "photo_to_depth":
+        photo_to_depth(input_path, output_path, depth_intensity, isolate_bg)
     elif command == "invert":
         invert_image(input_path, output_path)
     elif command == "mesh":
