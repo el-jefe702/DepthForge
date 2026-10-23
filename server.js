@@ -1611,6 +1611,8 @@ app.get('/api/debug/gemini-check', async (req, res) => {
     const results = {
         hasApiKey: !!process.env.GEMINI_API_KEY,
         apiKeyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 8) + '...' : null,
+        geminiBaseUrl: process.env.GEMINI_BASE_URL || null,
+        hasCfToken: !!(process.env.CF_AIG_TOKEN || process.env.CLOUDFLARE_AIG_TOKEN),
         models: {}
     };
 
