@@ -149,9 +149,12 @@ const creditDeductionMiddleware = (req, res, next) => {
 };
 app.use(['/api/generate', '/api/photo-to-depth'], creditDeductionMiddleware);
 
-// Global unhandled rejection guard — prevents silent process crashes
+// Global error guards — prevents silent process crashes
 process.on('unhandledRejection', (reason) => {
     console.error('[UnhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('[UncaughtException]', err);
 });
 
 // Request logging middleware
@@ -190,9 +193,15 @@ if (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true') {
         aiOptions.googleAuthOptions = { keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS };
     }
 }
-const ai = new GoogleGenAI(aiOptions);
-if (!process.env.GEMINI_API_KEY) {
-    console.warn("WARNING: GEMINI_API_KEY is missing from .env! Image generation will fail.");
+let ai;
+try {
+    ai = new GoogleGenAI(aiOptions);
+} catch (aiInitErr) {
+    console.error('[AI Init Error] Failed to initialize GoogleGenAI with custom options:', aiInitErr?.message || aiInitErr);
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.warn("WARNING: GEMINI_API_KEY and Google credentials are missing from .env! AI generation will fail.");
 }
 
 async function generateImagesWithFallback(params) {
