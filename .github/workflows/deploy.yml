@@ -56,6 +56,7 @@ jobs:
 
             docker compose up -d --build
             docker compose ps
+            docker compose logs --tail 50 depthforge || true
 
             # Remove Nginx HTTP Basic Auth prompts since unified login system is in place
             if [ -f scripts/remove-nginx-basic-auth.sh ]; then
