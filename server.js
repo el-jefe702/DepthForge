@@ -2300,91 +2300,103 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
     try {
         if (!req.file) return res.status(400).json({ error: 'No photo uploaded.' });
 
-        const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
         const depthIntensity = sanitizeDepthIntensity(req.body.depth_intensity ?? req.body.depthIntensity);
-        const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
-        const styleGuidance = getStyleGuidance(stylePreset);
-        const styleClause = styleGuidance ? ` ${styleGuidance}` : '';
+        const isolateBg = req.body.isolate_bg !== false && req.body.isolate_bg !== 'false';
+        const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
+        const filepath = path.join(generatedDir, filename);
 
-        const photoBytes = await fs.promises.readFile(uploadedPath);
-        const photoBase64 = photoBytes.toString('base64');
-        const mimeType = req.file.mimetype || 'image/jpeg';
+        let imageUrls = [];
+        let subjectDescription = 'Uploaded Photo Depth Map';
 
-        let rawAnalysisText = "";
-        let analysisJson = {};
-        const visionModels = ['gemini-3.6-flash', 'gemini-3.8-flash'];
-        for (const m of visionModels) {
-            try {
-                const analysisResponse = await runWithAiFallback(async (activeAi) => {
-                    return await activeAi.models.generateContent({
-                        model: m,
-                        contents: [{
-                            parts: [
-                                { inlineData: { mimeType: mimeType, data: photoBase64 } },
-                                { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
-                            ]
-                        }],
-                        config: { responseMimeType: 'application/json' }
+        // 1. Primary: True Depth Anything V2 pixel-aligned depth estimation
+        try {
+            console.log(`[Photo-to-Depth] Executing true pixel-aligned depth conversion for ${uploadedPath}...`);
+            await runPythonProcessor('photo_to_depth', [uploadedPath, filepath, String(depthIntensity), String(isolateBg)]);
+            if (fs.existsSync(filepath) && fs.statSync(filepath).size > 100) {
+                const { uploadGeneratedImage } = await import('./storage.js');
+                const finalUrl = await uploadGeneratedImage(filepath, filename);
+                imageUrls.push(finalUrl);
+            }
+        } catch (pyErr) {
+            console.warn('[Photo-to-Depth] Python depth processing failed, falling back to AI vision synthesis:', pyErr.message);
+        }
+
+        // 2. Fallback: If local neural depth failed, use Gemini Vision + Imagen pipeline
+        if (imageUrls.length === 0) {
+            const aspectRatio = sanitizeAspectRatio(req.body.aspectRatio);
+            const stylePreset = sanitizeStylePreset(req.body.style_preset ?? req.body.stylePreset);
+            const styleGuidance = getStyleGuidance(stylePreset);
+            const styleClause = styleGuidance ? ` ${styleGuidance}` : '';
+
+            const photoBytes = await fs.promises.readFile(uploadedPath);
+            const photoBase64 = photoBytes.toString('base64');
+            const mimeType = req.file.mimetype || 'image/jpeg';
+
+            let rawAnalysisText = "";
+            let analysisJson = {};
+            const visionModels = ['gemini-3.6-flash', 'gemini-3.8-flash'];
+            for (const m of visionModels) {
+                try {
+                    const analysisResponse = await runWithAiFallback(async (activeAi) => {
+                        return await activeAi.models.generateContent({
+                            model: m,
+                            contents: [{
+                                parts: [
+                                    { inlineData: { mimeType: mimeType, data: photoBase64 } },
+                                    { text: `Analyze this photo for 3D depth and spatial structure. Identify the primary subject, its relative depth layers (foreground, midground, background), surface textures, and overall spatial composition. Then write a highly detailed prompt for generating a grayscale 3D height map of this scene. The height map should place the closest/tallest elements in pure white and the farthest/lowest in pure black. REQUIREMENTS: Demand perfectly smooth continuous gradients, soft shading, and organic rounded transitions. Do NOT include any mention of contours, layers, or topography.${styleClause} Output in JSON format with key "depth_prompt" containing the Imagen prompt string, and key "subject_description" with a one-sentence description of what was detected in the photo.` }
+                                ]
+                            }],
+                            config: { responseMimeType: 'application/json' }
+                        });
                     });
-                });
-                rawAnalysisText = analysisResponse?.text || "";
-                analysisJson = safeJsonParse(rawAnalysisText, {});
-                if (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim()) {
-                    break;
+                    rawAnalysisText = analysisResponse?.text || "";
+                    analysisJson = safeJsonParse(rawAnalysisText, {});
+                    if (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim()) {
+                        break;
+                    }
+                } catch (visionErr) {
+                    console.warn(`[Gemini Vision Warning] ${m} vision analysis failed: ${visionErr?.message || visionErr}`);
                 }
-            } catch (visionErr) {
-                console.warn(`[Gemini Vision Warning] ${m} vision analysis failed: ${visionErr?.message || visionErr}`);
             }
-        }
 
-        let depthPrompt = (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim())
-            ? analysisJson.depth_prompt.trim()
-            : null;
-        let subjectDescription = (typeof analysisJson?.subject_description === 'string' && analysisJson.subject_description.trim())
-            ? analysisJson.subject_description.trim()
-            : 'photo subject';
-
-        // Robust fallback if Gemini returns plain text, markdown, or non-JSON output
-        if (!depthPrompt) {
-            console.warn(`[Gemini Photo-to-Depth Warning] Non-JSON or missing depth_prompt from Gemini Vision. Using fallback from raw response: ${rawAnalysisText}`);
-            const sanitizedRaw = rawAnalysisText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-            if (sanitizedRaw) {
-                depthPrompt = `depth map of ${sanitizedRaw.slice(0, 300)}`;
-                subjectDescription = sanitizedRaw.slice(0, 80);
-            } else {
-                depthPrompt = 'depth map of the uploaded photo subject with organic depth and smooth relief';
-                subjectDescription = 'uploaded photo';
+            let depthPrompt = (typeof analysisJson?.depth_prompt === 'string' && analysisJson.depth_prompt.trim())
+                ? analysisJson.depth_prompt.trim()
+                : null;
+            if (typeof analysisJson?.subject_description === 'string' && analysisJson.subject_description.trim()) {
+                subjectDescription = analysisJson.subject_description.trim();
             }
-        }
 
-        const finalDepthPrompt = buildFinalPrompt(depthPrompt, depthIntensity);
-
-        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
-        const numImages = isBatch ? 4 : 1;
-
-        const imageResult = await generateImagesWithFallback({
-            model: 'imagen-4.0-fast-generate-001',
-            prompt: finalDepthPrompt,
-            config: {
-                numberOfImages: numImages,
-                outputMimeType: 'image/png',
-                aspectRatio: aspectRatio
+            if (!depthPrompt) {
+                const sanitizedRaw = rawAnalysisText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+                depthPrompt = sanitizedRaw
+                    ? `depth map of ${sanitizedRaw.slice(0, 300)}`
+                    : 'depth map of the uploaded photo subject with organic depth and smooth relief';
             }
-        });
 
-        if (!imageResult?.generatedImages?.length) {
-            throw new Error('No depth map returned from Imagen.');
-        }
+            const finalDepthPrompt = buildFinalPrompt(depthPrompt, depthIntensity);
+            const imageResult = await generateImagesWithFallback({
+                model: 'imagen-4.0-fast-generate-001',
+                prompt: finalDepthPrompt,
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/png',
+                    aspectRatio: aspectRatio
+                }
+            });
 
-        const imageUrls = [];
-        const { uploadGeneratedImage } = await import('./storage.js');
-        for (const img of imageResult.generatedImages) {
-            const filename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
-            const filepath = path.join(generatedDir, filename);
-            const base64Data = img.image.imageBytes;
-            await fs.promises.writeFile(filepath, Buffer.from(base64Data, 'base64'));
-            const finalUrl = await uploadGeneratedImage(filepath, filename);
-            imageUrls.push(finalUrl);
+            if (!imageResult?.generatedImages?.length) {
+                throw new Error('No depth map returned from generation pipeline.');
+            }
+
+            const { uploadGeneratedImage } = await import('./storage.js');
+            for (const img of imageResult.generatedImages) {
+                const fallbackFilename = `photo_depth_${uuidv4().substring(0, 10)}.png`;
+                const fallbackFilepath = path.join(generatedDir, fallbackFilename);
+                const base64Data = img.image.imageBytes;
+                await fs.promises.writeFile(fallbackFilepath, Buffer.from(base64Data, 'base64'));
+                const finalUrl = await uploadGeneratedImage(fallbackFilepath, fallbackFilename);
+                imageUrls.push(finalUrl);
+            }
         }
 
         await fs.promises.unlink(uploadedPath).catch(() => {});
@@ -2401,10 +2413,11 @@ app.post('/api/photo-to-depth', photoToDepthLimiter, photoUpload.single('photo')
                     updatedBalance = await deductCredit(authUserId, `[Photo-to-Carve] ${subjectDescription}`, imageUrls[0]);
                 }
             } catch {
-                // Ignore invalid/expired token on optional auth so unauthenticated tests still pass
+                // Ignore invalid/expired token on optional auth
             }
         }
 
+        const isBatch = req.body.batch === true || req.body.batch === 'true' || req.body.numberOfImages === 4 || req.body.numberOfImages === '4';
         const payload = {
             status: 'success',
             image_url: imageUrls[0],
