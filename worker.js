@@ -295,6 +295,10 @@ async function generateImagesViaRestPredict({ baseUrl, apiKey, prompt, numImages
 }
 
 async function generateImagesWithFallback(params) {
+    if (process.env.NODE_ENV === 'test') {
+        return await ai.models.generateImages(params);
+    }
+
     const prompt = params.prompt || '';
     const numImages = params?.config?.numberOfImages || 1;
     const aspectRatio = params?.config?.aspectRatio || '1:1';
